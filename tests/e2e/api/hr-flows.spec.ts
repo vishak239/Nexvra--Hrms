@@ -9,7 +9,8 @@ import { DEMO, Session, json, login } from "../support/api";
 test.describe.serial("employee lifecycle", () => {
   const stamp = Date.now().toString(36);
   const email = `e2e-${stamp}@example.test`;
-  const password = `E2e-${stamp}-Pass!`;
+  // Must not resemble the username (Django's similarity validator checks it).
+  const password = `Start-Pa55-${Math.random().toString(36).slice(2, 10)}!`;
   let hr: Session, manager: Session, newcomer: Session;
   let employeeId: number;
   let leaveId: number;

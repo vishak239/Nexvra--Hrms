@@ -184,5 +184,11 @@ class UserSerializer(serializers.ModelSerializer):
                 attrs.pop("username")  # blank = keep the current one (or generate on create)
         password = attrs.get("password")
         if password:
-            validate_password(password, User(email=attrs.get("email", ""), first_name=attrs.get("first_name", "")))
+            candidate = User(
+                email=attrs.get("email", getattr(self.instance, "email", "")),
+                username=attrs.get("username") or getattr(self.instance, "username", None),
+                first_name=attrs.get("first_name", getattr(self.instance, "first_name", "")),
+                last_name=attrs.get("last_name", getattr(self.instance, "last_name", "")),
+            )
+            validate_password(password, candidate)
         return attrs

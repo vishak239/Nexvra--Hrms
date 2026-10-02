@@ -1,6 +1,7 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
+from apps.accounts import usernames
 from apps.accounts.models import Role, User
 from apps.accounts.rbac import EMPLOYEE
 from apps.accounts.serializers import UsernameField, assert_username_free
@@ -171,9 +172,14 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
         if self.instance is None:
             attrs.setdefault("role", Role.objects.get(code=EMPLOYEE))
             if attrs.get("initial_password"):
-                validate_password(
-                    attrs["initial_password"], User(email=attrs["email"], first_name=attrs["first_name"])
+                username = attrs.get("username") or usernames.generate_unique(User, attrs["email"])
+                candidate = User(
+                    email=attrs["email"],
+                    username=username,
+                    first_name=attrs["first_name"],
+                    last_name=attrs.get("last_name", ""),
                 )
+                validate_password(attrs["initial_password"], candidate)
         elif "initial_password" in attrs:
             raise serializers.ValidationError({"initial_password": ["Only allowed when creating an employee."]})
 

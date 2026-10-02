@@ -40,3 +40,14 @@ def test_username_in_profile_and_search(org, client_for):
     assert me["username"] == alice.user.username
     found = client_for(org["hr"]).get("/api/employees/", {"search": alice.user.username}).data["results"]
     assert [e["id"] for e in found] == [alice.id]
+
+
+def test_initial_password_must_not_resemble_the_username(org, client_for):
+    res = client_for(org["hr"]).post(
+        "/api/employees/",
+        {"email": "pw.check@example.test", "first_name": "Pw", "employee_code": "U-2", "joining_date": "2024-01-01",
+         "employment_type": "FULL_TIME", "username": "kumaravel", "initial_password": "kumaravel1!"},
+        format="json",
+    )
+    assert res.status_code == 400
+    assert "too similar" in res.data["error"]["message"]

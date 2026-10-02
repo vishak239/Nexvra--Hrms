@@ -72,8 +72,9 @@ test("HR uploads a document and the employee downloads the same file", async ({ 
 test.describe.serial("employee lifecycle through the UI", () => {
   const stamp = Date.now().toString(36);
   const email = `ui-${stamp}@example.test`;
-  const initialPassword = `Ui-${stamp}-Init!`;
-  const newPassword = `Ui-${stamp}-Changed!`;
+  // Passwords must not resemble the username (Django's similarity validator checks it).
+  const initialPassword = `Start-Pa55-${Math.random().toString(36).slice(2, 8)}!`;
+  const newPassword = `Rotated-Pa55-${Math.random().toString(36).slice(2, 8)}!`;
   const name = `Uitest ${stamp}`;
 
   test("HR creates an employee", async ({ page }) => {

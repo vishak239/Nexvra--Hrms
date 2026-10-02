@@ -94,6 +94,7 @@ function RecordsTable({
 }
 
 function MyAttendance({ employeeId }: { employeeId: number }) {
+  const [changes, setChanges] = useState(0);
   const [from, setFrom] = useState(monthStart());
   const [to, setTo] = useState(todayISO());
   const [page, setPage] = useState(1);
@@ -107,8 +108,13 @@ function MyAttendance({ employeeId }: { employeeId: number }) {
 
   return (
     <div className="space-y-6">
-      <WorkSessionCard onChange={history.reload} />
-      <MyOvertime />
+      <WorkSessionCard
+        onChange={() => {
+          history.reload();
+          setChanges((n) => n + 1);
+        }}
+      />
+      <MyOvertime changes={changes} />
       <Card>
         <CardHeader
           title="My history"
@@ -137,12 +143,16 @@ function MyAttendance({ employeeId }: { employeeId: number }) {
   );
 }
 
-function MyOvertime() {
+/** `changes` increments after every work-session action so the list stays current. */
+function MyOvertime({ changes }: { changes: number }) {
   const [page, setPage] = useState(1);
   const { data, error, loading, reload } = useResource<Paginated<OvertimeSession>>("/api/attendance/overtime/", {
     page,
     page_size: 10,
   });
+  useEffect(() => {
+    if (changes) reload();
+  }, [changes, reload]);
   if (!loading && !error && !data?.count) return null;
   return (
     <Card>
