@@ -15,6 +15,11 @@ if not exist "frontend\node_modules" goto install_frontend
 rem ---------- backend ----------
 curl -s -o nul -f http://127.0.0.1:8000/api/health/
 if not errorlevel 1 goto backend_running
+echo Applying database updates (migrations)...
+pushd backend
+.venv\Scripts\python manage.py migrate --noinput
+if errorlevel 1 goto migrate_failed
+popd
 echo Starting the backend on http://127.0.0.1:8000 ...
 start "Nexvra HRMS - Backend" /d "%~dp0backend" cmd /k ".venv\Scripts\python manage.py runserver 127.0.0.1:8000"
 goto wait_backend_start
@@ -88,6 +93,13 @@ exit /b 1
 :backend_failed
 echo [ERROR] The backend did not start within 60 seconds.
 echo         Check the "Nexvra HRMS - Backend" window for the error.
+echo         Most common cause: PostgreSQL is not running (Windows service "postgresql-x64-16").
+pause
+exit /b 1
+
+:migrate_failed
+popd
+echo [ERROR] The database update failed. See the messages above.
 echo         Most common cause: PostgreSQL is not running (Windows service "postgresql-x64-16").
 pause
 exit /b 1
