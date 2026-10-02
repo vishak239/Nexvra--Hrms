@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" fill="none">
+  <!-- Nexvra Hexagonal Isometric Cube Mark -->
+  <g transform="translate(4, 6)">
+    <!-- Hexagon faceted isometric prism matching the reference image {{DATA:IMAGE:IMAGE_2}} -->
+    <!-- Top outer angled prism/roof facet -->
+    <path d="M26 2L48 15V26L26 13L4 26V15L26 2Z" fill="#9CFF00"/>
+    <!-- Left outer flank facet -->
+    <path d="M4 26L26 13V24L12 32V42L4 37V26Z" fill="#9CFF00"/>
+    <!-- Right outer flank facet -->
+    <path d="M48 26L26 13V24L40 32V42L48 37V26Z" fill="#9CFF00"/>
+    <!-- Inner upward chevron / triangle arrow core -->
+    <path d="M26 26L38 34L26 42L14 34L26 26Z" fill="#9CFF00"/>
+    <!-- Bottom play/forward arrow polygon accent -->
+    <polygon points="26,38 38,45 26,52" fill="#9CFF00"/>
+  </g>
+  <!-- Brand Wordmark -->
+  <text x="68" y="36" fill="#FFFFFF" font-family="'Space Grotesk', system-ui, -apple-system, sans-serif" font-weight="700" font-size="24" letter-spacing="0.05em">NEXVRA</text>
+  <text x="68" y="49" fill="#A0A0A0" font-family="'Space Grotesk', system-ui, -apple-system, sans-serif" font-weight="500" font-size="9.5" letter-spacing="0.28em">SOLUTIONS</text>
+</svg>

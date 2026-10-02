@@ -1,0 +1,46 @@
+# --- Secrets & local config (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Django runtime data ---
+backend/private_media/
+backend/staticfiles/
+*.sqlite3
+
+# --- Node / Next.js ---
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+frontend/public/brand/
+*.tsbuildinfo
+npm-debug.log*
+
+# --- Playwright ---
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+tests/e2e/.auth/
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.log
