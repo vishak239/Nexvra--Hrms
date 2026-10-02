@@ -20,7 +20,9 @@ def test_login_success_returns_profile_and_permissions(anon, org):
     assert res.status_code == 200
     assert res.data["email"] == alice.email
     assert res.data["role"]["code"] == "EMPLOYEE"
-    assert set(res.data["permissions"]) == {"attendance.self", "leave.apply", "payroll.view_own", "documents.view_own"}
+    assert set(res.data["permissions"]) == {
+        "attendance.self", "leave.apply", "payroll.view_own", "documents.view_own", "messages.use"
+    }
     assert res.data["employee"]["employee_code"] == org["alice"].employee_code
     assert "nexvra_session" in res.cookies
     assert res.cookies["nexvra_session"]["httponly"]

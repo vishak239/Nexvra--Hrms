@@ -1,6 +1,14 @@
 """Leave rules. Only generic integrity rules are enforced (no overlaps, no self-approval,
 balance not exceeded when the type tracks balances). Company-specific policies such as
-sandwich rules, accrual or carry-forward are NOT SPECIFIED and therefore not applied."""
+sandwich rules, accrual or carry-forward are NOT SPECIFIED and therefore not applied.
+
+State machine: PENDING -> APPROVED (locked) | REJECTED | CANCELLED. Only a PENDING request
+can be cancelled, and only by its applicant; once APPROVED it is locked.
+
+Balance accounting: the balance decreases ONLY when a request is approved, exactly once.
+The approval writes one LeaveBalanceTransaction (one-to-one with the request) under row
+locks on both the request and the balance. Pending, rejected and cancelled requests never
+change the balance. Balances can never go negative (no negative-balance policy exists)."""
 
 import datetime
 from decimal import Decimal
@@ -19,7 +27,7 @@ from apps.notifications.models import Notification
 from apps.notifications.services import notify
 from apps.organization.models import CompanySettings, Holiday
 
-from .models import LeaveBalance, LeaveRequest, LeaveType
+from .models import LeaveBalance, LeaveBalanceTransaction, LeaveRequest, LeaveType
 
 
 def users_with_permission(code):
@@ -43,41 +51,101 @@ def count_leave_days(start, end, is_half_day, cs):
     return Decimal(days)
 
 
-def balance_summary(employee, leave_type, year, exclude_request_id=None):
+def used_days(balance):
+    if balance is None or balance.pk is None:
+        return Decimal("0")
+    return balance.transactions.aggregate(total=Sum("days"))["total"] or Decimal("0")
+
+
+def balance_summary(employee, leave_type, year):
     """Allocated / used / pending / available for one employee, type and leave year.
+
+    `available` is the balance itself (allocated - deducted on approval); it does NOT drop
+    while a request is pending. `pending` shows days awaiting a decision and `requestable`
+    is what can still be requested without over-committing the balance.
     Returns None for types that do not track balances."""
     if not leave_type.tracks_balance:
         return None
     balance = LeaveBalance.objects.filter(employee=employee, leave_type=leave_type, year=year).first()
     allocated = balance.allocated if balance else Decimal("0")
-    requests = LeaveRequest.objects.filter(employee=employee, leave_type=leave_type, leave_year=year)
-    if exclude_request_id:
-        requests = requests.exclude(pk=exclude_request_id)
-    totals = {
-        row["status"]: row["total"]
-        for row in requests.filter(status__in=LeaveRequest.ACTIVE_STATUSES).values("status").annotate(total=Sum("days"))
-    }
-    used = totals.get(LeaveRequest.Status.APPROVED) or Decimal("0")
-    pending = totals.get(LeaveRequest.Status.PENDING) or Decimal("0")
+    used = used_days(balance)
+    pending = (
+        LeaveRequest.objects.filter(
+            employee=employee, leave_type=leave_type, leave_year=year, status=LeaveRequest.Status.PENDING
+        ).aggregate(total=Sum("days"))["total"]
+        or Decimal("0")
+    )
+    available = allocated - used
     return {
         "has_allocation": balance is not None,
         "allocated": allocated,
         "used": used,
         "pending": pending,
-        "available": allocated - used - pending,
+        "available": available,
+        "requestable": available - pending,
     }
 
 
-def _assert_balance(employee, leave_type, year, days, exclude_request_id=None):
-    summary = balance_summary(employee, leave_type, year, exclude_request_id)
+def _assert_can_request(employee, leave_type, year, days):
+    summary = balance_summary(employee, leave_type, year)
     if summary is None:
         return
     if not summary["has_allocation"]:
         raise ValidationError({"leave_type": ["No leave balance has been allocated for this leave type and year."]})
-    if summary["available"] < days:
+    if summary["requestable"] < days:
+        pending = f", {summary['pending']} already requested in pending requests" if summary["pending"] else ""
         raise ValidationError(
-            {"non_field_errors": [f"Insufficient balance: {summary['available']} day(s) available, {days} requested."]}
+            {
+                "non_field_errors": [
+                    f"Insufficient balance: {summary['available']} day(s) available{pending}, {days} requested."
+                ]
+            }
         )
+
+
+def _deduct_on_approval(request, leave):
+    """Write the single DEDUCTION for an approved request (caller holds the request lock)."""
+    if not leave.leave_type.tracks_balance:
+        return None
+    balance = (
+        LeaveBalance.objects.select_for_update()
+        .filter(employee=leave.employee, leave_type=leave.leave_type, year=leave.leave_year)
+        .first()
+    )
+    if balance is None:
+        raise ValidationError({"leave_type": ["No leave balance has been allocated for this leave type and year."]})
+    if LeaveBalanceTransaction.objects.filter(leave_request=leave).exists():
+        return None  # already deducted; never deduct twice
+    before = balance.allocated - used_days(balance)
+    if before < leave.days:
+        raise ValidationError(
+            {
+                "non_field_errors": [
+                    f"Insufficient balance to approve: {before} day(s) available, {leave.days} requested."
+                ]
+            }
+        )
+    txn = LeaveBalanceTransaction.objects.create(
+        balance=balance,
+        leave_request=leave,
+        days=leave.days,
+        balance_before=before,
+        balance_after=before - leave.days,
+        created_by=request.user,
+    )
+    audit.record(
+        request,
+        "LEAVE_BALANCE_DEDUCTED",
+        obj=leave,
+        changes={"available": [before, txn.balance_after]},
+        metadata={
+            "days": leave.days,
+            "balance": balance.pk,
+            "leave_type": leave.leave_type.code,
+            "year": leave.leave_year,
+        },
+    )
+    return txn
 
 
 @transaction.atomic
@@ -110,7 +178,7 @@ def submit(request, data):
     days = count_leave_days(start, end, is_half_day, cs)
     if days <= 0:
         raise ValidationError({"non_field_errors": ["The selected dates contain no working days."]})
-    _assert_balance(employee, leave_type, leave_year, days)
+    _assert_can_request(employee, leave_type, leave_year, days)
 
     leave = LeaveRequest.objects.create(
         employee=employee,
@@ -160,7 +228,7 @@ def decide(request, leave, approve, note=""):
     if leave.status != LeaveRequest.Status.PENDING:
         raise Conflict("Only pending requests can be approved or rejected.")
     if approve:
-        _assert_balance(leave.employee, leave.leave_type, leave.leave_year, leave.days, exclude_request_id=leave.pk)
+        _deduct_on_approval(request, leave)
     leave.status = LeaveRequest.Status.APPROVED if approve else LeaveRequest.Status.REJECTED
     leave.decided_by = request.user
     leave.decided_at = timezone.now()
@@ -183,25 +251,15 @@ def cancel(request, leave):
     leave = _lock(leave)
     if leave.employee.user_id != request.user.pk:
         raise PermissionDenied("Only the employee who applied can cancel this request.")
-    today = CompanySettings.get_solo().today()
-    cancellable = leave.status == LeaveRequest.Status.PENDING or (
-        leave.status == LeaveRequest.Status.APPROVED and leave.start_date > today
-    )
-    if not cancellable:
-        raise Conflict("This request can no longer be cancelled.")
-    was_approved = leave.status == LeaveRequest.Status.APPROVED
+    if leave.status == LeaveRequest.Status.APPROVED:
+        raise Conflict("This leave has already been approved and cannot be cancelled.")
+    if leave.status != LeaveRequest.Status.PENDING:
+        raise Conflict("Only pending leave requests can be cancelled.")
     leave.status = LeaveRequest.Status.CANCELLED
     leave.cancelled_at = timezone.now()
     leave.save()
-    if was_approved and leave.decided_by_id:
-        notify(
-            [leave.decided_by],
-            Notification.Type.LEAVE_CANCELLED,
-            f"{leave.employee.user.full_name} cancelled approved leave",
-            f"{leave.leave_type.name}: {leave.start_date} to {leave.end_date}.",
-            obj=leave,
-        )
-    audit.record(request, "LEAVE_CANCELLED", obj=leave)
+    # Nothing to restore: a pending request never reduced the balance.
+    audit.record(request, "LEAVE_CANCELLED", obj=leave, changes={"status": ["PENDING", "CANCELLED"]})
     return leave
 
 
@@ -218,11 +276,13 @@ def allocate(request, leave_type, year, allocated, employees, overwrite=False):
         if employee.user_id == request.user.pk and not request.user.is_super_admin:
             skipped += 1
             continue
-        balance = LeaveBalance.objects.filter(employee=employee, leave_type=leave_type, year=year).first()
+        balance = LeaveBalance.objects.select_for_update().filter(
+            employee=employee, leave_type=leave_type, year=year
+        ).first()
         if balance is None:
             LeaveBalance.objects.create(employee=employee, leave_type=leave_type, year=year, allocated=allocated)
             created += 1
-        elif overwrite and balance.allocated != allocated:
+        elif overwrite and balance.allocated != allocated and allocated >= used_days(balance):
             balance.allocated = allocated
             balance.save(update_fields=["allocated", "updated_at"])
             updated += 1

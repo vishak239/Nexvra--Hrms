@@ -43,15 +43,20 @@ PERMISSIONS = {
     "documents.manage": "Upload and delete employee documents",
     "reports.view_team": "View team reports",
     "reports.view_all": "View company-wide HR reports",
+    "tasks.view_team": "View tasks assigned to direct reports",
+    "tasks.view_all": "View all tasks",
+    "tasks.manage": "Assign, edit, remind and cancel tasks",
+    "messages.use": "Send and receive private messages and files",
 }
 
-_EMPLOYEE = {"attendance.self", "leave.apply", "payroll.view_own", "documents.view_own"}
+_EMPLOYEE = {"attendance.self", "leave.apply", "payroll.view_own", "documents.view_own", "messages.use"}
 _MANAGER = _EMPLOYEE | {
     "employees.view_team",
     "attendance.view_team",
     "leave.view_team",
     "leave.approve_team",
     "reports.view_team",
+    "tasks.view_team",
 }
 _HR = _MANAGER | {
     "employees.view_all",
@@ -71,6 +76,8 @@ _HR = _MANAGER | {
     "documents.manage",
     "reports.view_all",
     "settings.manage",
+    "tasks.view_all",
+    "tasks.manage",
 }
 
 # code: (name, level, default permissions)

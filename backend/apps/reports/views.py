@@ -9,15 +9,18 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.attendance import services as attendance
-from apps.attendance.models import AttendanceRecord
+from apps.attendance.models import AttendanceRecord, BreakSession, OvertimeSession, SessionStatus
 from apps.attendance.serializers import AttendanceRecordSerializer
 from apps.core.permissions import HasPermission, scope_queryset
 from apps.employees.models import Employee
 from apps.leaves import services as leave_services
 from apps.leaves.models import LeaveRequest
+from apps.messaging import services as messaging
 from apps.notifications.models import Notification
 from apps.organization.models import CompanySettings, Holiday
 from apps.payroll.models import PayrollRun, Payslip
+from apps.tasks import rules as task_rules
+from apps.tasks.models import Task
 
 from . import services
 
@@ -140,6 +143,9 @@ class DashboardView(APIView):
             ),
         }
 
+        if user.has_permission("messages.use"):
+            data["unread_messages"] = messaging.unread_total(user)
+
         if employee is not None:
             record = AttendanceRecord.objects.filter(employee=employee, date=today).first()
             year = cs.leave_year_for(today)
@@ -162,6 +168,8 @@ class DashboardView(APIView):
                 "pending_leave_requests": LeaveRequest.objects.filter(
                     employee=employee, status=LeaveRequest.Status.PENDING
                 ).count(),
+                "open_tasks": Task.objects.filter(assigned_to=employee, status__in=Task.OPEN_STATUSES).count(),
+                "blocking_tasks": task_rules.blocking_tasks(user).count(),
                 "latest_payslip": (
                     {"id": latest.id, "year": latest.run.year, "month": latest.run.month, "net_pay": latest.net_pay,
                      "currency": latest.run.currency}
@@ -188,6 +196,24 @@ class DashboardView(APIView):
                 counts[row["status"]] = counts.get(row["status"], 0) + 1
             late = sum(1 for row in rows if row["record"] is not None and row["record"].is_late)
             data["attendance_today"] = {"total": len(rows), "by_status": counts, "late": late}
+
+        if user.has_permission("attendance.view_all") or user.has_permission("attendance.view_team"):
+            breaks = scope_queryset(BreakSession.objects.filter(status=SessionStatus.ACTIVE), user, "attendance")
+            overtime = scope_queryset(OvertimeSession.objects.filter(status=SessionStatus.ACTIVE), user, "attendance")
+            data["work_sessions_now"] = {
+                "on_break": breaks.exclude(employee__user=user).count(),
+                "overtime_running": overtime.exclude(employee__user=user).count(),
+            }
+
+        if user.has_permission("tasks.view_all") or user.has_permission("tasks.view_team"):
+            tasks = scope_queryset(
+                Task.objects.filter(status__in=Task.OPEN_STATUSES), user, "tasks", employee_path="assigned_to"
+            ).exclude(assigned_to__user=user)
+            data["tasks_overview"] = {
+                "open": tasks.count(),
+                "overdue": tasks.filter(due_date__lt=today).count(),
+                "awaiting_response": tasks.filter(requires_response=True, responded_at__isnull=True).count(),
+            }
 
         if user.has_permission("employees.view_all"):
             data["headcount"] = Employee.objects.exclude(employment_status=Employee.Status.EXITED).count()

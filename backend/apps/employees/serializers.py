@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import Role, User
 from apps.accounts.rbac import EMPLOYEE
+from apps.accounts.serializers import UsernameField, assert_username_free
 from apps.organization.models import Department, Designation
 
 from .models import Employee
@@ -29,7 +30,12 @@ SELF_EDITABLE_FIELDS = (
 def employee_ref(emp):
     if emp is None:
         return None
-    return {"id": emp.id, "employee_code": emp.employee_code, "full_name": emp.user.full_name}
+    return {
+        "id": emp.id,
+        "employee_code": emp.employee_code,
+        "full_name": emp.user.full_name,
+        "username": emp.user.username,
+    }
 
 
 def can_see_confidential(viewer, employee):
@@ -45,6 +51,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(source="user.last_name")
     full_name = serializers.CharField(source="user.full_name")
     email = serializers.EmailField(source="user.email")
+    username = serializers.CharField(source="user.username", default=None)
     role = serializers.CharField(source="user.role.code")
     is_active = serializers.BooleanField(source="user.is_active")
     department = serializers.SerializerMethodField()
@@ -61,6 +68,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "last_name",
             "full_name",
             "email",
+            "username",
             "department",
             "designation",
             "manager",
@@ -96,6 +104,7 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
     """HR create/update. User fields are written through to the linked account."""
 
     email = serializers.EmailField()
+    username = UsernameField()
     first_name = serializers.CharField(max_length=100)
     last_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
     role = serializers.SlugRelatedField(slug_field="code", queryset=Role.objects.all(), required=False)
@@ -111,12 +120,13 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
     )
     manager = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.all(), required=False, allow_null=True)
 
-    USER_FIELDS = ("email", "first_name", "last_name", "role", "is_active")
+    USER_FIELDS = ("email", "username", "first_name", "last_name", "role", "is_active")
 
     class Meta:
         model = Employee
         fields = [
             "email",
+            "username",
             "first_name",
             "last_name",
             "role",
@@ -153,6 +163,11 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
         return field in attrs and (self.instance is None or attrs[field] != getattr(self.instance, field))
 
     def validate(self, attrs):
+        if "username" in attrs:
+            if attrs["username"]:
+                assert_username_free(attrs["username"], self.instance.user_id if self.instance else None)
+            else:
+                attrs.pop("username")  # blank = keep the current one (or generate on create)
         if self.instance is None:
             attrs.setdefault("role", Role.objects.get(code=EMPLOYEE))
             if attrs.get("initial_password"):

@@ -39,7 +39,7 @@ class EmployeeViewSet(
         "partial_update": ("employees.manage",),
     }
     filterset_fields = ["department", "designation", "employment_status", "employment_type", "manager"]
-    search_fields = ["employee_code", "user__first_name", "user__last_name", "user__email"]
+    search_fields = ["employee_code", "user__username", "user__first_name", "user__last_name", "user__email"]
     ordering_fields = ["employee_code", "joining_date", "user__first_name"]
 
     def get_queryset(self):

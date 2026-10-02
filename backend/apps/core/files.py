@@ -2,13 +2,18 @@
 
 import os
 import uuid
+import zipfile
 
 from django.conf import settings
 from django.http import FileResponse
 from django.utils.deconstruct import deconstructible
 from rest_framework.exceptions import ValidationError
 
-# extension -> (content type, magic-byte prefixes)
+OLE2 = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"  # legacy Office (.doc / .xls)
+ZIP = b"PK\x03\x04"  # Office Open XML (.docx / .xlsx)
+
+# extension -> (content type, magic-byte prefixes). Text formats have no signature and are
+# checked by `_looks_like_text` instead.
 FILE_TYPES = {
     "pdf": ("application/pdf", (b"%PDF-",)),
     "png": ("image/png", (b"\x89PNG\r\n\x1a\n",)),
@@ -16,11 +21,48 @@ FILE_TYPES = {
     "jpeg": ("image/jpeg", (b"\xff\xd8\xff",)),
     "docx": (
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        (b"PK\x03\x04",),
+        (ZIP,),
     ),
+    "xlsx": ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", (ZIP,)),
+    "doc": ("application/msword", (OLE2,)),
+    "xls": ("application/vnd.ms-excel", (OLE2,)),
+    "csv": ("text/csv", ()),
+    "txt": ("text/plain", ()),
 }
 DOCUMENT_EXTENSIONS = ("pdf", "png", "jpg", "jpeg", "docx")
 IMAGE_EXTENSIONS = ("png", "jpg", "jpeg")
+MESSAGE_EXTENSIONS = ("pdf", "doc", "docx", "xls", "xlsx", "csv", "txt", "png", "jpg", "jpeg")
+
+# Office Open XML packages must contain these parts (a renamed arbitrary .zip does not).
+_OOXML_PARTS = {"docx": "word/document.xml", "xlsx": "xl/workbook.xml"}
+
+
+def _looks_like_text(file):
+    """Text uploads must decode as UTF-8 (or Windows-1252) and contain no NUL/control bytes."""
+    file.seek(0)
+    sample = file.read(64 * 1024)
+    file.seek(0)
+    if b"\x00" in sample:
+        return False
+    for encoding in ("utf-8", "cp1252"):
+        try:
+            text = sample.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+        return not any(ord(c) < 32 and c not in "\r\n\t\f" for c in text)
+    return False
+
+
+def _valid_ooxml(file, ext):
+    try:
+        file.seek(0)
+        with zipfile.ZipFile(file) as archive:
+            names = set(archive.namelist())
+        return "[Content_Types].xml" in names and _OOXML_PARTS[ext] in names
+    except (zipfile.BadZipFile, OSError, ValueError):
+        return False
+    finally:
+        file.seek(0)
 
 
 def max_upload_bytes():
@@ -45,7 +87,13 @@ def validate_upload(file, allowed_extensions):
     file.seek(0)
     head = file.read(16)
     file.seek(0)
-    if not any(head.startswith(sig) for sig in signatures):
+    if signatures:
+        valid = any(head.startswith(sig) for sig in signatures)
+        if valid and ext in _OOXML_PARTS:
+            valid = _valid_ooxml(file, ext)
+    else:
+        valid = _looks_like_text(file)
+    if not valid:
         raise ValidationError({"file": ["File content does not match its extension."]})
     return ext, content_type
 

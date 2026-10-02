@@ -10,6 +10,16 @@ class Notification(models.Model):
         LEAVE_CANCELLED = "LEAVE_CANCELLED", "Leave cancelled"
         PAYSLIP_PUBLISHED = "PAYSLIP_PUBLISHED", "Payslip published"
         DOCUMENT_SHARED = "DOCUMENT_SHARED", "Document shared"
+        TASK_ASSIGNED = "TASK_ASSIGNED", "Task assigned"
+        TASK_REMINDER = "TASK_REMINDER", "Task reminder"
+        TASK_RESPONSE = "TASK_RESPONSE", "Task response"
+        TASK_COMPLETED = "TASK_COMPLETED", "Task completed"
+        TASK_CANCELLED = "TASK_CANCELLED", "Task cancelled"
+        MESSAGE_RECEIVED = "MESSAGE_RECEIVED", "Message received"
+        FILE_RECEIVED = "FILE_RECEIVED", "File received"
+        OVERTIME_STARTED = "OVERTIME_STARTED", "Overtime started"
+        OVERTIME_COMPLETED = "OVERTIME_COMPLETED", "Overtime completed"
+        SYNC_STATUS = "SYNC_STATUS", "Offline sync status"
         GENERAL = "GENERAL", "General"
 
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")

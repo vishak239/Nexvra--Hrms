@@ -4,7 +4,7 @@ from apps.employees.models import Employee
 from apps.employees.serializers import employee_ref
 
 from . import services
-from .models import LeaveBalance, LeaveRequest, LeaveType
+from .models import LeaveBalance, LeaveBalanceTransaction, LeaveRequest, LeaveType
 
 
 class LeaveTypeSerializer(serializers.ModelSerializer):
@@ -74,6 +74,10 @@ class LeaveBalanceSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Must not be negative.")
         if (value * 2) % 1 != 0:
             raise serializers.ValidationError("Use whole or half days.")
+        if self.instance is not None:
+            used = services.used_days(self.instance)
+            if value < used:
+                raise serializers.ValidationError(f"Cannot be less than the {used} day(s) already used.")
         return value
 
 
@@ -99,6 +103,9 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
     leave_type_name = serializers.CharField(source="leave_type.name", read_only=True)
     decided_by_name = serializers.CharField(source="decided_by.full_name", read_only=True, default=None)
     can_decide = serializers.SerializerMethodField()
+    can_cancel = serializers.SerializerMethodField()
+    is_locked = serializers.BooleanField(read_only=True)
+    balance_deducted = serializers.SerializerMethodField()
 
     class Meta:
         model = LeaveRequest
@@ -121,6 +128,9 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             "cancelled_at",
             "created_at",
             "can_decide",
+            "can_cancel",
+            "is_locked",
+            "balance_deducted",
         ]
         read_only_fields = fields
 
@@ -132,6 +142,38 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         return bool(
             request and leave.status == LeaveRequest.Status.PENDING and services.can_decide(request.user, leave)
         )
+
+
+    def get_can_cancel(self, leave):
+        request = self.context.get("request")
+        return bool(
+            request and leave.status == LeaveRequest.Status.PENDING and leave.employee.user_id == request.user.pk
+        )
+
+    def get_balance_deducted(self, leave):
+        txn = getattr(leave, "balance_transaction", None) if leave.status == LeaveRequest.Status.APPROVED else None
+        return txn.days if txn else None
+
+
+class LeaveBalanceTransactionSerializer(serializers.ModelSerializer):
+    employee = serializers.SerializerMethodField()
+    leave_type_name = serializers.CharField(source="balance.leave_type.name", read_only=True)
+    year = serializers.IntegerField(source="balance.year", read_only=True)
+    leave_request = serializers.SerializerMethodField()
+    created_by_name = serializers.CharField(source="created_by.full_name", read_only=True, default=None)
+
+    class Meta:
+        model = LeaveBalanceTransaction
+        fields = ["id", "employee", "leave_type_name", "year", "kind", "days", "balance_before", "balance_after",
+                  "leave_request", "created_by_name", "created_at"]
+        read_only_fields = fields
+
+    def get_employee(self, txn):
+        return employee_ref(txn.balance.employee)
+
+    def get_leave_request(self, txn):
+        leave = txn.leave_request
+        return {"id": leave.id, "start_date": leave.start_date, "end_date": leave.end_date, "status": leave.status}
 
 
 class LeaveApplySerializer(serializers.Serializer):

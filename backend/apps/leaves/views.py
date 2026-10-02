@@ -9,12 +9,13 @@ from apps.employees.models import Employee
 from apps.organization.models import CompanySettings
 
 from . import services
-from .models import LeaveBalance, LeaveRequest, LeaveType
+from .models import LeaveBalance, LeaveBalanceTransaction, LeaveRequest, LeaveType
 from .serializers import (
     AllocateSerializer,
     DecisionSerializer,
     LeaveApplySerializer,
     LeaveBalanceSerializer,
+    LeaveBalanceTransactionSerializer,
     LeaveRequestSerializer,
     LeaveTypeSerializer,
 )
@@ -119,7 +120,7 @@ class LeaveRequestViewSet(
 
     def get_queryset(self):
         qs = LeaveRequest.objects.select_related(
-            "employee__user", "employee__manager", "leave_type", "decided_by"
+            "employee__user", "employee__manager", "leave_type", "decided_by", "balance_transaction"
         )
         return scope_queryset(qs, self.request.user, "leave")
 
@@ -157,3 +158,31 @@ class LeaveRequestViewSet(
         page = self.paginate_queryset(qs.order_by("start_date"))
         return self.get_paginated_response(self.get_serializer(page, many=True).data)
 
+
+
+class LeaveBalanceTransactionFilter(django_filters.FilterSet):
+    employee = django_filters.NumberFilter(field_name="balance__employee")
+    leave_type = django_filters.NumberFilter(field_name="balance__leave_type")
+    year = django_filters.NumberFilter(field_name="balance__year")
+    date_from = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
+    date_to = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
+
+    class Meta:
+        model = LeaveBalanceTransaction
+        fields = ["kind"]
+
+
+class LeaveBalanceTransactionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Auditable balance changes (own / team / all by leave scope)."""
+
+    serializer_class = LeaveBalanceTransactionSerializer
+    permission_classes = [HasPermission]
+    required_permissions = {"list": ()}
+    filterset_class = LeaveBalanceTransactionFilter
+    ordering_fields = ["created_at"]
+
+    def get_queryset(self):
+        qs = LeaveBalanceTransaction.objects.select_related(
+            "balance__employee__user", "balance__leave_type", "leave_request", "created_by"
+        )
+        return scope_queryset(qs, self.request.user, "leave", employee_path="balance__employee")

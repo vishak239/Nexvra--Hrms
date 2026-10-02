@@ -108,3 +108,41 @@ class LeaveRequest(TimeStampedModel):
 
     def __str__(self):
         return f"{self.employee_id} {self.leave_type_id} {self.start_date}–{self.end_date} {self.status}"
+
+    @property
+    def is_locked(self):
+        """Approved leave is locked: the applicant can no longer cancel it."""
+        return self.status == self.Status.APPROVED
+
+
+class LeaveBalanceTransaction(models.Model):
+    """Auditable ledger of balance changes. A DEDUCTION is written exactly once, in the same
+    transaction that approves a request; the one-to-one link to the request is the database
+    guarantee against double deduction (duplicate approvals, retries, concurrent requests).
+    The used balance is the sum of deductions."""
+
+    class Kind(models.TextChoices):
+        DEDUCTION = "DEDUCTION", "Deducted on approval"
+
+    balance = models.ForeignKey(LeaveBalance, on_delete=models.PROTECT, related_name="transactions")
+    leave_request = models.OneToOneField(
+        LeaveRequest, on_delete=models.PROTECT, related_name="balance_transaction"
+    )
+    kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.DEDUCTION)
+    days = models.DecimalField(max_digits=5, decimal_places=1)
+    balance_before = models.DecimalField(max_digits=6, decimal_places=1)
+    balance_after = models.DecimalField(max_digits=6, decimal_places=1)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(days__gt=0), name="leave_txn_days_positive"),
+            models.CheckConstraint(condition=models.Q(balance_after__gte=0), name="leave_txn_never_negative"),
+        ]
+
+    def __str__(self):
+        return f"{self.kind} {self.days} from balance {self.balance_id}"

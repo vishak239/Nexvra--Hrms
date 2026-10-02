@@ -7,7 +7,7 @@ from django.utils.functional import cached_property
 
 from apps.core.models import TimeStampedModel
 
-from . import rbac
+from . import rbac, usernames
 
 
 class Permission(models.Model):
@@ -46,6 +46,8 @@ class UserManager(BaseUserManager):
         if not email:
             raise ValueError("Email is required.")
         user = self.model(email=self.normalize_email(email).lower(), **extra)
+        if not user.username:
+            user.username = usernames.generate_unique(self.model, user.email)
         if password:
             user.set_password(password)
         else:
@@ -72,6 +74,14 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(max_length=254, unique=True)
+    username = models.CharField(
+        max_length=usernames.USERNAME_MAX_LENGTH,
+        unique=True,
+        null=True,
+        blank=True,
+        validators=[usernames.validate_username],
+        help_text="Public @handle used to find people. Relationships use the internal id, never this.",
+    )
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100, blank=True)
     role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="users")
@@ -96,6 +106,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def save(self, *args, **kwargs):
         self.email = (self.email or "").strip().lower()
+        self.username = usernames.normalize(self.username) or None
         super().save(*args, **kwargs)
 
     @property

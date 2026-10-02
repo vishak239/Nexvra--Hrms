@@ -1,7 +1,36 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
+from . import usernames
 from .models import Permission, Role, User
+
+
+class UsernameField(serializers.CharField):
+    """Optional @handle: normalised to lowercase, validated, and unique (case-insensitive)."""
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("required", False)
+        kwargs.setdefault("allow_blank", True)
+        kwargs.setdefault("max_length", usernames.USERNAME_MAX_LENGTH + 1)
+        super().__init__(**kwargs)
+
+    def to_internal_value(self, data):
+        value = usernames.normalize(super().to_internal_value(data))
+        if not value:
+            return ""
+        try:
+            usernames.validate_username(value)
+        except Exception as exc:  # django ValidationError -> DRF error
+            raise serializers.ValidationError(list(getattr(exc, "messages", [str(exc)]))) from None
+        return value
+
+
+def assert_username_free(value, exclude_user_pk=None):
+    qs = User.objects.filter(username=value)
+    if exclude_user_pk is not None:
+        qs = qs.exclude(pk=exclude_user_pk)
+    if value and qs.exists():
+        raise serializers.ValidationError({"username": ["This username is already taken."]})
 
 
 class RoleSummarySerializer(serializers.ModelSerializer):
@@ -21,6 +50,7 @@ class MeSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "email",
+            "username",
             "first_name",
             "last_name",
             "full_name",
@@ -112,12 +142,14 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, allow_blank=True, trim_whitespace=False)
     full_name = serializers.CharField(read_only=True)
     employee_id = serializers.SerializerMethodField()
+    username = UsernameField()
 
     class Meta:
         model = User
         fields = [
             "id",
             "email",
+            "username",
             "first_name",
             "last_name",
             "full_name",
@@ -145,6 +177,11 @@ class UserSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        if "username" in attrs:
+            if attrs["username"]:
+                assert_username_free(attrs["username"], self.instance.pk if self.instance else None)
+            else:
+                attrs.pop("username")  # blank = keep the current one (or generate on create)
         password = attrs.get("password")
         if password:
             validate_password(password, User(email=attrs.get("email", ""), first_name=attrs.get("first_name", "")))

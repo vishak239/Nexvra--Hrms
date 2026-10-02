@@ -15,6 +15,23 @@ _seq = itertools.count(1)
 
 
 @pytest.fixture(autouse=True)
+def _rbac_seeded(request):
+    """Transactional tests (real concurrency) flush the tables, including the roles and
+    permissions that migrations seed. Re-seed them (idempotently) when missing."""
+    if request.node.get_closest_marker("django_db") is None and "db" not in request.fixturenames:
+        return
+    request.getfixturevalue("db")  # honours a transaction=True marker
+    from apps.accounts.models import Permission
+    from apps.accounts.rbac import sync_rbac
+
+    if not Role.objects.exists():
+        sync_rbac(Permission, Role)
+        from apps.organization.models import Company
+
+        Company.objects.get_or_create(pk=1, defaults={"name": "Nexvra Solutions"})
+
+
+@pytest.fixture(autouse=True)
 def _test_env(settings, tmp_path):
     settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
     settings.STORAGES = {

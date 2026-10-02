@@ -212,7 +212,7 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
     serializer_class = UserSerializer
     permission_classes = [HasPermission]
     required_permissions = {"list": ("users.view",), "retrieve": ("users.view",), "*": ("users.manage",)}
-    search_fields = ["email", "first_name", "last_name"]
+    search_fields = ["email", "username", "first_name", "last_name"]
     filterset_fields = ["is_active", "role__code"]
     ordering_fields = ["email", "first_name", "date_joined"]
 
@@ -238,7 +238,7 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         actor = self.request.user
         data = serializer.validated_data
         services.assert_can_edit_user(actor, user, data.get("role"), data.get("is_active"))
-        fields = ["email", "first_name", "last_name", "role", "is_active"]
+        fields = ["email", "username", "first_name", "last_name", "role", "is_active"]
         before = audit.snapshot(user, fields)
         password = data.pop("password", "")
         user = serializer.save()

@@ -14,8 +14,10 @@ from apps.core.permissions import scope_queryset
 from apps.employees.models import Employee
 from apps.leaves.models import LeaveRequest
 from apps.organization.models import CompanySettings, Holiday
+from apps.tasks.rules import assert_checkout_allowed
 
 from .models import AttendanceRecord
+from .sessions import close_open_break_at_checkout
 
 # Derived (not stored) day statuses used by the daily view and reports.
 ON_LEAVE = "ON_LEAVE"
@@ -93,6 +95,10 @@ def check_out(request):
         raise Conflict("You have not checked in today.")
     if record.check_out is not None:
         raise Conflict("You have already checked out today.")
+    # Task checkout protection (HR / Manager / Employee; Super Admin exempt). See apps/tasks/rules.py.
+    assert_checkout_allowed(request.user)
+    # An open break ends at check-out; break time is excluded from worked time.
+    record = close_open_break_at_checkout(record, now)
     record.check_out = now
     record.status, record.is_late = evaluate(record, cs)
     record.save()

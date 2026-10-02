@@ -16,6 +16,8 @@ api_patterns = [
     path("payroll/", include("apps.payroll.urls")),
     path("documents/", include("apps.documents.urls")),
     path("notifications/", include("apps.notifications.urls")),
+    path("tasks/", include("apps.tasks.urls")),
+    path("messages/", include("apps.messaging.urls")),
     path("audit-logs/", include("apps.audit.urls")),
     path("", include("apps.reports.urls")),
 ]

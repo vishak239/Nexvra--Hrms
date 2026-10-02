@@ -22,7 +22,7 @@ EMPLOYEE_AUDIT_FIELDS = [
     "emergency_contact_phone",
     "emergency_contact_relation",
 ]
-USER_AUDIT_FIELDS = ["email", "first_name", "last_name", "role_id", "is_active"]
+USER_AUDIT_FIELDS = ["email", "username", "first_name", "last_name", "role_id", "is_active"]
 
 
 @transaction.atomic
@@ -32,7 +32,7 @@ def create_employee(request, data):
     role = data.pop("role")
     account_services.assert_can_assign_role(actor, role)
     password = data.pop("initial_password", "") or None
-    user_fields = {f: data.pop(f) for f in ("email", "first_name", "last_name", "is_active") if f in data}
+    user_fields = {f: data.pop(f) for f in ("email", "username", "first_name", "last_name", "is_active") if f in data}
     user = User.objects.create_user(password=password, role=role, must_change_password=bool(password), **user_fields)
     employee = Employee.objects.create(user=user, **data)
     if not password:
@@ -58,7 +58,7 @@ def update_employee(request, employee, data):
         **audit.snapshot(employee, EMPLOYEE_AUDIT_FIELDS),
         **audit.snapshot(user, USER_AUDIT_FIELDS),
     }
-    for field in ("email", "first_name", "last_name", "role", "is_active"):
+    for field in ("email", "username", "first_name", "last_name", "role", "is_active"):
         if field in data:
             setattr(user, field, data.pop(field))
     for field, value in data.items():
