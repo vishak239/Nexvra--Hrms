@@ -1,6 +1,8 @@
 # HRMS V1 Scope
 
-V1 is a **normal HRMS**. It has no AI and no monitoring. Policies are configurable, not invented (see `requirements-analysis.md`).
+V1 is a **normal HRMS**. It has no AI and no surveillance. Policies are configurable, not invented (see `requirements-analysis.md`).
+
+The second release (2026-10-02) added work sessions, tasks and messaging. They are listed under **ADDED IN RELEASE 2** below.
 
 ## MUST HAVE — V1
 
@@ -47,6 +49,7 @@ V1 is a **normal HRMS**. It has no AI and no monitoring. Policies are configurab
 
 **Notifications** (in-app)
 - Leave submitted, leave decided, payslip published, document shared; read/unread
+- Release 2: task assigned / reminder / response / completed / cancelled, message and file received, overtime started / completed, offline sync problems
 
 **Reports & dashboards**
 - Headcount, attendance summary, leave summary, payroll summary (JSON + CSV)
@@ -59,6 +62,18 @@ V1 is a **normal HRMS**. It has no AI and no monitoring. Policies are configurab
 - Pytest suite covering auth, RBAC, isolation, every module
 - Playwright critical flows (once the UI exists)
 - Docs: README, setup, architecture, database, API, testing
+
+## ADDED IN RELEASE 2 (implemented 2026-10-02)
+- Break tracking with a live timer; breaks excluded from working time
+- Separate overtime sessions after check-out (recording only; no approval or pay)
+- HR task management: assign by Employee ID or @username, respond, complete, cancel, remind
+- Task checkout protection (Super Admin exempt), enforced by the API
+- Private 1:1 messaging with secure file sharing
+- Leave approval lock and an exactly-once balance ledger
+- Work-session recovery after the browser is closed, offline mode with an idempotent sync queue, connection status indicator
+- HR / manager monitoring of attendance, breaks, overtime, tasks, leave decisions, balance changes and offline sync (Reports → Activity monitoring)
+
+Details: [work-sessions-tasks-messaging.md](work-sessions-tasks-messaging.md).
 
 ## SHOULD HAVE — V1 if time permits
 - Custom roles beyond the four system roles (the model already supports them; UI pending)
@@ -73,7 +88,8 @@ V1 is a **normal HRMS**. It has no AI and no monitoring. Policies are configurab
 - Multi-level / configurable leave approval chains
 - Leave accrual, carry-forward, encashment
 - Statutory payroll (PF/ESI/TDS/PT), proration, loss-of-pay, arrears, bank file exports, Form 16
-- Shift scheduling, overtime, geo-fenced or device-based attendance
+- Shift scheduling, overtime approval and pay, geo-fenced or device-based attendance
+- Real-time messaging (WebSocket), group conversations
 - Employee self-service document upload + HR verification workflow (the setting exists, off by default)
 - Company directory / org chart
 - Onboarding/offboarding checklists, asset management
@@ -85,7 +101,7 @@ V1 is a **normal HRMS**. It has no AI and no monitoring. Policies are configurab
 
 ## AI / ACTIVITY MONITORING — FUTURE (explicitly excluded from V1)
 - AI chatbot / LLM features
-- Activity monitoring, productivity scoring, screenshots, keystrokes
+- Activity surveillance: productivity scoring, screenshots, keystrokes, app/URL tracking (the release 2 "Activity monitoring" report only lists HR records the employee creates themselves: attendance, breaks, overtime, tasks, leave)
 - Face recognition / computer vision attendance
 - Predictive analytics, AI-driven HR decisions
 

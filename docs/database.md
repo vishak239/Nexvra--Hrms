@@ -15,7 +15,12 @@ Permission ──< Role.permissions >── Role ──< User ──1:1── Em
                                                              ├──< LeaveRequest >── LeaveType
                                                              ├──< SalaryStructure ──< SalaryStructureItem >── PayComponent
                                                              ├──< Payslip ──< PayslipItem          Payslip >── PayrollRun
-                                                             └──< EmployeeDocument
+                                                             ├──< EmployeeDocument
+                                                             ├──< Task ──< TaskResponse        (Task.assigned_by → User)
+                                                             ├──< OvertimeSession
+                                                             └──< BreakSession >── AttendanceRecord
+LeaveBalance ──< LeaveBalanceTransaction ──1:1── LeaveRequest
+User ──< SyncEvent        User >── ConversationParticipant ──< Conversation ──< Message ──< MessageAttachment
 User ──< Notification            AuditLog (actor → User, SET_NULL)            Holiday
 ```
 
@@ -26,7 +31,7 @@ User ──< Notification            AuditLog (actor → User, SET_NULL)        
 |---|---|---|
 | `Permission` | `codename`, `description` | `codename` unique |
 | `Role` | `code`, `name`, `level`, `is_system`, `permissions` (M2M) | `code`, `name` unique |
-| `User` | `email` (login), `first_name`, `last_name`, `role` FK (PROTECT), `is_active`, `is_staff`, `must_change_password`, `password` (PBKDF2 hash), `last_login`, `date_joined` | `email` unique + `UniqueConstraint(Lower(email))`; emails are stored lower-case |
+| `User` | `email` (login), `username` (public @handle, lower-case, generated from the email when not given), `first_name`, `last_name`, `role` FK (PROTECT), `is_active`, `is_staff`, `must_change_password`, `password` (PBKDF2 hash), `last_login`, `date_joined` | `email` unique + `UniqueConstraint(Lower(email))`; emails are stored lower-case; `username` unique |
 
 ### organization
 | Model | Key fields | Constraints |
@@ -47,9 +52,12 @@ Name and email are **not** duplicated on Employee; they live on User.
 ### attendance
 | Model | Key fields | Constraints |
 |---|---|---|
-| `AttendanceRecord` | `employee`, `date`, `check_in`, `check_out`, `status` (PRESENT/HALF_DAY/ABSENT), `is_late`, `source` (SELF/ADMIN), `remarks`, `updated_by` | unique (`employee`, `date`); `CHECK check_out IS NULL OR (check_in NOT NULL AND check_out ≥ check_in)`; index on `date` |
+| `AttendanceRecord` | `employee`, `date`, `check_in`, `check_out`, `status` (PRESENT/HALF_DAY/ABSENT), `is_late`, `source` (SELF/ADMIN), `remarks`, `total_break_seconds` (server-maintained), `updated_by` | unique (`employee`, `date`); `CHECK check_out IS NULL OR (check_in NOT NULL AND check_out ≥ check_in)`; index on `date` |
+| `BreakSession` | `attendance`, `employee`, `started_at`, `ended_at`, `duration_seconds`, `status` (ACTIVE/COMPLETED), `source` (ONLINE/OFFLINE) | **one ACTIVE break per employee** (partial unique index); `CHECK ended_at ≥ started_at`; `CHECK` status matches end/duration; index (`employee`, `started_at`) |
+| `OvertimeSession` | `employee`, `attendance` (SET_NULL), `date`, `started_at`, `ended_at`, `duration_seconds`, `status`, `trigger` (AFTER_CHECKOUT), `source`, timestamps | **one ACTIVE overtime per employee** (partial unique index); same checks; indexes on `date`, (`employee`, `started_at`) |
+| `SyncEvent` | `user`, `employee`, `client_event_id` (UUID), `event_type`, `channel` (ONLINE/OFFLINE), `client_timestamp`, `effective_at`, `received_at`, `status` (APPLIED/CONFLICT/REJECTED), `error`, `entity_type/id` | **unique (`user`, `client_event_id`)**: the idempotency key; indexes on `status`, (`channel`, `received_at`) |
 
-Absence, leave, holiday and weekly-off days are **derived** (not stored), so no nightly job is needed.
+Absence, leave, holiday and weekly-off days are **derived** (not stored), so no nightly job is needed. Overtime is never added to `AttendanceRecord` worked time.
 
 ### leaves
 | Model | Key fields | Constraints |
@@ -58,7 +66,9 @@ Absence, leave, holiday and weekly-off days are **derived** (not stored), so no 
 | `LeaveBalance` | `employee`, `leave_type` (PROTECT), `year`, `allocated` | unique (`employee`, `leave_type`, `year`); allocated ≥ 0 |
 | `LeaveRequest` | `employee`, `leave_type` (PROTECT), `start_date`, `end_date`, `is_half_day`, `half_day_period`, `days` (snapshot), `leave_year`, `reason`, `status`, `decided_by`, `decided_at`, `decision_note`, `cancelled_at` | `CHECK end ≥ start`; `CHECK NOT half_day OR start = end`; `CHECK days > 0`; indexes on `status` and (`employee`, `start_date`, `end_date`) |
 
-`used` and `pending` balances are computed from requests, not stored.
+| `LeaveBalanceTransaction` | `balance` (PROTECT), `leave_request` **1:1** (PROTECT), `kind` (DEDUCTION), `days`, `balance_before`, `balance_after`, `created_by`, `created_at` | one row per request (database guarantee against double deduction); `CHECK days > 0`; `CHECK balance_after ≥ 0` |
+
+`used` = sum of the balance's ledger deductions (written once, on approval). `pending` is computed from pending requests and never reduces the balance. Migration `leaves.0003` backfilled one deduction per previously approved request.
 
 ### payroll
 | Model | Key fields | Constraints |
@@ -76,6 +86,20 @@ Payslip totals and item names are deliberate snapshots, so a finalized payslip n
 | Model | Key fields | Constraints |
 |---|---|---|
 | `EmployeeDocument` | `employee`, `category`, `title`, `file` (random name in private storage), `original_filename`, `content_type`, `size`, `visible_to_employee`, `uploaded_by` | index (`employee`, `category`) |
+
+### tasks
+| Model | Key fields | Constraints |
+|---|---|---|
+| `Task` | `title`, `description`, `assigned_by` (User, SET_NULL), `assigned_to` (Employee, PROTECT, internal id), `priority`, `due_date`, `requires_response`, `status` (PENDING/IN_PROGRESS/COMPLETED/CANCELLED), `acknowledged_at`, `response`, `responded_at`, `completed_at`, `cancelled_at`, `cancelled_by`, `cancel_reason`, timestamps | `CHECK` completed ⇒ `completed_at`, cancelled ⇒ `cancelled_at`; indexes (`assigned_to`, `status`), (`status`, `due_date`). OVERDUE is derived, not stored. |
+| `TaskResponse` | `task`, `author`, `message`, `created_at` | ordered by time |
+
+### messaging
+| Model | Key fields | Constraints |
+|---|---|---|
+| `Conversation` | `pair_key` ("low:high" user ids), `created_by`, `last_message_at`, timestamps | `pair_key` unique (one 1:1 conversation per pair) |
+| `ConversationParticipant` | `conversation`, `user`, `last_read_message_id` (read watermark) | unique (`conversation`, `user`); index (`user`, `conversation`) |
+| `Message` | `conversation`, `sender` (SET_NULL), `body`, `created_at` | index (`conversation`, `id`) |
+| `MessageAttachment` | `message`, `uploaded_by`, `file` (random name, private storage `message_files/`), `original_filename`, `content_type`, `size`, `created_at` | — |
 
 ### notifications / audit
 | Model | Key fields | Constraints |

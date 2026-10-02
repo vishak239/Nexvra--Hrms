@@ -86,14 +86,32 @@ E2E_BASE_URL=http://127.0.0.1:8001 E2E_UI_URL=http://127.0.0.1:3002 E2E_PASSWORD
 
 The flow tests create uniquely named `e2e-*` / `ui-*@example.test` employees and payroll runs in unused far-future months, so they can be re-run safely. They do leave that test data in the dev database. To get a clean demo database back, drop and recreate it, then run `migrate` and `seed_demo`.
 
-## Latest results (2026-10-01)
+### What the new-feature tests cover
+
+| Layer | Files | Covers |
+|---|---|---|
+| Backend | `apps/attendance/tests/test_work_sessions.py` | breaks (flow, multiple, duplicates, overlap, invalid states, close at checkout, scope), overtime (flow, duplicates, overlap, separation from attendance, visibility per role, all roles), task checkout protection (blocking, response unblocks, closed tasks don't block, HR/Manager blocked, Super Admin exempt, API bypass), offline sync (device times, ordering, idempotent retry, conflicts, rejections, per-user ids, recovery state) |
+| | `apps/tasks/tests/test_tasks.py` | assignment by Employee ID / username, rename-safe relationship, invalid / exited / self assignee, notifications, visibility per role, start/respond/complete, ownership can't change, edit/remind/cancel, derived OVERDUE |
+| | `apps/messaging/tests/test_messaging.py` | directory search, 1:1 conversations, unread + read, collapsed notifications, pagination, participant-only access (incl. HR/Super Admin), valid & invalid attachments (magic bytes, fake OOXML, binary CSV), random storage names, download by guessing ids |
+| | `apps/leaves/tests/test_leave_lock_and_balance.py` | pending/rejected/cancelled don't reduce the balance, approval deducts once with audit, duplicate approval, **real concurrent approvals (threads)**, approved can't be cancelled, never negative, allocation floor, ledger scope |
+| | `apps/accounts/tests/test_usernames.py`, `apps/core/tests/test_files.py`, `apps/reports/tests/test_dashboard_sessions.py` | usernames, file validation, dashboard + notification links |
+| Frontend | `lib/worksession.test.ts`, `lib/offline.test.ts` | break/overtime timers, actual working time, offline overlay, queue persistence, idempotent enqueue, sync, retry back-off |
+| | `components/attendance/WorkSessionCard.test.tsx` | break timer, overtime timer, checkout popup, server-side block, offline queue + reconnect sync, offline snapshot, session recovery |
+| | `components/tasks/AssignTaskModal.test.tsx`, `components/connection/ConnectionIndicator.test.tsx`, `components/leave/LeaveLock.test.tsx`, `app/(app)/messages/messages.test.tsx`, `app/(app)/notifications/notifications.test.tsx` | lookup by ID / username, offline indicator + sync status, leave lock + balance display, messaging + file upload, task notification |
+| E2E | `api/new-features.spec.ts` | API-level rules for every role (no UI) |
+| | `ui/work-session.spec.ts`, `ui/overtime-leave.spec.ts`, `ui/messaging-offline.spec.ts`, `ui/roles-new-features.spec.ts`, `ui/page-health.spec.ts` | the full browser flows, role visibility, every page × 4 roles without console/5xx errors, phone-width layout |
+
+New E2E flows create their own uniquely named employees through the HR API, so they can run any number of times per day.
+
+## Latest results (2026-10-02)
 
 | Suite | Result |
 |---|---|
-| Backend pytest (PostgreSQL 16) | 147 passed |
-| Frontend Vitest (includes API proxy tests) | 16 passed; `tsc` clean; `next build` OK |
-| Playwright e2e (isolated e2e DB, :8001/:3002) | 25 passed (14 api + 11 ui) |
+| Backend pytest (PostgreSQL 16) | 219 passed |
+| Frontend Vitest (unit + component, jsdom) | 58 passed; `tsc` clean; `next build` OK (25 routes) |
+| Playwright e2e (isolated e2e DB, :8001/:3002) | 45 passed (18 api + 27 ui) |
+| `makemigrations --check` | no missing migrations |
 | Backend-down check | login page shows "Can't reach the Nexvra HRMS server"; one log line, no stack traces |
-| Browser tour: every screen for all 4 roles | no console errors, no 5xx responses |
+| Browser tour: every screen for all 4 roles (automated: `ui/page-health.spec.ts`) | no console errors, no 5xx responses; no horizontal scroll at 390 px |
 | `ruff check` | clean |
 | `manage.py check --deploy` (production settings) | no issues |

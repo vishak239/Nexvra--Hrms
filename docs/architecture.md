@@ -5,7 +5,7 @@
 ```
 Browser ──► Next.js (frontend, :3000) ──rewrite /api/* ──► Django + DRF (backend, :8000) ──► PostgreSQL
                 │                                              │
-                └─ /brand/* (copied from /brand)               └─ private media dir (documents, photos), never served publicly
+                └─ /brand/* (copied from /brand)               └─ private media dir (documents, photos, message files), never served publicly
 ```
 
 - **One origin for the browser.** Next.js proxies `/api/*` to Django, so the session cookie is first-party and CORS isn't needed in normal use. CORS is still configurable through env for split-domain deployments.
@@ -22,12 +22,16 @@ Structure:
 src/app/(auth)/          login, forgot-password, reset-password (split layout with the logo panel)
 src/app/(app)/           authenticated screens inside AppShell (sidebar + top bar)
   dashboard, profile, change-password, employees[/new|/[id]|/[id]/edit], attendance, leave,
-  holidays, payslips[/[id]], documents, notifications, payroll[/runs/[id]], reports, settings,
-  admin/users, admin/audit
+  holidays, tasks, messages, payslips[/[id]], documents, notifications, payroll[/runs/[id]],
+  reports, settings, admin/users, admin/audit
 src/components/ui/       Button, Field controls, Card/Badge/StatCard, Table/Pagination, Modal (portal),
                          ConfirmDialog, Tabs, Toasts, Loading/Empty/Error/NoAccess states
 src/components/layout/   AppShell (auth guard, forced password change, permission-driven navigation)
-src/lib/                 api client, auth context, useResource/useAction hooks, formatting, nav config
+src/components/attendance/  WorkSessionCard (check-in/out, breaks, overtime, checkout task popup, recovery)
+src/components/connection/  ConnectionIndicator (ONLINE / OFFLINE / SYNCING / SYNCED / SYNC ERROR)
+src/components/tasks/, leave/  AssignTaskModal (lookup by Employee ID or @username), leave lock + balance
+src/lib/                 api client, auth context, useResource/useAction hooks, formatting, nav config,
+                         worksession.ts (timer maths), offline.ts (per-user sync queue), connection.tsx
 ```
 
 - Every data view has loading (skeleton), empty and error states. A 403 from the API renders a "no access" state.
@@ -35,6 +39,7 @@ src/lib/                 api client, auth context, useResource/useAction hooks, 
 - Forms show the backend's field-level validation errors next to each field.
 - Modals render through a React portal, close on Escape, and restore focus.
 - The payslip page has a print stylesheet (Print / Save as PDF).
+- Work-session timers are derived from server timestamps plus the measured server-clock offset, never from counting ticks, so they stay correct in background tabs. Offline break/overtime actions go into a per-user localStorage queue with a client UUID and are replayed to `POST /api/attendance/sync/` when the connection returns. Details: [work-sessions-tasks-messaging.md](work-sessions-tasks-messaging.md).
 
 - Next.js 15 (App Router) + TypeScript 5 + Tailwind CSS **3.4**. Stitch exports Tailwind HTML with a v3-style `tailwind.config`, so v3 lets screens and tokens port almost 1:1.
 - Route groups: `(auth)` for login, forgot and reset; `(app)` for the authenticated shell (sidebar + top nav).
@@ -66,10 +71,12 @@ apps/<app>/
 | `accounts` | Custom `User` (email login), `Role`, `Permission`, auth endpoints, users & roles APIs, role seed migration |
 | `organization` | `Company`, `CompanySettings`, `Department`, `Designation`, `Holiday` |
 | `employees` | `Employee` + role-aware serializers, photo endpoint |
-| `attendance` | `AttendanceRecord`, check-in/out, status computation |
-| `leaves` | `LeaveType`, `LeaveBalance`, `LeaveRequest`, day counting, approvals |
+| `attendance` | `AttendanceRecord`, check-in/out, status computation; `BreakSession`, `OvertimeSession`, `SyncEvent` and the offline sync service (`sessions.py`) |
+| `leaves` | `LeaveType`, `LeaveBalance`, `LeaveRequest`, day counting, approvals, approval lock, `LeaveBalanceTransaction` ledger (deduct once on approval) |
 | `payroll` | `PayComponent`, `SalaryStructure(+Item)`, `PayrollRun`, `Payslip(+Item)` |
 | `documents` | `EmployeeDocument`, private storage, streaming download |
+| `tasks` | `Task`, `TaskResponse`, assignment by Employee ID or @username, checkout-blocking rule (`rules.py`) |
+| `messaging` | `Conversation`, `Message`, `MessageAttachment`, people directory, participant-only access, private attachment storage |
 | `notifications` | `Notification` + `notify()` service |
 | `audit` | `AuditLog` + `audit.record()` service |
 | `reports` | Report queries, CSV export, `/api/dashboard/` |
@@ -113,14 +120,16 @@ Principles:
 | Payroll | `payroll.view_own`, `payroll.view_all`, `payroll.manage` |
 | Documents | `documents.view_own`, `documents.view_all`, `documents.manage` |
 | Reports | `reports.view_team`, `reports.view_all` |
+| Tasks | `tasks.view_team`, `tasks.view_all`, `tasks.manage` |
+| Messages | `messages.use` |
 
 **Default role matrix** (editable by SUPER_ADMIN, except that SUPER_ADMIN always keeps everything):
 
 | Role (level) | Permissions |
 |---|---|
-| EMPLOYEE (10) | `attendance.self`, `leave.apply`, `payroll.view_own`, `documents.view_own` |
-| MANAGER (20) | EMPLOYEE + `employees.view_team`, `attendance.view_team`, `leave.view_team`, `leave.approve_team`, `reports.view_team` |
-| HR_ADMIN (50) | MANAGER + `employees.view_all`, `employees.manage`, `attendance.view_all`, `attendance.manage`, `leave.view_all`, `leave.approve_all`, `leave.manage_types`, `leave.manage_balances`, `holidays.manage`, `departments.manage`, `designations.manage`, `payroll.view_all`, `payroll.manage`, `documents.view_all`, `documents.manage`, `reports.view_all`, `settings.manage` |
+| EMPLOYEE (10) | `attendance.self`, `leave.apply`, `payroll.view_own`, `documents.view_own`, `messages.use` |
+| MANAGER (20) | EMPLOYEE + `employees.view_team`, `attendance.view_team`, `leave.view_team`, `leave.approve_team`, `reports.view_team`, `tasks.view_team` |
+| HR_ADMIN (50) | MANAGER + `employees.view_all`, `employees.manage`, `attendance.view_all`, `attendance.manage`, `leave.view_all`, `leave.approve_all`, `leave.manage_types`, `leave.manage_balances`, `holidays.manage`, `departments.manage`, `designations.manage`, `payroll.view_all`, `payroll.manage`, `documents.view_all`, `documents.manage`, `reports.view_all`, `settings.manage`, `tasks.view_all`, `tasks.manage` |
 | SUPER_ADMIN (100) | Everything, including `company.manage`, `users.*`, `roles.*`, `audit.view` |
 
 **Enforcement layers:**
@@ -128,9 +137,11 @@ Principles:
 2. **Queryset scoping:** list/detail querysets are filtered by `scope(user, area)` → `all` | `team` | `own`. An object outside scope returns **404**, not 403, so other records' existence isn't leaked.
 3. **Field-level:** the serializer is chosen by the viewer's relationship to the record (self / manager / HR).
 4. **Escalation guards:** a user can't change their own role, and can assign or edit only roles and users with a *lower* `level` than their own (SUPER_ADMIN excepted). Only SUPER_ADMIN can edit role permissions.
-5. **Business guards:** nobody approves their own leave; finalized payroll is immutable; employees see only finalized payslips and documents marked visible.
+5. **Business guards:** nobody approves their own leave; approved leave can't be cancelled by the applicant; finalized payroll is immutable; employees see only finalized payslips and documents marked visible; check-out is refused (409 `checkout_blocked_by_tasks`) while a blocking task is unanswered, except for Super Admin.
 6. **Conflict-of-interest guards:** apart from Super Admin, nobody can correct their own attendance, change their own leave balance, or set their own salary/payslip adjustments.
 7. **Self-service:** every employee can edit only their own contact fields (phone, address, emergency contact) through `/api/employees/me/`.
+8. **Participant-only messaging:** conversation, message and attachment querysets are filtered to the requesting user's own conversations. No role (including Super Admin) can read other people's messages; any other id returns 404.
+9. **Server-resolved identities:** the task assignee, task owner, conversation participants, durations and leave balances are always resolved or computed on the server. Values sent by the browser for these are ignored.
 
 "Team" means **direct reports** (`Employee.manager = me`) in V1.
 
@@ -150,13 +161,15 @@ Principles:
 - **No public media URL** is configured. Files are returned only through `GET /api/documents/{id}/download/` or `/api/employees/{id}/photo/`, after the same permission + scope checks. Responses send `Content-Disposition: attachment` (inline for photos), `X-Content-Type-Options: nosniff`, and `Cache-Control: private, no-store`.
 - Validation: extension allowlist (pdf, png, jpg, jpeg, docx), magic-byte check, size limit (`max_upload_size_mb`).
 - Production can switch to S3-compatible private storage through Django storages without code changes in views.
+- **Message attachments** reuse the same validators and storage principles: allowlist (pdf, doc, docx, xls, xlsx, csv, txt, png, jpg, jpeg), magic-byte check, real Office packages for docx/xlsx, text-only csv/txt, the same size limit, random names under `message_files/`, and download only through `GET /api/messages/attachments/{id}/download/` after the participant check.
 
 ## 8. Audit logging
 
 - `audit.record(request, action, obj=None, changes=None, metadata=None)` is called from services.
 - Records: actor (FK, plus an email snapshot so history survives user deletion), action, entity type, entity id, changes (`{field: [old, new]}` with sensitive fields redacted), metadata, IP (`REMOTE_ADDR`, or `X-Forwarded-For` only when `TRUST_X_FORWARDED_FOR` is set), user agent, timestamp.
-- Audited actions: login success/failure, logout, password change/reset, user/role changes, employee create/update/deactivate, attendance corrections, leave submit/approve/reject/cancel, leave type/balance changes, salary changes, payroll generate/finalize, document upload/download/delete, settings/company changes.
+- Audited actions: login success/failure, logout, password change/reset, user/role changes, employee create/update/deactivate, attendance corrections, leave submit/approve/reject/cancel, leave type/balance changes, leave balance deductions (`LEAVE_BALANCE_DEDUCTED`), task create/update/start/respond/complete/cancel/remind, break start/end, overtime start/complete, offline sync conflicts and rejections, salary changes, payroll generate/finalize, document upload/download/delete, settings/company changes.
 - Append-only: there's no update/delete endpoint, and the Django admin is read-only.
+- Private message contents and file contents are never written to the audit log.
 
 ## 9. Error handling
 
@@ -177,8 +190,8 @@ Codes: `validation_error` (400), `not_authenticated` (401/403 when no session), 
 ## 11. Testing
 
 - **Backend:** pytest + pytest-django against PostgreSQL (the same engine as production). Per-app `tests/` folders. Fixtures create users per role. The **isolation suite** explicitly covers: employee accessing another employee, manager outside their team, HR attempting system administration, normal users hitting admin endpoints.
-- **Frontend:** component/unit tests (Vitest + Testing Library) once the UI exists.
-- **E2E:** Playwright in `tests/e2e/`. Covers login, employee create/view, attendance, leave request → manager approval, payslip access, unauthorised access.
+- **Frontend:** unit and component tests (Vitest + Testing Library, jsdom) for the API client, proxy, timers, offline queue, work-session card, task assignment, connection indicator, leave lock, messaging and notifications.
+- **E2E:** Playwright in `tests/e2e/`. Covers login, employee create/view, attendance, breaks, overtime, task checkout protection, leave approval lock and balance, messaging with files, offline sync, role visibility, and a page-health sweep of every page for all four roles.
 - Details: `docs/testing.md`.
 
 ## 12. Environment configuration
@@ -204,7 +217,11 @@ All configuration comes from environment variables (`backend/.env`, `frontend/.e
 | Brute force | Login throttling + audit of failures |
 | Account enumeration | Generic login error; password reset always returns 200 |
 | SQL injection | ORM only; no raw SQL |
-| Malicious uploads | Allowlist + magic bytes + size limit; random names; never executed or served inline (except validated images) |
+| Malicious uploads | Allowlist + magic bytes + size limit; random names; never executed or served inline (except validated images); same rules for message attachments |
+| Reading other people's messages or files | Participant-only querysets (404); no admin read path; ids are not guessable into access |
+| Double leave deduction (double click, retry, concurrency) | Row locks + one-to-one ledger row per request + non-negative check constraint, all in one transaction |
+| Replayed or duplicated offline events | Unique `(user, client_event_id)`; server re-validates time bounds and state |
+| Bypassing the checkout task rule | Enforced in the check-out service, not the UI |
 | Private file exposure | No public media route; authorised streaming only |
 | Secrets in git | `.env` gitignored; `.env.example` holds placeholders only; startup check for the secret key |
 | Login throttling bypass across workers | `CACHE_URL` shared cache (Redis) in multi-worker deployments |

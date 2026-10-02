@@ -53,7 +53,7 @@ Optional fictional demo data (development only; uses `@example.test` accounts):
 .venv/Scripts/python manage.py seed_demo --password "<demo-password>"
 ```
 
-It creates superadmin@, hr@, manager@, employee@, employee2@ and outsider@example.test, plus demo departments, leave types and salary components, all labelled "Demo".
+It creates superadmin@, hr@, manager@, employee@, employee2@ and outsider@example.test (usernames `@demo.superadmin`, `@demo.hr`, `@demo.manager`, `@demo.employee`, `@demo.employee2`, `@demo.outsider`), plus demo departments, leave types and salary components, all labelled "Demo".
 
 In development, password-reset emails are printed to the backend console.
 
@@ -81,11 +81,13 @@ Nothing company-specific is pre-filled. A Super Admin or HR Admin should:
 3. **Settings → Departments / Designations**, and the **Holidays** calendar.
 4. **Leave → Leave types**, then **Leave → Balances → Allocate**.
 5. **Payroll → Pay components**, then **Payroll → Salary structures**.
-6. **Employees → Add employee** (each gets a sign-in account).
+6. **Employees → Add employee** (each gets a sign-in account and a `@username`; leave it empty to generate one from the email).
+7. Optional: adjust the task checkout rule or offline limits in code (see [work-sessions-tasks-messaging.md §9](work-sessions-tasks-messaging.md#9-configuration-in-code)).
 
 ## Everyday start / stop (Windows)
 
-- **Start:** double-click `start-hrms.bat` (backend → waits until healthy → frontend → opens the browser).
+- **Start:** double-click `start-hrms.bat` (applies database migrations → backend → waits until healthy → frontend → opens the browser).
+- **After updating the code:** run `cd frontend && npm run build` once (the start script only builds when no build exists), then start again.
 - **Stop:** double-click `stop-hrms.bat`.
 - Starting by hand? Start the **backend first**, then the frontend. If the frontend runs without the backend, the login page shows "Can't reach the Nexvra HRMS server" and the frontend window prints one `[nexvra-hrms] Backend not reachable` line. Start the backend and refresh.
 - The app is at http://localhost:3000. http://127.0.0.1:8000 is the API only (its root redirects to the app; `/api/health/` reports status).
@@ -98,3 +100,4 @@ Nothing company-specific is pre-filled. A Super Admin or HR Admin should:
 - Use a shared cache (`CACHE_URL=redis://...`, which needs the `redis` package) when running several worker processes, so login throttling is global.
 - Configure SMTP (`EMAIL_*`) for password-reset and new-account emails.
 - Run `python manage.py check --deploy` and `python manage.py migrate` on each release.
+- Message attachments are stored under `PRIVATE_MEDIA_ROOT/message_files/`; include them in backups and never serve that directory publicly.

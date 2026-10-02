@@ -23,7 +23,7 @@ Base path: `/api/`. JSON in and out (multipart for uploads). All URLs end with `
 | GET | `csrf/` | public | Sets the `csrftoken` cookie |
 | POST | `login/` | public, CSRF, throttled | `{email, password}` → current user (same as `me`). Generic error on failure. |
 | POST | `logout/` | — | 204 |
-| GET | `me/` | — | `{id, email, full_name, role{code,name,level}, permissions[], must_change_password, employee{id, employee_code, ...}|null}` |
+| GET | `me/` | — | `{id, email, username, full_name, role{code,name,level}, permissions[], must_change_password, employee{id, employee_code, ...}|null}` |
 | GET | `session/` | public | Always 200: `{authenticated, user}` where `user` has the same shape as `me` (or null). Used by the SPA on load. |
 | POST | `change-password/` | — | `{current_password, new_password}` |
 | POST | `password-reset/` | public, throttled | `{email}`. Always 200 (no enumeration). Emails a link to `FRONTEND_URL/reset-password?uid=&token=` |
@@ -34,7 +34,7 @@ Base path: `/api/`. JSON in and out (multipart for uploads). All URLs end with `
 | Method | Path | Permission | Notes |
 |---|---|---|---|
 | GET | `users/` | `users.view` | Filters: `is_active`, `role__code`; search email/name |
-| POST | `users/` | `users.manage` | `{email, first_name, last_name, role, is_active, password?}`. No password → set-password email. Can only assign roles ranked below your own (Super Admin excepted). |
+| POST | `users/` | `users.manage` | `{email, username?, first_name, last_name, role, is_active, password?}`. `username` is generated from the email when omitted. No password → set-password email. Can only assign roles ranked below your own (Super Admin excepted). |
 | GET/PATCH | `users/{id}/` | `users.view` / `users.manage` | Can't change your own role or active status. Can't edit accounts at or above your level. Users are never deleted (405). |
 | GET | `roles/` | `roles.view` (or `users.manage` / `employees.manage` for the list) | Includes `permissions[]` and `user_count` |
 | POST/PATCH/DELETE | `roles/{id}/` | `roles.manage` | System roles can't be deleted and their code/level can't change. Super Admin's permissions are fixed (always all). Changes are audited. |
@@ -64,7 +64,7 @@ Base path: `/api/`. JSON in and out (multipart for uploads). All URLs end with `
 |---|---|---|---|
 | GET | `` | — (scoped: own / team / all) | Filters: `department`, `designation`, `employment_status`, `employment_type`, `manager`; search code/name/email |
 | GET | `{id}/` | — (scoped) | Confidential fields (`phone`, `address`, emergency contact, `exit_date`, `role`, `is_active`) only for yourself and `employees.view_all` |
-| POST | `` | `employees.manage` | Creates the login account too: `{email, first_name, last_name, role?=EMPLOYEE, initial_password?, employee_code, joining_date, employment_type, department?, designation?, manager?, employment_status?, exit_date?, phone?, address?, emergency_contact_*}` |
+| POST | `` | `employees.manage` | Creates the login account too: `{email, username?, first_name, last_name, role?=EMPLOYEE, initial_password?, employee_code, joining_date, employment_type, department?, designation?, manager?, employment_status?, exit_date?, phone?, address?, emergency_contact_*}` |
 | PATCH/PUT | `{id}/` | `employees.manage` | Same fields (no `initial_password`); `is_active` allowed. Escalation guards apply. `EXITED` requires `exit_date`. |
 | DELETE | `{id}/` | — | 405: employees are never deleted (set `EXITED`) |
 | GET/PATCH | `me/` | — | Self-service PATCH limited to `phone`, `address`, `emergency_contact_name/phone/relation` |
@@ -75,12 +75,18 @@ Base path: `/api/`. JSON in and out (multipart for uploads). All URLs end with `
 | Method | Path | Permission | Notes |
 |---|---|---|---|
 | GET | `` | — (scoped own/team/all) | Filters: `employee`, `status`, `is_late`, `date`, `date_from`, `date_to` |
-| GET | `today/` | `attendance.self` | `{date, self_attendance_enabled, record}` |
-| POST | `check-in/`, `check-out/` | `attendance.self` | 409 on a duplicate check-in / invalid check-out. 403 if self attendance is disabled. |
+| GET | `today/` | `attendance.self` | Work session: `{date, server_time, self_attendance_enabled, record, breaks[], active_break, overtime[], active_overtime, blocking_tasks, checkout_exempt}` |
+| POST | `check-in/`, `check-out/` | `attendance.self` | 409 on a duplicate check-in / invalid check-out. 403 if self attendance is disabled. Check-out returns **409 `checkout_blocked_by_tasks`** while a blocking HR task is unanswered (Super Admin exempt); an open break ends at check-out. |
+| GET | `breaks/` | — (scoped own/team/all) | Break history. Filters: `employee`, `status`, `source`, `date_from`, `date_to` |
+| POST | `breaks/start/`, `breaks/end/` | `attendance.self` | Body `{client_event_id?: uuid}` (makes retries idempotent) → `{duplicate, state}` (state = `today/` payload). 409: not checked in / already checked out / already on a break / no break to end / overlap. |
+| GET | `overtime/`, `overtime/{id}/` | — (scoped) | Filters: `employee`, `status`, `source`, `date_from`, `date_to` |
+| POST | `overtime/start/`, `overtime/end/` | `attendance.self` | Same body/response as breaks. 409: before normal check-out / already running / nothing running / overlap. Notifies the manager. |
+| POST | `sync/` | `attendance.self` | Offline queue: `{events: [{id: uuid, type: BREAK_START|BREAK_END|OVERTIME_START|OVERTIME_END, occurred_at}]}` (≤ 100). Applied in time order, idempotent per id → `{results: [{id, type, status: APPLIED|CONFLICT|REJECTED, duplicate, error}], state}` |
+| GET | `sync-events/` | — (scoped) | Synchronisation log. Filters: `employee`, `status`, `channel` (`ONLINE`/`OFFLINE`), `event_type`, `date_from`, `date_to` |
 | GET | `daily/?date=&department=` | `attendance.view_team` / `view_all` | Per-employee status: `PRESENT`, `HALF_DAY`, `ABSENT`, `ON_LEAVE`, `HOLIDAY`, `WEEKLY_OFF`, `NOT_MARKED` |
 | POST/PATCH/DELETE | `` / `{id}/` | `attendance.manage` | HR corrections: `{employee, date, check_in?, check_out?, status?, remarks?}`. Status is computed if omitted. Can't correct your own records. Audited. |
 
-Records have `status` ∈ `PRESENT | HALF_DAY | ABSENT`, `is_late`, `worked_minutes` and `source` (`SELF | ADMIN`). Late and half-day are computed only from configured settings.
+Records have `status` ∈ `PRESENT | HALF_DAY | ABSENT`, `is_late`, `worked_minutes` (actual working time = session − breaks), `session_minutes` (gross), `break_minutes`, `total_break_seconds` and `source` (`SELF | ADMIN`). Late and half-day are computed only from configured settings. Details: [work-sessions-tasks-messaging.md](work-sessions-tasks-messaging.md).
 
 ## Leave — `/api/leaves/`
 
@@ -88,15 +94,16 @@ Records have `status` ∈ `PRESENT | HALF_DAY | ABSENT`, `is_late`, `worked_minu
 |---|---|---|---|
 | GET | `types/` | — | Not paginated |
 | POST/PATCH/DELETE | `types/{id}/` | `leave.manage_types` | `{name, code, is_paid, annual_allocation?, allow_half_day, is_active}`. `annual_allocation` empty = balance not tracked. |
-| GET | `balances/` | — (scoped) | Filters: `employee`, `leave_type`, `year`. Each row includes computed `used`, `pending`, `available`. |
-| GET | `balances/mine/?year=` | — | Own summary for every active type |
+| GET | `balances/` | — (scoped) | Filters: `employee`, `leave_type`, `year`. Each row includes `used` (deducted on approval), `pending` (information only) and `available` (= allocated − used). |
+| GET | `balances/mine/?year=` | — | Own summary for every active type, plus `requestable` (= available − pending) |
+| GET | `balance-transactions/` | — (scoped by leave) | Audited ledger of deductions: `{employee, leave_type_name, year, kind, days, balance_before, balance_after, leave_request, created_by_name, created_at}`. Filters: `employee`, `leave_type`, `year`, `date_from`, `date_to` |
 | POST/PATCH/DELETE | `balances/{id}/` | `leave.manage_balances` | Can't change your own balance |
 | POST | `balances/allocate/` | `leave.manage_balances` | `{leave_type, year, allocated?, employees?[], overwrite?}` → `{created, updated, skipped}` |
-| GET | `requests/` | — (scoped) | Filters: `status`, `employee`, `leave_type`, `leave_year`, `date_from`, `date_to`. Rows include `can_decide`. |
+| GET | `requests/` | — (scoped) | Filters: `status`, `employee`, `leave_type`, `leave_year`, `date_from`, `date_to`. Rows include `can_decide`, `can_cancel`, `is_locked` and `balance_deducted`. |
 | POST | `requests/` | `leave.apply` | Always for yourself: `{leave_type, start_date, end_date, is_half_day?, half_day_period?, reason?}`. Validates overlap, balance, working days. Notifies your manager (or HR when you have no manager). |
 | GET | `requests/pending-approvals/` | `leave.approve_team` / `approve_all` | Requests you can decide |
-| POST | `requests/{id}/approve/`, `reject/` | `leave.approve_team` (direct reports) / `leave.approve_all` | `{note?}`. Never your own request. Only `PENDING` (else 409). |
-| POST | `requests/{id}/cancel/` | `leave.apply` (owner only) | Pending, or approved before the start date |
+| POST | `requests/{id}/approve/`, `reject/` | `leave.approve_team` (direct reports) / `leave.approve_all` | `{note?}`. Never your own request. Only `PENDING` (else 409). Approval deducts the balance exactly once (row-locked; one ledger row per request); 400 if the balance is insufficient at approval time. |
+| POST | `requests/{id}/cancel/` | `leave.apply` (owner only) | **Pending only.** Approved leave is locked: 409 "This leave has already been approved and cannot be cancelled." |
 
 ## Payroll — `/api/payroll/`
 
@@ -128,17 +135,43 @@ No statutory deductions, proration or loss-of-pay are applied (not specified).
 
 Categories: `OFFER_LETTER, APPOINTMENT_LETTER, CERTIFICATE, ID_DOCUMENT, PAYSLIP, EXPERIENCE_LETTER, RELIEVING_LETTER, OTHER`.
 
+## Tasks — `/api/tasks/`
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `` | — (scoped: own / team via `tasks.view_team` / all via `tasks.view_all`) | Filters: `status` (`PENDING`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, plus `OPEN` and derived `OVERDUE`), `priority`, `assigned_to`, `requires_response`, `mine`, `due_from`/`due_to`, `created_from`/`created_to`; search title / Employee ID / username / name |
+| GET | `{id}/` | — (scoped) | Includes `responses[]` |
+| GET | `lookup/?employee_code=` **or** `?username=` | `tasks.manage` | Confirms who an identifier refers to (exactly one identifier) |
+| POST | `` | `tasks.manage` | `{employee_code` **or** `username, title, description?, priority?, due_date?, requires_response?=true}`. Stored against the internal employee id. Not to yourself. Notifies the assignee. |
+| PATCH | `{id}/` | `tasks.manage` | `title, description, priority, due_date, requires_response` only (open tasks). The assignee can't be changed. |
+| POST | `{id}/cancel/` `{reason?}`, `{id}/remind/` | `tasks.manage` | Open tasks only; not tasks assigned to yourself (Super Admin excepted) |
+| POST | `{id}/start/`, `{id}/respond/` `{message}`, `{id}/complete/` `{message?}` | — (assignee only, else 403) | Completing a `requires_response` task needs a response first |
+| GET | `blocking/` | — | Your tasks that currently block checkout: `{exempt, count, results}` |
+
+## Messages — `/api/messages/` (`messages.use`, participants only)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `people/?q=` | Directory search by @username, Employee ID or name (minimal card, max 20) |
+| GET / POST | `conversations/` | List (paginated by `page`, 30 per page) with `other`, `unread_count`, `last_message` · POST `{user_id}` gets or creates the 1:1 conversation (201 / 200) |
+| GET | `conversations/{id}/` | 404 unless you are a participant |
+| GET | `conversations/{id}/messages/?before=&after=` | 30 per page, oldest → newest, `has_more` |
+| POST | `conversations/{id}/messages/` | Multipart `body` + up to 5 `files` (pdf, doc, docx, xls, xlsx, csv, txt, png, jpg, jpeg; content-checked) |
+| POST | `conversations/{id}/read/` | Marks the conversation (and its message notifications) read |
+| GET | `unread-count/` | Total unread messages |
+| GET | `attachments/{id}/download/` | Private download; 404 for non-participants |
+
 ## Notifications — `/api/notifications/` (always own only)
 
-`GET` list (filters `is_read`, `type`) · `GET unread-count/` · `POST {id}/mark-read/` · `POST mark-all-read/`
+`GET` list (filters `is_read`, `type`) · `GET unread-count/` · `POST {id}/mark-read/` · `POST mark-all-read/`. Each notification has a `link` to the related screen.
 
-Types: `LEAVE_SUBMITTED, LEAVE_APPROVED, LEAVE_REJECTED, LEAVE_CANCELLED, PAYSLIP_PUBLISHED, DOCUMENT_SHARED, GENERAL`.
+Types: `LEAVE_SUBMITTED, LEAVE_APPROVED, LEAVE_REJECTED, LEAVE_CANCELLED, PAYSLIP_PUBLISHED, DOCUMENT_SHARED, TASK_ASSIGNED, TASK_REMINDER, TASK_RESPONSE, TASK_COMPLETED, TASK_CANCELLED, MESSAGE_RECEIVED, FILE_RECEIVED, OVERTIME_STARTED, OVERTIME_COMPLETED, SYNC_STATUS, GENERAL`.
 
 ## Reports & dashboard
 
 | Method | Path | Permission | Notes |
 |---|---|---|---|
-| GET | `dashboard/` | — | Role-aware: `me` (attendance today, leave balances, latest payslip), `pending_approvals`, `attendance_today`, `headcount` / `team_size`, `latest_payroll_run`, `upcoming_holidays`, `unread_notifications` |
+| GET | `dashboard/` | — | Role-aware: `me` (attendance today, leave balances, latest payslip, `open_tasks`, `blocking_tasks`), `pending_approvals`, `attendance_today`, `work_sessions_now` (on break / overtime running), `tasks_overview`, `unread_messages`, `headcount` / `team_size`, `latest_payroll_run`, `upcoming_holidays`, `unread_notifications` |
 | GET | `reports/headcount/` | `reports.view_team` / `view_all` | By status, department, employment type |
 | GET | `reports/attendance-summary/?date_from=&date_to=&department=` | same | Per employee counts. Range ≤ 93 days. |
 | GET | `reports/leave-summary/?year=` | same | By type/status + approved days per employee |

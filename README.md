@@ -1,11 +1,15 @@
 # Nexvra HRMS
 
-Internal Human Resource Management System for **Nexvra Solutions**. Version 1 is a standard HRMS with no AI and no activity monitoring.
+Internal Human Resource Management System for **Nexvra Solutions**. A standard HRMS (no AI, no screen or activity surveillance) with work-session tracking, HR tasks and private messaging.
 
 | Area | Status |
 |---|---|
 | Backend API (Django + DRF + PostgreSQL) | Implemented and tested: auth, RBAC, company/settings, departments, designations, holidays, employees, attendance, leave, payroll, documents, notifications, audit log, reports, dashboard |
-| Frontend (Next.js + TypeScript + Tailwind) | Implemented: 23 role-aware screens covering sign-in, dashboard, employees, attendance, leave, holidays, payroll, payslips, documents, reports, notifications, settings, users & roles, and the audit log. Responsive with a mobile menu. |
+| Work sessions | Breaks with a live timer (excluded from working time), separate overtime sessions, offline mode with an idempotent sync queue, session recovery after the browser is closed |
+| Tasks | HR assigns tasks by Employee ID **or** @username; employees respond and complete; unanswered tasks block checkout (Super Admin exempt) |
+| Messaging | Private 1:1 conversations with secure file sharing (PDF, Office, CSV, images) |
+| Leave | Approved leave is locked; the balance is deducted exactly once, on approval, with an audited ledger |
+| Frontend (Next.js + TypeScript + Tailwind) | Implemented: 25 role-aware screens covering sign-in, dashboard, employees, attendance, leave, holidays, tasks, messages, payroll, payslips, documents, reports (with activity monitoring), notifications, settings, users & roles, and the audit log. Responsive with a mobile menu. |
 | UI design | No Stitch screen export was supplied, so the UI is a restrained enterprise design built on the Nexvra brand (black sidebar, lime accent). Tokens live in `frontend/tailwind.config.ts`, so a Stitch design can be applied later. |
 | Official logo | `brand/nexvra-logo.svg`, as confirmed by the owner, used unmodified |
 | HR policies | None supplied. Every policy is **configurable** and starts empty (see `docs/requirements-analysis.md`) |
@@ -15,7 +19,7 @@ Internal Human Resource Management System for **Nexvra Solutions**. Version 1 is
 ```
 Browser ──► Next.js :3000 ──/api/* proxy──► Django REST API :8000 ──► PostgreSQL 16
                                                 │
-                                                └── private file storage (documents, photos; never public)
+                                                └── private file storage (documents, photos, message files; never public)
 ```
 
 - **Session authentication** (HttpOnly cookie + CSRF). The browser only talks to Next.js, so cookies are first-party.
@@ -53,6 +57,8 @@ To stop everything, double-click **`stop-hrms.bat`** (or close the two server wi
 | The backend window closes or shows a database error | PostgreSQL isn't running | Start the Windows service `postgresql-x64-16` (Services app), then run `start-hrms.bat` again |
 | Code changes don't show up in the browser | `npm start` serves the last build | `cd frontend && npm run build`, then restart |
 | "Too many requests" when signing in | Login rate limit (10 per minute) | Wait a minute |
+| "Offline mode" in the header | The browser has no network, or the server can't be reached | Breaks/overtime keep working and sync automatically; check-in/out wait for the connection |
+| Errors after updating the code | Database not migrated | `cd backend && .venv\Scripts\python manage.py migrate` (also run by `start-hrms.bat`) |
 
 ## Prerequisites
 
@@ -104,9 +110,9 @@ All configuration comes from environment variables. [`.env.example`](.env.exampl
 ## Tests
 
 ```bash
-cd backend && .venv/Scripts/python -m pytest       # 147 tests on PostgreSQL
-cd frontend && npm test && npm run typecheck        # 16 unit tests
-cd tests/e2e && E2E_PASSWORD="<demo-pw>" npx playwright test   # 25 tests (API + browser UI); see docs/testing.md
+cd backend && .venv/Scripts/python -m pytest       # 219 tests on PostgreSQL
+cd frontend && npm test && npm run typecheck        # 58 unit + component tests
+cd tests/e2e && E2E_PASSWORD="<demo-pw>" npx playwright test   # 45 tests (API + browser UI); see docs/testing.md
 ```
 
 See [docs/testing.md](docs/testing.md).
@@ -128,6 +134,7 @@ See [docs/testing.md](docs/testing.md).
 | [requirements-analysis.md](docs/requirements-analysis.md) | Requirements by module; NOT SPECIFIED — CONFIGURABLE items; open questions for HR |
 | [hrms-v1-scope.md](docs/hrms-v1-scope.md) | Must / should / later / excluded |
 | [architecture.md](docs/architecture.md) | Frontend, backend, auth, RBAC, files, audit, security |
+| [work-sessions-tasks-messaging.md](docs/work-sessions-tasks-messaging.md) | Breaks, overtime, tasks + checkout rule, leave lock & balance ledger, messaging & files, offline mode, monitoring |
 | [database.md](docs/database.md) | Tables, constraints, migrations |
 | [api.md](docs/api.md) | Every endpoint with its permission |
 | [setup.md](docs/setup.md) | Installation and first-time configuration |
