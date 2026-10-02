@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowRight, Bell, CalendarDays, ClipboardCheck, Users, Wallet } from "lucide-react";
+import { ArrowRight, Bell, CalendarDays, ClipboardCheck, ListTodo, MessageSquare, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CheckInCard } from "@/components/attendance/CheckInCard";
+import { WorkSessionCard } from "@/components/attendance/WorkSessionCard";
 import { Badge, Card, CardHeader, PageHeader, StatCard, StatusBadge } from "@/components/ui/Display";
 import { EmptyState, ErrorState, Loading } from "@/components/ui/States";
 import { useAuth } from "@/lib/auth";
@@ -51,6 +51,32 @@ export default function DashboardPage() {
       hint: data.latest_payroll_run ? <StatusBadge status={data.latest_payroll_run.status} /> : "No payroll runs",
       icon: <Wallet className="h-5 w-5" />,
     },
+    data.tasks_overview !== undefined && {
+      label: "Open HR tasks",
+      value: data.tasks_overview.open,
+      hint: (
+        <Link href="/tasks" className="font-medium text-zinc-700 hover:underline">
+          {data.tasks_overview.awaiting_response} awaiting response · {data.tasks_overview.overdue} overdue →
+        </Link>
+      ),
+      icon: <ListTodo className="h-5 w-5" />,
+    },
+    mine !== undefined && {
+      label: "My tasks",
+      value: mine.open_tasks,
+      hint: (
+        <Link href="/tasks" className="font-medium text-zinc-700 hover:underline">
+          {mine.blocking_tasks ? `${mine.blocking_tasks} need a response →` : "View tasks →"}
+        </Link>
+      ),
+      icon: <ListTodo className="h-5 w-5" />,
+    },
+    data.unread_messages !== undefined && {
+      label: "Unread messages",
+      value: data.unread_messages,
+      hint: <Link href="/messages" className="font-medium text-zinc-700 hover:underline">Open messages →</Link>,
+      icon: <MessageSquare className="h-5 w-5" />,
+    },
     {
       label: "Unread notifications",
       value: data.unread_notifications,
@@ -67,27 +93,24 @@ export default function DashboardPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.slice(0, 4).map((s) => (
+        {stats.slice(0, 8).map((s) => (
           <StatCard key={s.label} {...s} />
         ))}
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          {mine && (
-            <CheckInCard
-              date={data.date}
-              record={mine.attendance_today}
-              enabled={mine.self_attendance_enabled}
-              onChange={reload}
-            />
-          )}
+          {mine && <WorkSessionCard onChange={reload} />}
 
           {data.attendance_today && (
             <Card>
               <CardHeader
                 title={me?.permissions.includes("attendance.view_all") ? "Company attendance today" : "Team attendance today"}
-                description={`${data.attendance_today.total} people · ${data.attendance_today.late} late`}
+                description={`${data.attendance_today.total} people · ${data.attendance_today.late} late${
+                  data.work_sessions_now
+                    ? ` · ${data.work_sessions_now.on_break} on break · ${data.work_sessions_now.overtime_running} on overtime`
+                    : ""
+                }`}
                 actions={
                   <Link href="/attendance?tab=daily" className="text-sm font-medium text-zinc-700 hover:underline">
                     Details
@@ -137,7 +160,7 @@ export default function DashboardPage() {
                             <span className="ml-1 text-sm font-normal text-zinc-500">of {fmtDays(b.allocated)} days left</span>
                           </p>
                           <p className="mt-1 text-xs text-zinc-500">
-                            {fmtDays(b.used)} used · {fmtDays(b.pending)} pending
+                            {fmtDays(b.used)} used · {fmtDays(b.pending)} pending approval (not deducted yet)
                           </p>
                         </>
                       ) : (

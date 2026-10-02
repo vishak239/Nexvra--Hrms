@@ -26,7 +26,7 @@ function UsersTab() {
   const [role, setRole] = useState("");
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<UserAccount | "new" | null>(null);
-  const [form, setForm] = useState({ email: "", first_name: "", last_name: "", role: "EMPLOYEE", is_active: true, password: "" });
+  const [form, setForm] = useState({ email: "", username: "", first_name: "", last_name: "", role: "EMPLOYEE", is_active: true, password: "" });
   const save = useAction();
   const roles = useResource<Role[]>("/api/roles/");
   const { data, error, loading, reload } = useResource<Paginated<UserAccount>>("/api/users/", { search, role__code: role, page, page_size: PAGE_SIZE });
@@ -37,8 +37,8 @@ function UsersTab() {
     save.setError(undefined);
     setForm(
       u === "new"
-        ? { email: "", first_name: "", last_name: "", role: "EMPLOYEE", is_active: true, password: "" }
-        : { email: u.email, first_name: u.first_name, last_name: u.last_name, role: u.role, is_active: u.is_active, password: "" },
+        ? { email: "", username: "", first_name: "", last_name: "", role: "EMPLOYEE", is_active: true, password: "" }
+        : { email: u.email, username: u.username ?? "", first_name: u.first_name, last_name: u.last_name, role: u.role, is_active: u.is_active, password: "" },
     );
     setEditing(u);
   }
@@ -78,7 +78,7 @@ function UsersTab() {
         }
       />
       <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:flex-row">
-        <SearchInput label="Search name or email" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <SearchInput label="Search name, email or username" value={search} onChange={(e) => setSearch(e.target.value)} />
         <FilterSelect label="Role" value={role} onChange={(e) => setRole(e.target.value)}>
           <option value="">All roles</option>
           {roles.data?.map((r) => (
@@ -110,7 +110,10 @@ function UsersTab() {
                 <tr key={u.id}>
                   <Td>
                     <p className="font-medium text-zinc-900">{u.full_name || "—"}</p>
-                    <p className="text-xs text-zinc-500">{u.email}</p>
+                    <p className="text-xs text-zinc-500">
+                      {u.email}
+                      {u.username && <span className="ml-2 text-zinc-400">@{u.username}</span>}
+                    </p>
                   </Td>
                   <Td>
                     <Badge tone={u.role === "SUPER_ADMIN" ? "dark" : "neutral"}>{roles.data?.find((r) => r.code === u.role)?.name ?? u.role}</Badge>
@@ -157,6 +160,7 @@ function UsersTab() {
             <TextField label="Last name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} error={f.last_name} />
           </div>
           <TextField label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} error={f.email} required />
+          <TextField label="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} error={f.username} hint="Public @handle. Leave empty to keep it (or generate one for a new user)." />
           <SelectField label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} error={f.role} disabled={self}>
             {roles.data?.map((r) => (
               <option key={r.code} value={r.code}>

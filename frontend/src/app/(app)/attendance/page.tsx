@@ -3,7 +3,8 @@
 import { CalendarCheck, Pencil, Plus, Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
-import { CheckInCard } from "@/components/attendance/CheckInCard";
+import { OvertimeTable } from "@/components/attendance/OvertimeTable";
+import { WorkSessionCard } from "@/components/attendance/WorkSessionCard";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, PageHeader, StatusBadge } from "@/components/ui/Display";
 import { FilterSelect, SelectField, TextField } from "@/components/ui/Field";
@@ -14,7 +15,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fmtDate, fmtMinutes, fmtTime, humanize, todayISO } from "@/lib/format";
 import { tryApi, useAction, useResource } from "@/lib/hooks";
-import type { AttendanceRecord, Department, Employee, EmployeeRef, Paginated } from "@/lib/types";
+import type { AttendanceRecord, Department, Employee, EmployeeRef, OvertimeSession, Paginated } from "@/lib/types";
 
 type Tab = "mine" | "daily" | "records";
 
@@ -40,6 +41,7 @@ function RecordsTable({
         <Th>Date</Th>
         <Th>Check-in</Th>
         <Th>Check-out</Th>
+        <Th>Breaks</Th>
         <Th>Worked</Th>
         <Th>Status</Th>
         <Th>Source</Th>
@@ -57,6 +59,7 @@ function RecordsTable({
             <Td>{fmtDate(r.date)}</Td>
             <Td>{fmtTime(r.check_in)}</Td>
             <Td>{fmtTime(r.check_out)}</Td>
+            <Td>{r.break_minutes ? fmtMinutes(r.break_minutes) : "—"}</Td>
             <Td>{fmtMinutes(r.worked_minutes)}</Td>
             <Td>
               <div className="flex gap-1.5">
@@ -91,9 +94,6 @@ function RecordsTable({
 }
 
 function MyAttendance({ employeeId }: { employeeId: number }) {
-  const today = useResource<{ date: string; self_attendance_enabled: boolean; record: AttendanceRecord | null }>(
-    "/api/attendance/today/",
-  );
   const [from, setFrom] = useState(monthStart());
   const [to, setTo] = useState(todayISO());
   const [page, setPage] = useState(1);
@@ -107,17 +107,8 @@ function MyAttendance({ employeeId }: { employeeId: number }) {
 
   return (
     <div className="space-y-6">
-      {today.data && (
-        <CheckInCard
-          date={today.data.date}
-          record={today.data.record}
-          enabled={today.data.self_attendance_enabled}
-          onChange={() => {
-            today.reload();
-            history.reload();
-          }}
-        />
-      )}
+      <WorkSessionCard onChange={history.reload} />
+      <MyOvertime />
       <Card>
         <CardHeader
           title="My history"
@@ -143,6 +134,30 @@ function MyAttendance({ employeeId }: { employeeId: number }) {
         )}
       </Card>
     </div>
+  );
+}
+
+function MyOvertime() {
+  const [page, setPage] = useState(1);
+  const { data, error, loading, reload } = useResource<Paginated<OvertimeSession>>("/api/attendance/overtime/", {
+    page,
+    page_size: 10,
+  });
+  if (!loading && !error && !data?.count) return null;
+  return (
+    <Card>
+      <CardHeader title="My overtime" description="Recorded separately from normal working hours." />
+      {error ? (
+        <ErrorState error={error} onRetry={reload} />
+      ) : loading && !data ? (
+        <SkeletonRows rows={2} />
+      ) : (
+        <>
+          <OvertimeTable rows={data?.results ?? []} showEmployee={false} />
+          <Pagination page={page} pageSize={10} count={data?.count ?? 0} onPage={setPage} />
+        </>
+      )}
+    </Card>
   );
 }
 

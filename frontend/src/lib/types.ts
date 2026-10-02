@@ -5,6 +5,7 @@ export type RoleCode = "SUPER_ADMIN" | "HR_ADMIN" | "MANAGER" | "EMPLOYEE" | (st
 export interface Me {
   id: number;
   email: string;
+  username: string | null;
   first_name: string;
   last_name: string;
   full_name: string;
@@ -40,6 +41,7 @@ export interface EmployeeRef {
   id: number;
   employee_code: string;
   full_name: string;
+  username?: string | null;
 }
 
 export type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERN";
@@ -52,6 +54,7 @@ export interface Employee {
   last_name: string;
   full_name: string;
   email: string;
+  username: string | null;
   department: Ref | null;
   designation: Ref | null;
   manager: EmployeeRef | null;
@@ -134,10 +137,168 @@ export interface AttendanceRecord {
   check_out: string | null;
   status: AttendanceStatus;
   is_late: boolean;
+  /** Actual working time: session minus breaks. */
   worked_minutes: number | null;
+  session_minutes: number | null;
+  break_minutes: number;
+  total_break_seconds: number;
   source: "SELF" | "ADMIN";
   remarks: string;
   updated_at: string;
+}
+
+export type SessionStatus = "ACTIVE" | "COMPLETED";
+export type SessionSource = "ONLINE" | "OFFLINE";
+
+export interface BreakSession {
+  id: number;
+  employee: EmployeeRef;
+  attendance: number;
+  date: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  status: SessionStatus;
+  source: SessionSource;
+  created_at: string;
+}
+
+export interface OvertimeSession {
+  id: number;
+  employee: EmployeeRef;
+  attendance: number | null;
+  date: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  status: SessionStatus;
+  trigger: "AFTER_CHECKOUT";
+  source: SessionSource;
+  created_at: string;
+  updated_at: string;
+}
+
+/** GET /api/attendance/today/ - the server-authoritative work session. */
+export interface WorkSessionState {
+  date: string;
+  server_time: string;
+  self_attendance_enabled: boolean;
+  record: AttendanceRecord | null;
+  breaks: BreakSession[];
+  active_break: BreakSession | null;
+  overtime: OvertimeSession[];
+  active_overtime: OvertimeSession | null;
+  blocking_tasks: number;
+  checkout_exempt: boolean;
+}
+
+export type SyncEventType = "BREAK_START" | "BREAK_END" | "OVERTIME_START" | "OVERTIME_END";
+export type SyncEventStatus = "APPLIED" | "CONFLICT" | "REJECTED";
+
+export interface SyncEventRecord {
+  id: number;
+  employee: EmployeeRef | null;
+  client_event_id: string;
+  event_type: SyncEventType;
+  channel: "ONLINE" | "OFFLINE";
+  client_timestamp: string | null;
+  effective_at: string | null;
+  received_at: string;
+  status: SyncEventStatus;
+  error: string;
+}
+
+export interface SyncResult {
+  id: string;
+  type: SyncEventType;
+  status: SyncEventStatus;
+  duplicate: boolean;
+  error: string;
+}
+
+export type TaskStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+
+export interface UserRef {
+  id: number;
+  full_name: string;
+  username: string | null;
+}
+
+export interface Task {
+  id: number;
+  title: string;
+  description: string;
+  priority: TaskPriority;
+  due_date: string | null;
+  status: TaskStatus;
+  display_status: TaskStatus | "OVERDUE";
+  is_overdue: boolean;
+  requires_response: boolean;
+  assigned_to: EmployeeRef;
+  assigned_by: UserRef | null;
+  acknowledged_at: string | null;
+  response: string;
+  responded_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancel_reason: string;
+  created_at: string;
+  updated_at: string;
+  is_blocking: boolean;
+  is_assignee: boolean;
+  can_manage: boolean;
+  responses?: { id: number; author: UserRef | null; message: string; created_at: string }[];
+}
+
+export interface AssigneeLookup {
+  looked_up_by: "employee_code" | "username";
+  employee: EmployeeRef & { department: string | null; designation: string | null; is_self: boolean };
+}
+
+export interface Person {
+  user_id: number;
+  full_name: string;
+  username: string | null;
+  employee_id: number | null;
+  employee_code: string | null;
+  designation: string | null;
+  department: string | null;
+  has_photo: boolean;
+}
+
+export interface Conversation {
+  id: number;
+  other: Person | null;
+  unread_count: number;
+  last_message_at: string | null;
+  last_message: {
+    id: number;
+    body: string;
+    is_mine: boolean;
+    attachment_count: number;
+    created_at: string;
+  } | null;
+  created_at: string;
+}
+
+export interface MessageAttachment {
+  id: number;
+  original_filename: string;
+  content_type: string;
+  size: number;
+  created_at: string;
+  download_url: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  conversation: number;
+  sender_id: number | null;
+  body: string;
+  attachments: MessageAttachment[];
+  created_at: string;
+  is_mine: boolean;
 }
 
 export interface LeaveType {
@@ -175,7 +336,10 @@ export interface MyBalance {
   allocated?: string;
   used?: string;
   pending?: string;
+  /** The balance itself: allocated minus approved (deducted) days. Pending requests do not reduce it. */
   available?: string;
+  /** What can still be requested: available minus pending. */
+  requestable?: string;
 }
 
 export type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
@@ -199,6 +363,25 @@ export interface LeaveRequest {
   cancelled_at: string | null;
   created_at: string;
   can_decide: boolean;
+  /** Only the applicant, only while pending. */
+  can_cancel: boolean;
+  /** Approved leave is locked. */
+  is_locked: boolean;
+  balance_deducted: string | null;
+}
+
+export interface LeaveBalanceTransaction {
+  id: number;
+  employee: EmployeeRef;
+  leave_type_name: string;
+  year: number;
+  kind: "DEDUCTION";
+  days: string;
+  balance_before: string;
+  balance_after: string;
+  leave_request: { id: number; start_date: string; end_date: string; status: LeaveStatus };
+  created_by_name: string | null;
+  created_at: string;
 }
 
 export type ComponentKind = "EARNING" | "DEDUCTION";
@@ -289,6 +472,7 @@ export interface Notification {
   message: string;
   entity_type: string;
   entity_id: string;
+  link: string | null;
   is_read: boolean;
   read_at: string | null;
   created_at: string;
@@ -313,6 +497,7 @@ export interface Permission {
 export interface UserAccount {
   id: number;
   email: string;
+  username: string | null;
   first_name: string;
   last_name: string;
   full_name: string;
@@ -348,6 +533,8 @@ export interface Dashboard {
     leave_year: number;
     leave_balances: (MyBalance & { leave_type: string })[];
     pending_leave_requests: number;
+    open_tasks: number;
+    blocking_tasks: number;
     latest_payslip: { id: number; year: number; month: number; net_pay: string; currency: string } | null;
   };
   pending_approvals?: number;
@@ -355,4 +542,7 @@ export interface Dashboard {
   headcount?: number;
   team_size?: number;
   latest_payroll_run?: { id: number; year: number; month: number; status: string } | null;
+  unread_messages?: number;
+  work_sessions_now?: { on_break: number; overtime_running: number };
+  tasks_overview?: { open: number; overdue: number; awaiting_response: number };
 }

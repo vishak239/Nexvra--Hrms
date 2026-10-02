@@ -1,5 +1,7 @@
 "use client";
 
+import { BalanceCard } from "@/components/leave/BalanceCard";
+import { LockedBadge, canCancelLeave } from "@/components/leave/LeaveLock";
 import { CalendarRange, Check, Pencil, Plus, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
@@ -122,7 +124,6 @@ function MyLeave({ employeeId }: { employeeId: number }) {
   const [page, setPage] = useState(1);
   const balances = useResource<{ year: number | null; results: MyBalance[] }>("/api/leaves/balances/mine/");
   const requests = useResource<Paginated<LeaveRequest>>("/api/leaves/requests/", { employee: employeeId, page, page_size: PAGE_SIZE });
-  const today = todayISO();
 
   return (
     <div className="space-y-6">
@@ -145,27 +146,7 @@ function MyLeave({ employeeId }: { employeeId: number }) {
         ) : (
           <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3">
             {balances.data.results.map((b) => (
-              <div key={b.leave_type} className="rounded-lg border border-zinc-100 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-zinc-900">{b.leave_type_name}</p>
-                  {!b.is_paid && <Badge>Unpaid</Badge>}
-                </div>
-                {!b.tracks_balance ? (
-                  <p className="mt-2 text-sm text-zinc-500">No balance limit</p>
-                ) : b.has_allocation ? (
-                  <>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-900">
-                      {fmtDays(b.available)}
-                      <span className="ml-1 text-sm font-normal text-zinc-500">/ {fmtDays(b.allocated)} days</span>
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {fmtDays(b.used)} used · {fmtDays(b.pending)} pending
-                    </p>
-                  </>
-                ) : (
-                  <p className="mt-2 text-sm text-zinc-500">Not allocated for this year</p>
-                )}
-              </div>
+              <BalanceCard key={b.leave_type} balance={b} />
             ))}
           </div>
         )}
@@ -192,17 +173,22 @@ function MyLeave({ employeeId }: { employeeId: number }) {
               </THead>
               <TBody>
                 {requests.data.results.map((r) => {
-                  const cancellable = r.status === "PENDING" || (r.status === "APPROVED" && r.start_date > today);
+                  // The server decides: only the applicant, only while pending (approved leave is locked).
+                  const cancellable = canCancelLeave(r);
                   return (
                     <tr key={r.id}>
                       <Td className="font-medium text-zinc-900">{r.leave_type_name}</Td>
                       <Td>{dateRange(r)}</Td>
                       <Td>{fmtDays(r.days)}</Td>
                       <Td>
-                        <StatusBadge status={r.status} />
+                        <div className="flex gap-1.5">
+                          <StatusBadge status={r.status} />
+                          <LockedBadge request={r} />
+                        </div>
                       </Td>
                       <Td className="max-w-xs truncate text-xs text-zinc-500">
                         {r.decided_by_name ? `${r.decided_by_name}${r.decision_note ? `: ${r.decision_note}` : ""}` : "—"}
+                        {r.balance_deducted && <span className="block text-zinc-400">{fmtDays(r.balance_deducted)} day(s) deducted</span>}
                       </Td>
                       <Td className="text-right">
                         {cancellable && (
@@ -482,7 +468,7 @@ function Balances() {
     <Card>
       <CardHeader
         title="Leave balances"
-        description="Used and pending days are calculated from leave requests."
+        description="Days are deducted once, when a request is approved. Pending days are shown for information."
         actions={
           <>
             <FilterSelect label="Year" value={filterYear} onChange={(e) => { setFilterYear(e.target.value); setPage(1); }}>

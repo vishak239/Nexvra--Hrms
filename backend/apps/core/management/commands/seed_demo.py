@@ -28,6 +28,15 @@ PEOPLE = [
     ("outsider@example.test", "Demo", "Outsider", "EMPLOYEE", "DEMO-006", "DEMO-HR", "Demo HR Executive", None),
 ]
 
+USERNAMES = {
+    "superadmin@example.test": "demo.superadmin",
+    "hr@example.test": "demo.hr",
+    "manager@example.test": "demo.manager",
+    "employee@example.test": "demo.employee",
+    "employee2@example.test": "demo.employee2",
+    "outsider@example.test": "demo.outsider",
+}
+
 
 class Command(BaseCommand):
     help = "Seed fictional demo data for local development (DEBUG only)."
@@ -60,6 +69,10 @@ class Command(BaseCommand):
             else:
                 user.set_password(password)
                 user.save()
+            handle = USERNAMES[email]
+            if user.username != handle and not User.objects.filter(username=handle).exclude(pk=user.pk).exists():
+                user.username = handle
+                user.save(update_fields=["username"])
             designation = Designation.objects.get_or_create(name=desig)[0] if desig else None
             emp, _ = Employee.objects.get_or_create(
                 user=user,
@@ -108,6 +121,6 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("Demo data ready. Users:"))
         for email, _first, _last, role, *_ in PEOPLE:
-            self.stdout.write(f"  {email}  ({role})")
+            self.stdout.write(f"  {email}  @{USERNAMES[email]}  ({role})")
         if generated:
             self.stdout.write(self.style.WARNING(f"Generated password for all demo users: {password}"))

@@ -13,9 +13,11 @@ import { fmtDateTime } from "@/lib/format";
 import { tryApi, useResource } from "@/lib/hooks";
 import type { Notification, Paginated } from "@/lib/types";
 
-/** Where a notification should take the user. */
+/** Where a notification should take the user (the server supplies `link` for most types). */
 function linkFor(n: Notification) {
   if (n.type.startsWith("LEAVE_SUBMITTED")) return "/leave?tab=approvals";
+  if (n.link) return n.link;
+  if (n.type === "SYNC_STATUS") return "/attendance";
   if (n.type.startsWith("LEAVE_")) return "/leave";
   if (n.type === "PAYSLIP_PUBLISHED" && n.entity_id) return `/payslips/${n.entity_id}`;
   if (n.type === "DOCUMENT_SHARED") return "/documents";

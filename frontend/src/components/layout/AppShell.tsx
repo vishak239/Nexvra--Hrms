@@ -1,14 +1,16 @@
 "use client";
 
-import { Bell, KeyRound, LogOut, Menu, UserRound, X } from "lucide-react";
+import { Bell, KeyRound, LogOut, Menu, MessageSquare, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NexvraLogo } from "@/components/brand/NexvraLogo";
+import { ConnectionIndicator, OfflineBanner } from "@/components/connection/ConnectionIndicator";
 import { Avatar } from "@/components/ui/Display";
 import { ErrorState, Loading, NoAccess } from "@/components/ui/States";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { ConnectionProvider } from "@/lib/connection";
 import { visibleNav } from "@/lib/nav";
 import type { Me } from "@/lib/types";
 
@@ -119,25 +121,34 @@ function UserMenu({ me }: { me: Me }) {
   );
 }
 
-function NotificationBell() {
+/** Unread count, refreshed on navigation and when the window regains focus (no polling). */
+function useUnreadCount(path: string) {
   const pathname = usePathname();
   const [count, setCount] = useState(0);
   useEffect(() => {
     let alive = true;
-    api<{ count: number }>("/api/notifications/unread-count/")
-      .then((r) => alive && setCount(r.count))
-      .catch(() => undefined);
+    const load = () =>
+      api<{ count: number }>(path)
+        .then((r) => alive && setCount(r.count))
+        .catch(() => undefined);
+    void load();
+    window.addEventListener("focus", load);
     return () => {
       alive = false;
+      window.removeEventListener("focus", load);
     };
-  }, [pathname]);
+  }, [path, pathname]);
+  return count;
+}
+
+function CountLink({ href, label, count, icon }: { href: string; label: string; count: number; icon: ReactNode }) {
   return (
     <Link
-      href="/notifications"
+      href={href}
       className="relative rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
-      aria-label={count ? `Notifications, ${count} unread` : "Notifications"}
+      aria-label={count ? `${label}, ${count} unread` : label}
     >
-      <Bell className="h-5 w-5" />
+      {icon}
       {count > 0 && (
         <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-nexvra-lime px-1 text-[10px] font-bold text-black">
           {count > 99 ? "99+" : count}
@@ -145,6 +156,16 @@ function NotificationBell() {
       )}
     </Link>
   );
+}
+
+function NotificationBell() {
+  const count = useUnreadCount("/api/notifications/unread-count/");
+  return <CountLink href="/notifications" label="Notifications" count={count} icon={<Bell className="h-5 w-5" />} />;
+}
+
+function MessagesLink() {
+  const count = useUnreadCount("/api/messages/unread-count/");
+  return <CountLink href="/messages" label="Messages" count={count} icon={<MessageSquare className="h-5 w-5" />} />;
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -178,6 +199,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
+    <ConnectionProvider userId={me.id}>
     <div className="min-h-screen">
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
         <Sidebar me={me} />
@@ -209,14 +231,18 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex-1" />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <ConnectionIndicator />
+            {me.permissions.includes("messages.use") && <MessagesLink />}
             <NotificationBell />
             <UserMenu me={me} />
           </div>
         </header>
+        <OfflineBanner />
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
     </div>
+    </ConnectionProvider>
   );
 }
 

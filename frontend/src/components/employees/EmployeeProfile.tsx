@@ -116,6 +116,7 @@ export function EmployeeProfile({
             <DetailList
               items={[
                 { label: "Work email", value: employee.email },
+                { label: "Username", value: employee.username ? `@${employee.username}` : null },
                 { label: "Employee ID", value: employee.employee_code },
                 { label: "Department", value: employee.department?.name },
                 { label: "Designation", value: employee.designation?.name },

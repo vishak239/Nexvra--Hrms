@@ -20,6 +20,7 @@ type FormState = {
   first_name: string;
   last_name: string;
   email: string;
+  username: string;
   employee_code: string;
   joining_date: string;
   employment_type: string;
@@ -43,6 +44,7 @@ function initial(e?: Employee): FormState {
     first_name: e?.first_name ?? "",
     last_name: e?.last_name ?? "",
     email: e?.email ?? "",
+    username: e?.username ?? "",
     employee_code: e?.employee_code ?? "",
     joining_date: e?.joining_date ?? "",
     employment_type: e?.employment_type ?? "FULL_TIME",
@@ -84,6 +86,7 @@ export function EmployeeForm({ employee }: { employee?: Employee }) {
     e.preventDefault();
     const body: Record<string, unknown> = {
       ...form,
+      username: form.username.trim().replace(/^@/, ""),
       department: form.department ? Number(form.department) : null,
       designation: form.designation ? Number(form.designation) : null,
       manager: form.manager ? Number(form.manager) : null,
@@ -120,6 +123,14 @@ export function EmployeeForm({ employee }: { employee?: Employee }) {
           <TextField label="First name" value={form.first_name} onChange={(e) => set("first_name", e.target.value)} error={f.first_name} required />
           <TextField label="Last name" value={form.last_name} onChange={(e) => set("last_name", e.target.value)} error={f.last_name} />
           <TextField label="Work email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} error={f.email} required />
+          <TextField
+            label="Username"
+            value={form.username}
+            onChange={(e) => set("username", e.target.value)}
+            error={f.username}
+            placeholder="e.g. vishak"
+            hint="Public @handle for tasks and messages. Leave empty to generate one from the email."
+          />
           <SelectField label="Role" value={form.role} onChange={(e) => set("role", e.target.value)} error={f.role} disabled={editing && !assignableRoles.some((r) => r.code === form.role)}>
             {editing && !assignableRoles.some((r) => r.code === form.role) && <option value={form.role}>{humanize(form.role)}</option>}
             {assignableRoles.map((r) => (

@@ -1,5 +1,6 @@
 "use client";
 
+import { ActivityMonitor } from "@/components/reports/ActivityMonitor";
 import { Download } from "lucide-react";
 import { useState } from "react";
 import { RequirePermission } from "@/components/layout/AppShell";
@@ -14,7 +15,7 @@ import { fmtDays, fmtMoney, fmtPeriod, humanize, todayISO } from "@/lib/format";
 import { useResource } from "@/lib/hooks";
 import type { Department, Paginated, PayrollRun } from "@/lib/types";
 
-type Tab = "headcount" | "attendance" | "leave" | "payroll";
+type Tab = "headcount" | "attendance" | "leave" | "payroll" | "monitoring";
 type Group = { key: string | number | null; label: string | null; count: number };
 
 function csvHref(path: string, params: Record<string, string>) {
@@ -335,6 +336,7 @@ function ReportsContent() {
     { value: "attendance" as Tab, label: "Attendance" },
     { value: "leave" as Tab, label: "Leave" },
     ...(can("payroll.view_all") ? [{ value: "payroll" as Tab, label: "Payroll" }] : []),
+    { value: "monitoring" as Tab, label: "Activity monitoring" },
   ];
   const [tab, setTab] = useState<Tab>("headcount");
   return (
@@ -348,6 +350,7 @@ function ReportsContent() {
       {tab === "attendance" && <AttendanceSummary />}
       {tab === "leave" && <LeaveSummary />}
       {tab === "payroll" && <PayrollSummary />}
+      {tab === "monitoring" && <ActivityMonitor />}
     </>
   );
 }

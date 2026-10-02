@@ -33,6 +33,7 @@ function me(permissions: string[], employee = true): Me {
   return {
     id: 1,
     email: "x@example.test",
+    username: null,
     first_name: "X",
     last_name: "",
     full_name: "X",

@@ -6,6 +6,8 @@ import {
   CalendarRange,
   FileText,
   LayoutDashboard,
+  ListTodo,
+  MessageSquare,
   ScrollText,
   Settings,
   ShieldCheck,
@@ -24,6 +26,8 @@ export interface NavItem {
   /** Shown if the user holds ANY of these (display only; the API enforces access). Empty = everyone. */
   perms: string[];
   needsEmployee?: boolean;
+  /** Shown to users with an employee record, or to anyone holding one of these permissions. */
+  needsEmployeeOr?: string[];
 }
 
 export interface NavSection {
@@ -39,6 +43,8 @@ export const NAV: NavSection[] = [
       { href: "/profile", label: "My profile", icon: UserRound, perms: [], needsEmployee: true },
       { href: "/attendance", label: "Attendance", icon: CalendarCheck, perms: ["attendance.self", "attendance.view_team", "attendance.view_all"] },
       { href: "/leave", label: "Leave", icon: CalendarRange, perms: ["leave.apply", "leave.view_team", "leave.view_all"] },
+      { href: "/tasks", label: "Tasks", icon: ListTodo, perms: [], needsEmployeeOr: ["tasks.manage", "tasks.view_all", "tasks.view_team"] },
+      { href: "/messages", label: "Messages", icon: MessageSquare, perms: ["messages.use"] },
       { href: "/payslips", label: "My payslips", icon: Receipt, perms: ["payroll.view_own"], needsEmployee: true },
       { href: "/documents", label: "Documents", icon: FileText, perms: ["documents.view_own", "documents.view_all"] },
       { href: "/holidays", label: "Holidays", icon: CalendarDays, perms: [] },
@@ -74,6 +80,7 @@ export function visibleNav(me: Me): NavSection[] {
     items: section.items.filter(
       (item) =>
         (!item.needsEmployee || me.employee !== null) &&
+        (!item.needsEmployeeOr || me.employee !== null || item.needsEmployeeOr.some((p) => me.permissions.includes(p))) &&
         (item.perms.length === 0 || item.perms.some((p) => me.permissions.includes(p))),
     ),
   })).filter((section) => section.items.length > 0);
