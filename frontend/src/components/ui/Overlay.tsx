@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X } from "@/components/ui/icons";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "./Button";
@@ -46,27 +46,33 @@ export function Modal({
   // Portalled to <body> so parent layout utilities (margins, stacking contexts) can't offset it.
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} aria-hidden="true" />
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl ${
+        className={`relative flex max-h-[92vh] w-full flex-col rounded-t-xl border border-surface-container-high bg-surface-container-low sm:rounded-xl ${
           size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg"
         }`}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-6 py-4">
-          <div>
-            <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
-            {description && <p className="mt-0.5 text-sm text-zinc-500">{description}</p>}
+        <div className="flex items-start justify-between gap-4 border-b border-surface-container-high/40 px-space-xl py-space-lg">
+          <div className="space-y-0.5">
+            <h2 className="font-headline-md text-headline-md text-primary">{title}</h2>
+            {description && <p className="text-body-sm text-on-surface-variant">{description}</p>}
           </div>
-          <button onClick={onClose} className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700" aria-label="Close">
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+            aria-label="Close"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="overflow-y-auto px-6 py-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-zinc-100 px-6 py-4">{footer}</div>}
+        <div className="overflow-y-auto px-space-xl py-space-lg">{children}</div>
+        {footer && (
+          <div className="flex justify-end gap-2 border-t border-surface-container-high/40 px-space-xl py-space-md">{footer}</div>
+        )}
       </div>
     </div>,
     document.body,
@@ -102,13 +108,13 @@ export function ConfirmDialog({
           <Button variant="secondary" onClick={onClose} disabled={pending}>
             Cancel
           </Button>
-          <Button variant={danger ? "danger" : "dark"} onClick={onConfirm} loading={pending}>
+          <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} loading={pending}>
             {confirmLabel}
           </Button>
         </>
       }
     >
-      <div className="text-sm text-zinc-600">{message}</div>
+      <div className="text-body-md text-on-surface-variant">{message}</div>
     </Modal>
   );
 }
@@ -132,8 +138,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
-              t.tone === "success" ? "bg-zinc-900 text-white" : "bg-red-600 text-white"
+            className={`pointer-events-auto rounded-lg border-l-2 px-4 py-3 text-label-lg font-medium ${
+              t.tone === "success"
+                ? "border-primary-container bg-surface-container-highest text-primary"
+                : "border-error bg-error-container text-on-error-container"
             }`}
           >
             {t.message}
@@ -156,8 +164,8 @@ export function Tabs<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="mb-5 border-b border-zinc-200">
-      <nav className="-mb-px flex gap-6 overflow-x-auto" role="tablist">
+    <div className="mb-space-lg max-w-full overflow-x-auto">
+      <nav className="inline-flex gap-1 rounded-lg bg-surface-container-low p-1" role="tablist">
         {tabs.map((tab) => {
           const active = tab.value === value;
           return (
@@ -166,13 +174,13 @@ export function Tabs<T extends string>({
               role="tab"
               aria-selected={active}
               onClick={() => onChange(tab.value)}
-              className={`whitespace-nowrap border-b-2 px-0.5 pb-3 text-sm font-medium transition-colors ${
-                active ? "border-zinc-900 text-zinc-900" : "border-transparent text-zinc-500 hover:text-zinc-800"
+              className={`inline-flex items-center whitespace-nowrap rounded px-space-md py-1.5 text-label-lg font-medium transition-colors ${
+                active ? "bg-surface-container-high font-semibold text-primary" : "text-on-surface-variant hover:text-on-surface"
               }`}
             >
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
-                <span className="ml-2 rounded-full bg-nexvra-lime px-1.5 py-0.5 text-xs font-semibold text-black">
+                <span className="ml-2 rounded-full bg-primary-container px-1.5 py-px text-[11px] font-bold text-on-primary-fixed">
                   {tab.count}
                 </span>
               )}

@@ -1,4 +1,4 @@
-import { AlertTriangle, Inbox, Lock, ServerOff } from "lucide-react";
+import { AlertTriangle, Inbox, Lock, ServerOff } from "@/components/ui/icons";
 import type { ReactNode } from "react";
 import type { ApiError } from "@/lib/api";
 
@@ -13,7 +13,7 @@ export function Spinner({ className = "h-5 w-5" }: { className?: string }) {
 
 export function Loading({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-3 py-16 text-sm text-zinc-500" role="status">
+    <div className="flex items-center justify-center gap-3 py-16 text-body-md text-on-surface-variant" role="status">
       <Spinner />
       {label}
     </div>
@@ -22,9 +22,9 @@ export function Loading({ label = "Loading…" }: { label?: string }) {
 
 export function SkeletonRows({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="space-y-3 p-5" aria-hidden="true">
+    <div className="space-y-3 p-space-lg" aria-hidden="true">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="h-4 animate-pulse rounded bg-zinc-100" style={{ width: `${90 - i * 8}%` }} />
+        <div key={i} className="h-4 animate-pulse rounded bg-surface-container-high" style={{ width: `${90 - i * 8}%` }} />
       ))}
     </div>
   );
@@ -43,11 +43,11 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-zinc-100 text-zinc-500">
+      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-surface-container-high text-on-surface-variant">
         {icon ?? <Inbox className="h-5 w-5" />}
       </div>
-      <p className="text-sm font-semibold text-zinc-900">{title}</p>
-      {description && <p className="mt-1 max-w-sm text-sm text-zinc-500">{description}</p>}
+      <p className="font-headline-sm text-headline-sm text-primary">{title}</p>
+      {description && <p className="mt-1 max-w-sm text-body-md text-on-surface-variant">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -74,13 +74,13 @@ export function ErrorState({ error, onRetry }: { error?: ApiError; onRetry?: () 
   const unreachable = !!error && SERVER_UNREACHABLE.has(error.code);
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-red-50 text-red-600">
+      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-error-container text-on-error-container">
         {unreachable ? <ServerOff className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
       </div>
-      <p className="text-sm font-semibold text-zinc-900">{unreachable ? "Can't reach the server" : "Something went wrong"}</p>
-      <p className="mt-1 max-w-sm text-sm text-zinc-500">{error?.message ?? "Please try again."}</p>
+      <p className="font-headline-sm text-headline-sm text-primary">{unreachable ? "Can't reach the server" : "Something went wrong"}</p>
+      <p className="mt-1 max-w-sm text-body-md text-on-surface-variant">{error?.message ?? "Please try again."}</p>
       {onRetry && (
-        <button onClick={onRetry} className="mt-4 text-sm font-medium text-zinc-900 underline underline-offset-4">
+        <button onClick={onRetry} className="mt-4 text-label-lg font-medium text-primary-fixed underline underline-offset-4">
           Try again
         </button>
       )}
@@ -90,13 +90,13 @@ export function ErrorState({ error, onRetry }: { error?: ApiError; onRetry?: () 
 
 export function Alert({ tone = "error", children }: { tone?: "error" | "info" | "success" | "warning"; children: ReactNode }) {
   const tones = {
-    error: "border-red-200 bg-red-50 text-red-800",
-    info: "border-zinc-200 bg-zinc-50 text-zinc-700",
-    success: "border-green-200 bg-green-50 text-green-800",
-    warning: "border-amber-200 bg-amber-50 text-amber-900",
+    error: "border-error-container bg-error-container/25 text-on-error-container",
+    info: "border-surface-container-high bg-surface-container text-on-surface",
+    success: "border-primary-container/30 bg-primary-container/10 text-primary-fixed",
+    warning: "border-warning-outline bg-warning-container text-warning",
   };
   return (
-    <div role={tone === "error" ? "alert" : "status"} className={`rounded-lg border px-4 py-3 text-sm ${tones[tone]}`}>
+    <div role={tone === "error" ? "alert" : "status"} className={`rounded-lg border px-4 py-3 text-body-md ${tones[tone]}`}>
       {children}
     </div>
   );

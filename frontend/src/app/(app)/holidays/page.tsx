@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Plus, Trash2 } from "@/components/ui/icons";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, PageHeader } from "@/components/ui/Display";
@@ -92,13 +92,13 @@ export default function HolidaysPage() {
             <TBody>
               {data.map((h) => (
                 <tr key={h.id}>
-                  <Td className="font-medium text-zinc-900">{fmtDate(h.date)}</Td>
+                  <Td className="font-medium text-primary">{fmtDate(h.date)}</Td>
                   <Td>{WEEKDAY.format(new Date(`${h.date}T00:00:00`))}</Td>
                   <Td>{h.name}</Td>
                   <Td>{h.is_optional ? <Badge>Optional</Badge> : <Badge tone="lime">Company holiday</Badge>}</Td>
                   {manage && (
                     <Td className="text-right">
-                      <button onClick={() => setDeleting(h)} className="rounded-md p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600" aria-label={`Delete ${h.name}`}>
+                      <button onClick={() => setDeleting(h)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-error-container/25 hover:text-error" aria-label={`Delete ${h.name}`}>
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </Td>

@@ -1,16 +1,51 @@
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/space-grotesk";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Nexvra design system (Stitch "Obsidian Kinetic"). Tokens live in tailwind.config.ts. */
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
+    color-scheme: dark;
   }
   body {
-    @apply bg-surface text-zinc-900;
+    @apply bg-surface-container-lowest font-sans text-body-md text-on-surface;
+    /* DESIGN.md: tabular numbers everywhere (timestamps, money, counts, codes). */
+    font-variant-numeric: tabular-nums;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+  ::selection {
+    @apply bg-primary-container text-on-primary-fixed;
   }
   :focus-visible {
-    @apply outline-none ring-2 ring-zinc-900 ring-offset-2;
+    @apply outline-none ring-1 ring-primary-container;
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    @apply accent-primary-container;
+  }
+  /* Default form control surface (Stitch dark well); component classes can override. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+  select,
+  textarea {
+    @apply bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/60;
+  }
+  /* Native date/time pickers use dark chrome. */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+  }
+  option {
+    @apply bg-surface-container text-on-surface;
   }
 }
 
@@ -18,7 +53,14 @@
   .no-print {
     display: none !important;
   }
-  body {
-    background: #fff;
+  /* Paper is white: print every surface as black text on white. */
+  /* .print-keep (e.g. the payslip letterhead) keeps its own colours. */
+  html,
+  body,
+  body *:not(.print-keep):not(.print-keep *) {
+    background: transparent !important;
+    color: #000 !important;
+    border-color: #d4d4d8 !important;
+    box-shadow: none !important;
   }
 }

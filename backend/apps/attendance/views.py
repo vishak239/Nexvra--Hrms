@@ -36,6 +36,7 @@ def today_payload(request):
         "date": state["date"],
         "server_time": serializers.DateTimeField().to_representation(timezone.now()),
         "self_attendance_enabled": state["cs"].self_attendance_enabled,
+        "break_allowance_minutes": state["cs"].break_allowance_minutes,
         "record": AttendanceRecordSerializer(record).data if record else None,
         "breaks": BreakSessionSerializer(state["breaks"], many=True).data,
         "active_break": BreakSessionSerializer(state["active_break"]).data if state["active_break"] else None,

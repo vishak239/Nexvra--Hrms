@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "@/components/ui/icons";
 import { useEffect, useState, type FormEvent } from "react";
 import { RequirePermission } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
@@ -73,6 +73,7 @@ type PolicyForm = {
   work_start_time: string;
   work_end_time: string;
   late_grace_minutes: string;
+  break_allowance_minutes: string;
   half_day_min_hours: string;
   full_day_min_hours: string;
   self_attendance_enabled: boolean;
@@ -90,6 +91,7 @@ function toForm(s: CompanySettings): PolicyForm {
     work_start_time: s.work_start_time?.slice(0, 5) ?? "",
     work_end_time: s.work_end_time?.slice(0, 5) ?? "",
     late_grace_minutes: s.late_grace_minutes?.toString() ?? "",
+    break_allowance_minutes: s.break_allowance_minutes?.toString() ?? "",
     half_day_min_hours: s.half_day_min_hours ?? "",
     full_day_min_hours: s.full_day_min_hours ?? "",
     self_attendance_enabled: s.self_attendance_enabled,
@@ -126,6 +128,7 @@ function PoliciesTab() {
       work_start_time: orNull(form.work_start_time),
       work_end_time: orNull(form.work_end_time),
       late_grace_minutes: orNull(form.late_grace_minutes),
+      break_allowance_minutes: orNull(form.break_allowance_minutes),
       half_day_min_hours: orNull(form.half_day_min_hours),
       full_day_min_hours: orNull(form.full_day_min_hours),
       self_attendance_enabled: form.self_attendance_enabled,
@@ -164,7 +167,7 @@ function PoliciesTab() {
         <CardHeader title="Working time & attendance" />
         <div className="space-y-5 p-5">
           <fieldset>
-            <legend className="mb-2 text-sm font-medium text-zinc-700">Working days</legend>
+            <legend className="mb-1.5 font-label-sm text-label-sm uppercase text-on-surface-variant">Working days</legend>
             <div className="flex flex-wrap gap-2">
               {WEEKDAYS.map((d, i) => {
                 const on = form.working_days.includes(i);
@@ -176,7 +179,7 @@ function PoliciesTab() {
                     aria-pressed={on}
                     onClick={() => set("working_days", on ? form.working_days.filter((x) => x !== i) : [...form.working_days, i].sort())}
                     className={`h-9 w-14 rounded-lg border text-sm font-medium transition-colors disabled:cursor-not-allowed ${
-                      on ? "border-zinc-900 bg-zinc-900 text-nexvra-lime" : "border-zinc-300 bg-white text-zinc-600 hover:bg-zinc-50"
+                      on ? "border-primary-container bg-primary-container text-on-primary-fixed" : "border-surface-container-high bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container"
                     }`}
                   >
                     {d}
@@ -184,8 +187,8 @@ function PoliciesTab() {
                 );
               })}
             </div>
-            <p className="mt-1.5 text-xs text-zinc-500">
-              {f.working_days ? <span className="text-red-600">{f.working_days.join(" ")}</span> : "None selected = weekends and absences are not calculated."}
+            <p className="mt-1.5 text-xs text-on-surface-variant">
+              {f.working_days ? <span className="text-error">{f.working_days.join(" ")}</span> : "None selected = weekends and absences are not calculated."}
             </p>
           </fieldset>
           <div className="grid gap-5 sm:grid-cols-3">
@@ -194,6 +197,7 @@ function PoliciesTab() {
             <TextField label="Late grace (minutes)" type="number" min="0" value={form.late_grace_minutes} onChange={(e) => set("late_grace_minutes", e.target.value)} error={f.late_grace_minutes} hint="Needs a start time." disabled={!edit} />
             <TextField label="Half-day minimum hours" type="number" step="0.25" min="0" value={form.half_day_min_hours} onChange={(e) => set("half_day_min_hours", e.target.value)} error={f.half_day_min_hours} disabled={!edit} />
             <TextField label="Full-day minimum hours" type="number" step="0.25" min="0" value={form.full_day_min_hours} onChange={(e) => set("full_day_min_hours", e.target.value)} error={f.full_day_min_hours} hint="Set both or neither." disabled={!edit} />
+            <TextField label="Daily break allowance (minutes)" type="number" min="1" max="480" value={form.break_allowance_minutes} onChange={(e) => set("break_allowance_minutes", e.target.value)} error={f.break_allowance_minutes} hint="e.g. 60 for a 1-hour break. Empty = no limit." disabled={!edit} />
           </div>
           <CheckboxField label="Allow employees to check in and out themselves" checked={form.self_attendance_enabled} onChange={(e) => set("self_attendance_enabled", e.target.checked)} disabled={!edit} />
         </div>
@@ -300,17 +304,17 @@ function OrgListTab({ kind }: { kind: "departments" | "designations" }) {
           <TBody>
             {data.results.map((item) => (
               <tr key={item.id}>
-                <Td className="font-medium text-zinc-900">{item.name}</Td>
-                {isDept && <Td className="font-mono text-xs">{(item as Department).code}</Td>}
+                <Td className="font-medium text-primary">{item.name}</Td>
+                {isDept && <Td className="font-code-mono text-code-mono text-on-surface-variant">{(item as Department).code}</Td>}
                 {isDept && <Td>{(item as Department).head_name ?? "—"}</Td>}
                 <Td className="text-right tabular-nums">{item.employee_count}</Td>
                 <Td>{item.is_active ? <Badge tone="green">Active</Badge> : <Badge>Inactive</Badge>}</Td>
                 <Td className="text-right">
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => open(item)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label={`Edit ${item.name}`}>
+                    <button onClick={() => open(item)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary" aria-label={`Edit ${item.name}`}>
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button onClick={() => setDeleting(item)} className="rounded-md p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600" aria-label={`Delete ${item.name}`}>
+                    <button onClick={() => setDeleting(item)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-error-container/25 hover:text-error" aria-label={`Delete ${item.name}`}>
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>

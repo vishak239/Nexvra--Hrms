@@ -21,6 +21,7 @@ import type {
   Task,
 } from "@/lib/types";
 import { fmtDuration } from "@/lib/worksession";
+import { BreakTotal } from "@/components/attendance/BreakTotal";
 
 type View = "attendance" | "breaks" | "overtime" | "tasks" | "leave" | "balance" | "sync";
 
@@ -45,11 +46,11 @@ const SOURCES: Record<View, { path: string; dateKeys: [string, string]; extra?: 
 };
 
 function Person({ e }: { e: EmployeeRef | null }) {
-  if (!e) return <span className="text-zinc-400">—</span>;
+  if (!e) return <span className="text-outline">—</span>;
   return (
     <>
-      <span className="font-medium text-zinc-900">{e.full_name}</span>
-      <span className="ml-2 font-mono text-xs text-zinc-400">{e.employee_code}</span>
+      <span className="font-medium text-primary">{e.full_name}</span>
+      <span className="ml-2 font-code-mono text-code-mono text-outline">{e.employee_code}</span>
     </>
   );
 }
@@ -104,8 +105,8 @@ export function ActivityMonitor() {
             <Td>{fmtTime(r.check_in)}</Td>
             <Td>{fmtTime(r.check_out)}</Td>
             <Td>{fmtMinutes(r.session_minutes)}</Td>
-            <Td>{fmtMinutes(r.break_minutes)}</Td>
-            <Td className="font-medium text-zinc-900">{fmtMinutes(r.worked_minutes)}</Td>
+            <Td><BreakTotal record={r} empty={fmtMinutes(0)} /></Td>
+            <Td className="font-medium text-primary">{fmtMinutes(r.worked_minutes)}</Td>
             <Td><StatusBadge status={r.status} /></Td>
           </tr>
         )}
@@ -138,7 +139,7 @@ export function ActivityMonitor() {
         render={(t) => (
           <tr key={t.id}>
             <Td><Person e={t.assigned_to} /></Td>
-            <Td className="max-w-xs whitespace-normal font-medium text-zinc-900">{t.title}</Td>
+            <Td className="max-w-xs whitespace-normal font-medium text-primary">{t.title}</Td>
             <Td>{t.assigned_by?.full_name ?? "—"}</Td>
             <Td><PriorityBadge priority={t.priority} /></Td>
             <Td><TaskStatusBadge task={t} /></Td>
@@ -176,7 +177,7 @@ export function ActivityMonitor() {
             <Td><Person e={t.employee} /></Td>
             <Td>{t.leave_type_name}</Td>
             <Td>{t.year}</Td>
-            <Td className="font-medium text-red-700">−{fmtDays(t.days)}</Td>
+            <Td className="font-medium text-error">−{fmtDays(t.days)}</Td>
             <Td>{fmtDays(t.balance_before)}</Td>
             <Td>{fmtDays(t.balance_after)}</Td>
             <Td>{fmtDate(t.leave_request.start_date)} – {fmtDate(t.leave_request.end_date)}</Td>
@@ -198,7 +199,7 @@ export function ActivityMonitor() {
             <Td>{fmtDateTime(e.client_timestamp)}</Td>
             <Td>{fmtDateTime(e.received_at)}</Td>
             <Td><Badge tone={e.status === "APPLIED" ? "green" : e.status === "CONFLICT" ? "amber" : "red"}>{humanize(e.status)}</Badge></Td>
-            <Td className="max-w-xs whitespace-normal text-xs text-zinc-500">{e.error || "—"}</Td>
+            <Td className="max-w-xs whitespace-normal text-xs text-on-surface-variant">{e.error || "—"}</Td>
           </tr>
         )}
       />
@@ -219,8 +220,8 @@ export function ActivityMonitor() {
                 </option>
               ))}
             </FilterSelect>
-            <input type="date" aria-label="From" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-10 rounded-lg border border-zinc-300 px-2 text-sm" />
-            <input type="date" aria-label="To" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-10 rounded-lg border border-zinc-300 px-2 text-sm" />
+            <input type="date" aria-label="From" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-10 rounded-lg border border-surface-container-high px-2 text-sm" />
+            <input type="date" aria-label="To" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-10 rounded-lg border border-surface-container-high px-2 text-sm" />
           </>
         }
       />

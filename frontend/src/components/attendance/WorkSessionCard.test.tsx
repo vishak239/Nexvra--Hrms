@@ -27,12 +27,13 @@ function session(kind: "none" | "working" | "break" | "checked_out" | "overtime"
           id: 1, employee: EMP, date: "2026-10-02", check_in: iso(240 * MIN),
           check_out: kind === "checked_out" || kind === "overtime" ? iso(30 * MIN) : null,
           status: "PRESENT" as const, is_late: false, worked_minutes: null, session_minutes: null,
-          break_minutes: 0, total_break_seconds: 0, source: "SELF" as const, remarks: "", updated_at: iso(0),
+          break_minutes: 0, total_break_seconds: 0, break_over_allowance_minutes: null, source: "SELF" as const, remarks: "", updated_at: iso(0),
         };
   return {
     date: "2026-10-02",
     server_time: new Date().toISOString(),
     self_attendance_enabled: true,
+    break_allowance_minutes: null,
     record,
     breaks: [],
     active_break:
@@ -84,6 +85,36 @@ afterEach(() => {
 });
 
 describe("WorkSessionCard", () => {
+  it("shows the daily break allowance from settings and flags break time over it", async () => {
+    const base = session("working");
+    let breakMinutes = 75;
+    mockFetch((url) => {
+      if (url === "/api/attendance/today/")
+        return {
+          body: {
+            ...base,
+            break_allowance_minutes: 60,
+            record: { ...base.record!, total_break_seconds: breakMinutes * 60, break_minutes: breakMinutes },
+          },
+        };
+    });
+    const { unmount } = renderCard();
+    expect((await screen.findByTestId("total-break")).textContent).toBe("1h 15m");
+    expect(screen.getByTestId("total-break-hint").textContent).toBe("0h 15m over the 60 min allowance");
+    unmount();
+
+    breakMinutes = 20;
+    renderCard();
+    expect((await screen.findByTestId("total-break-hint")).textContent).toBe("0h 40m left of 60 min allowance");
+  });
+
+  it("shows no allowance hint when no break limit is configured", async () => {
+    mockFetch((url) => (url === "/api/attendance/today/" ? { body: session("working") } : undefined));
+    renderCard();
+    await screen.findByTestId("total-break");
+    expect(screen.queryByTestId("total-break-hint")).toBeNull();
+  });
+
   it("shows a live break timer and ends the break with an idempotency key", async () => {
     const { calls } = mockFetch((url) => {
       if (url === "/api/attendance/today/") return { body: session("break") };

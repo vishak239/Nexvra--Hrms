@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Trash2, Wallet } from "lucide-react";
+import { Pencil, Plus, Trash2, Wallet } from "@/components/ui/icons";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { RequirePermission } from "@/components/layout/AppShell";
@@ -75,8 +75,8 @@ function Runs({ manage, currency }: { manage: boolean; currency: string }) {
             </THead>
             <TBody>
               {data.results.map((r) => (
-                <tr key={r.id} className="cursor-pointer hover:bg-zinc-50" onClick={() => router.push(`/payroll/runs/${r.id}`)}>
-                  <Td className="font-medium text-zinc-900">{fmtPeriod(r.year, r.month)}</Td>
+                <tr key={r.id} className="cursor-pointer hover:bg-surface-container" onClick={() => router.push(`/payroll/runs/${r.id}`)}>
+                  <Td className="font-medium text-primary">{fmtPeriod(r.year, r.month)}</Td>
                   <Td>
                     <StatusBadge status={r.status} />
                   </Td>
@@ -117,7 +117,7 @@ function Runs({ manage, currency }: { manage: boolean; currency: string }) {
             </SelectField>
             <TextField label="Year" type="number" value={period.year} onChange={(e) => setPeriod({ ...period, year: e.target.value })} error={error?.fields.year} />
           </div>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-on-surface-variant">
             No statutory deductions, proration or loss-of-pay are applied automatically. Use adjustments on draft payslips where needed.
           </p>
         </form>
@@ -233,24 +233,24 @@ function Salaries({ manage, currency }: { manage: boolean; currency: string }) {
             <TBody>
               {data.results.map((s) => (
                 <tr key={s.id}>
-                  <Td className="font-medium text-zinc-900">{s.employee_detail.full_name}</Td>
+                  <Td className="font-medium text-primary">{s.employee_detail.full_name}</Td>
                   <Td>{fmtDate(s.effective_from)}</Td>
                   <Td className="text-right tabular-nums">{fmtMoney(s.gross_earnings, currency)}</Td>
                   <Td className="text-right tabular-nums">{fmtMoney(s.total_deductions, currency)}</Td>
-                  <Td className="text-right font-medium tabular-nums text-zinc-900">{fmtMoney(s.net_pay, currency)}</Td>
+                  <Td className="text-right font-medium tabular-nums text-primary">{fmtMoney(s.net_pay, currency)}</Td>
                   {manage && (
                     <Td className="text-right">
                       {s.employee !== me?.employee?.id || me?.role.code === "SUPER_ADMIN" ? (
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => open(s)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label={`Edit structure for ${s.employee_detail.full_name}`}>
+                          <button onClick={() => open(s)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary" aria-label={`Edit structure for ${s.employee_detail.full_name}`}>
                             <Pencil className="h-4 w-4" />
                           </button>
-                          <button onClick={() => setDeleting(s)} className="rounded-md p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600" aria-label={`Delete structure for ${s.employee_detail.full_name}`}>
+                          <button onClick={() => setDeleting(s)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-error-container/25 hover:text-error" aria-label={`Delete structure for ${s.employee_detail.full_name}`}>
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       ) : (
-                        <span className="text-xs text-zinc-400">Your own</span>
+                        <span className="text-xs text-outline">Your own</span>
                       )}
                     </Td>
                   )}
@@ -295,7 +295,7 @@ function Salaries({ manage, currency }: { manage: boolean; currency: string }) {
             <TextField label="Effective from" type="date" value={form.effective_from} onChange={(e) => setForm({ ...form, effective_from: e.target.value })} error={f.effective_from} required />
           </div>
           <div>
-            <p className="mb-2 text-sm font-medium text-zinc-700">Components (monthly)</p>
+            <p className="mb-2 text-sm font-medium text-on-surface">Components (monthly)</p>
             <div className="space-y-2">
               {form.items.map((item, idx) => (
                 <div key={idx} className="flex gap-2">
@@ -303,7 +303,7 @@ function Salaries({ manage, currency }: { manage: boolean; currency: string }) {
                     aria-label={`Component ${idx + 1}`}
                     value={item.component}
                     onChange={(e) => setForm({ ...form, items: form.items.map((x, i) => (i === idx ? { ...x, component: e.target.value } : x)) })}
-                    className="h-10 flex-1 rounded-lg border border-zinc-300 bg-white px-3 text-sm"
+                    className="h-10 flex-1 rounded-lg border border-surface-container-high bg-surface-container-low px-3 text-sm"
                   >
                     <option value="">Select component</option>
                     {components.data?.map((c) => (
@@ -320,12 +320,12 @@ function Salaries({ manage, currency }: { manage: boolean; currency: string }) {
                     placeholder="0.00"
                     value={item.amount}
                     onChange={(e) => setForm({ ...form, items: form.items.map((x, i) => (i === idx ? { ...x, amount: e.target.value } : x)) })}
-                    className="h-10 w-36 rounded-lg border border-zinc-300 px-3 text-right text-sm tabular-nums"
+                    className="h-10 w-36 rounded-lg border border-surface-container-high px-3 text-right text-sm tabular-nums"
                   />
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) })}
-                    className="rounded-md px-2 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                    className="rounded-md px-2 text-outline hover:bg-error-container/25 hover:text-error"
                     aria-label={`Remove component ${idx + 1}`}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -333,8 +333,8 @@ function Salaries({ manage, currency }: { manage: boolean; currency: string }) {
                 </div>
               ))}
             </div>
-            {itemErrors.length > 0 && <p className="mt-1.5 text-xs text-red-600">{itemErrors.join(" ")}</p>}
-            {typeof f.items?.[0] === "string" && <p className="mt-1.5 text-xs text-red-600">{f.items.join(" ")}</p>}
+            {itemErrors.length > 0 && <p className="mt-1.5 text-xs text-error">{itemErrors.join(" ")}</p>}
+            {typeof f.items?.[0] === "string" && <p className="mt-1.5 text-xs text-error">{f.items.join(" ")}</p>}
             <Button size="sm" variant="ghost" className="mt-2" icon={<Plus className="h-4 w-4" />} onClick={() => setForm({ ...form, items: [...form.items, { component: "", amount: "" }] })}>
               Add component
             </Button>
@@ -423,15 +423,15 @@ function Components({ manage }: { manage: boolean }) {
           <TBody>
             {data.map((c) => (
               <tr key={c.id}>
-                <Td className="font-medium text-zinc-900">{c.name}</Td>
-                <Td className="font-mono text-xs">{c.code}</Td>
+                <Td className="font-medium text-primary">{c.name}</Td>
+                <Td className="font-code-mono text-code-mono text-on-surface-variant">{c.code}</Td>
                 <Td>
                   <StatusBadge status={c.kind} />
                 </Td>
                 <Td>{c.is_active ? <Badge tone="green">Active</Badge> : <Badge>Inactive</Badge>}</Td>
                 {manage && (
                   <Td className="text-right">
-                    <button onClick={() => setEditing(c)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label={`Edit ${c.name}`}>
+                    <button onClick={() => setEditing(c)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary" aria-label={`Edit ${c.name}`}>
                       <Pencil className="h-4 w-4" />
                     </button>
                   </Td>

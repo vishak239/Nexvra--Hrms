@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Search } from "lucide-react";
+import { CheckCircle2, Search } from "@/components/ui/icons";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/ui/Field";
@@ -92,10 +92,10 @@ export function AssignTaskModal({ open, onClose, onCreated }: { open: boolean; o
       <form id="assign-task-form" onSubmit={onSubmit} className="space-y-4" noValidate>
         <FormError error={save.error} />
         <fieldset>
-          <legend className="mb-1.5 text-sm font-medium text-zinc-700">Find employee by</legend>
+          <legend className="mb-1.5 font-label-sm text-label-sm uppercase text-on-surface-variant">Find employee by</legend>
           <div className="flex gap-2" role="radiogroup">
             {(["employee_code", "username"] as LookupBy[]).map((option) => (
-              <label key={option} className={`cursor-pointer rounded-lg border px-3 py-1.5 text-sm ${by === option ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 text-zinc-700"}`}>
+              <label key={option} className={`cursor-pointer rounded-lg border px-3 py-1.5 text-sm ${by === option ? "border-primary-container bg-primary-container font-semibold text-on-primary-fixed" : "border-surface-container-high text-on-surface"}`}>
                 <input
                   type="radio"
                   name="lookup-by"
@@ -140,14 +140,14 @@ export function AssignTaskModal({ open, onClose, onCreated }: { open: boolean; o
           found.employee.is_self ? (
             <Alert>You cannot assign a task to yourself.</Alert>
           ) : (
-            <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm" data-testid="assignee-confirmation">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 text-green-700" />
+            <div className="flex items-start gap-3 rounded-lg border border-primary-container/30 bg-primary-container/10 px-4 py-3 text-sm" data-testid="assignee-confirmation">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary-fixed" />
               <div>
-                <p className="font-medium text-zinc-900">
+                <p className="font-medium text-primary">
                   {found.employee.full_name}
-                  {found.employee.username && <span className="ml-2 text-zinc-500">@{found.employee.username}</span>}
+                  {found.employee.username && <span className="ml-2 text-on-surface-variant">@{found.employee.username}</span>}
                 </p>
-                <p className="text-zinc-600">
+                <p className="text-on-surface-variant">
                   {found.employee.employee_code}
                   {found.employee.designation && ` · ${found.employee.designation}`}
                   {found.employee.department && ` · ${found.employee.department}`}

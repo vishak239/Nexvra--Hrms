@@ -71,3 +71,13 @@ export async function tryApi<T>(fn: () => Promise<T>): Promise<{ ok: true; data:
     return { ok: false, error: toApiError(e) };
   }
 }
+
+/** Returns `value` once it has stopped changing for `ms` (for search boxes). */
+export function useDebounced<T>(value: T, ms = 300) {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return v;
+}

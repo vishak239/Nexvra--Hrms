@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck } from "@/components/ui/icons";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -78,22 +78,22 @@ export default function NotificationsPage() {
           <EmptyState icon={<Bell className="h-5 w-5" />} title={filter === "unread" ? "No unread notifications" : "No notifications yet"} />
         ) : (
           <>
-            <ul className="divide-y divide-zinc-100">
+            <ul className="divide-y divide-surface-container-high/40">
               {data.results.map((n) => {
                 const href = linkFor(n);
                 const body = (
                   <div className="flex items-start gap-3">
-                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.is_read ? "bg-transparent" : "bg-nexvra-lime ring-2 ring-[#cdf58a]"}`} aria-hidden="true" />
+                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.is_read ? "bg-transparent" : "bg-primary-container ring-2 ring-primary-container/30"}`} aria-hidden="true" />
                     <div className="min-w-0 flex-1">
-                      <p className={`text-sm ${n.is_read ? "text-zinc-700" : "font-semibold text-zinc-900"}`}>{n.title}</p>
-                      {n.message && <p className="mt-0.5 text-sm text-zinc-500">{n.message}</p>}
-                      <p className="mt-1 text-xs text-zinc-400">{fmtDateTime(n.created_at)}</p>
+                      <p className={`text-sm ${n.is_read ? "text-on-surface" : "font-semibold text-primary"}`}>{n.title}</p>
+                      {n.message && <p className="mt-0.5 text-sm text-on-surface-variant">{n.message}</p>}
+                      <p className="mt-1 text-xs text-outline">{fmtDateTime(n.created_at)}</p>
                     </div>
                     {!n.is_read && <span className="sr-only">Unread</span>}
                   </div>
                 );
                 return (
-                  <li key={n.id} className="px-5 py-4 hover:bg-zinc-50">
+                  <li key={n.id} className="px-5 py-4 hover:bg-surface-container">
                     {href ? (
                       <Link href={href} onClick={() => void markRead(n)} className="block">
                         {body}

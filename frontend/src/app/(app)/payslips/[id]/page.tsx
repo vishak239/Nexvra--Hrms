@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer } from "@/components/ui/icons";
 import { useParams, useRouter } from "next/navigation";
 import { PayslipView } from "@/components/payroll/PayslipView";
 import { Button } from "@/components/ui/Button";
@@ -17,7 +17,7 @@ export default function PayslipPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="no-print mb-4 flex items-center justify-between">
-        <button onClick={() => router.back()} className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900">
+        <button onClick={() => router.back()} className="inline-flex items-center gap-1 text-sm text-on-surface-variant hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
         {data && (

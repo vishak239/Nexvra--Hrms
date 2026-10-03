@@ -47,6 +47,7 @@ PERMISSIONS = {
     "tasks.view_all": "View all tasks",
     "tasks.manage": "Assign, edit, remind and cancel tasks",
     "messages.use": "Send and receive private messages and files",
+    "policies.manage": "Create, edit and publish company policies",
 }
 
 _EMPLOYEE = {"attendance.self", "leave.apply", "payroll.view_own", "documents.view_own", "messages.use"}
@@ -78,6 +79,7 @@ _HR = _MANAGER | {
     "settings.manage",
     "tasks.view_all",
     "tasks.manage",
+    "policies.manage",
 }
 
 # code: (name, level, default permissions)

@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.employees.models import Employee
 from apps.employees.serializers import employee_ref
+from apps.organization.models import CompanySettings
 
 from .models import AttendanceRecord, BreakSession, OvertimeSession, SyncEvent
 
@@ -11,6 +12,7 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
     worked_minutes = serializers.IntegerField(read_only=True)
     session_minutes = serializers.IntegerField(read_only=True)
     break_minutes = serializers.IntegerField(read_only=True)
+    break_over_allowance_minutes = serializers.SerializerMethodField()
 
     class Meta:
         model = AttendanceRecord
@@ -26,6 +28,7 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
             "session_minutes",
             "break_minutes",
             "total_break_seconds",
+            "break_over_allowance_minutes",
             "source",
             "remarks",
             "updated_at",
@@ -34,6 +37,15 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
 
     def get_employee(self, record):
         return employee_ref(record.employee)
+
+    def get_break_over_allowance_minutes(self, record):
+        """Break time beyond the configured daily allowance; None when no allowance is set."""
+        if "break_allowance" not in self.context:  # one settings read per response, not per row
+            self.context["break_allowance"] = CompanySettings.get_solo().break_allowance_minutes
+        allowance = self.context["break_allowance"]
+        if allowance is None:
+            return None
+        return max(0, record.break_minutes - allowance)
 
 
 class AttendanceAdminSerializer(serializers.ModelSerializer):

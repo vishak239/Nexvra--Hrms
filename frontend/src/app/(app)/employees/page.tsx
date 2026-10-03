@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Users } from "lucide-react";
+import { Plus, Users } from "@/components/ui/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -12,19 +12,10 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/States";
 import { PAGE_SIZE, Pagination, TBody, THead, Table, Td, Th } from "@/components/ui/Table";
 import { Can } from "@/lib/auth";
 import { fmtDate, humanize } from "@/lib/format";
-import { useResource } from "@/lib/hooks";
+import { useDebounced, useResource } from "@/lib/hooks";
 import type { Department, Employee, Paginated } from "@/lib/types";
 
 const STATUSES = ["ACTIVE", "PROBATION", "NOTICE_PERIOD", "EXITED"];
-
-function useDebounced<T>(value: T, ms = 300) {
-  const [v, setV] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setV(value), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return v;
-}
 
 function EmployeesList() {
   const router = useRouter();
@@ -59,7 +50,7 @@ function EmployeesList() {
         }
       />
       <Card>
-        <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:flex-row sm:flex-wrap">
+        <div className="flex flex-col gap-3 border-b border-surface-container-high/40 p-4 sm:flex-row sm:flex-wrap">
           <SearchInput label="Search name, email or ID" value={search} onChange={(e) => setSearch(e.target.value)} />
           <FilterSelect label="Department" value={department} onChange={(e) => setDepartment(e.target.value)}>
             <option value="">All departments</option>
@@ -105,7 +96,7 @@ function EmployeesList() {
                 {data.results.map((e) => (
                   <tr
                     key={e.id}
-                    className="cursor-pointer hover:bg-zinc-50"
+                    className="cursor-pointer hover:bg-surface-container"
                     onClick={() => router.push(`/employees/${e.id}`)}
                   >
                     <Td>
@@ -115,15 +106,15 @@ function EmployeesList() {
                           <Link
                             href={`/employees/${e.id}`}
                             onClick={(ev) => ev.stopPropagation()}
-                            className="font-medium text-zinc-900 hover:underline"
+                            className="font-medium text-primary-fixed hover:underline"
                           >
                             {e.full_name}
                           </Link>
-                          <p className="text-xs text-zinc-500">{e.email}</p>
+                          <p className="text-xs text-on-surface-variant">{e.email}</p>
                         </div>
                       </div>
                     </Td>
-                    <Td className="font-mono text-xs">{e.employee_code}</Td>
+                    <Td className="font-code-mono text-code-mono text-primary-fixed">{e.employee_code}</Td>
                     <Td>{e.department?.name ?? "—"}</Td>
                     <Td>{e.designation?.name ?? "—"}</Td>
                     <Td>{e.manager?.full_name ?? "—"}</Td>

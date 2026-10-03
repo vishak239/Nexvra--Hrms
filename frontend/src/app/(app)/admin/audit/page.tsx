@@ -1,6 +1,6 @@
 "use client";
 
-import { ScrollText } from "lucide-react";
+import { ScrollText } from "@/components/ui/icons";
 import { Fragment, useEffect, useState } from "react";
 import { RequirePermission } from "@/components/layout/AppShell";
 import { Card, PageHeader } from "@/components/ui/Display";
@@ -12,8 +12,8 @@ import { useResource } from "@/lib/hooks";
 import type { AuditLog, Paginated } from "@/lib/types";
 
 function Json({ value }: { value: Record<string, unknown> }) {
-  if (!value || Object.keys(value).length === 0) return <span className="text-zinc-400">—</span>;
-  return <pre className="max-w-xl whitespace-pre-wrap break-all rounded-md bg-zinc-50 p-2 font-mono text-[11px] text-zinc-700">{JSON.stringify(value, null, 2)}</pre>;
+  if (!value || Object.keys(value).length === 0) return <span className="text-outline">—</span>;
+  return <pre className="max-w-xl whitespace-pre-wrap break-all rounded-md bg-surface-container p-2 font-mono text-[11px] text-on-surface">{JSON.stringify(value, null, 2)}</pre>;
 }
 
 function AuditContent() {
@@ -44,10 +44,10 @@ function AuditContent() {
     <>
       <PageHeader title="Audit log" description="Append-only record of sign-ins and important HR actions. Read-only." />
       <Card>
-        <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 border-b border-surface-container-high/40 p-4 sm:flex-row sm:items-center">
           <SearchInput label="Search actor, action or entity" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <input type="date" aria-label="From" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-10 rounded-lg border border-zinc-300 px-2 text-sm" />
-          <input type="date" aria-label="To" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-10 rounded-lg border border-zinc-300 px-2 text-sm" />
+          <input type="date" aria-label="From" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-10 rounded-lg border border-surface-container-high px-2 text-sm" />
+          <input type="date" aria-label="To" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-10 rounded-lg border border-surface-container-high px-2 text-sm" />
         </div>
         {error ? (
           <ErrorState error={error} onRetry={reload} />
@@ -68,27 +68,27 @@ function AuditContent() {
               <TBody>
                 {data.results.map((log) => (
                   <Fragment key={log.id}>
-                    <tr className="cursor-pointer hover:bg-zinc-50" onClick={() => setOpen(open === log.id ? null : log.id)} aria-expanded={open === log.id}>
+                    <tr className="cursor-pointer hover:bg-surface-container" onClick={() => setOpen(open === log.id ? null : log.id)} aria-expanded={open === log.id}>
                       <Td>{fmtDateTime(log.created_at)}</Td>
-                      <Td>{log.actor_email || <span className="text-zinc-400">system / anonymous</span>}</Td>
-                      <Td className="font-medium text-zinc-900">{humanize(log.action)}</Td>
-                      <Td className="font-mono text-xs">
+                      <Td>{log.actor_email || <span className="text-outline">system / anonymous</span>}</Td>
+                      <Td className="font-medium text-primary">{humanize(log.action)}</Td>
+                      <Td className="font-code-mono text-code-mono text-on-surface-variant">
                         {log.entity_type ? `${log.entity_type} #${log.entity_id}` : "—"}
                       </Td>
-                      <Td className="font-mono text-xs">{log.ip_address ?? "—"}</Td>
+                      <Td className="font-code-mono text-code-mono text-on-surface-variant">{log.ip_address ?? "—"}</Td>
                     </tr>
                     {open === log.id && (
-                      <tr className="bg-zinc-50/50">
+                      <tr className="bg-surface-container/50">
                         <td colSpan={5} className="px-5 py-4">
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
-                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Changes</p>
+                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Changes</p>
                               <Json value={log.changes} />
                             </div>
                             <div>
-                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Details</p>
+                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Details</p>
                               <Json value={log.metadata} />
-                              <p className="mt-2 truncate text-xs text-zinc-400" title={log.user_agent}>
+                              <p className="mt-2 truncate text-xs text-outline" title={log.user_agent}>
                                 {log.user_agent}
                               </p>
                             </div>

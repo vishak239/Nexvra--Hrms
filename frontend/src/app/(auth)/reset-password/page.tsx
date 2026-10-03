@@ -36,7 +36,7 @@ function ResetForm() {
     return (
       <div className="space-y-5">
         <Alert tone="success">Your password has been set. You can now sign in.</Alert>
-        <Link href="/login" className="block text-center text-sm font-medium text-zinc-900 underline underline-offset-4">
+        <Link href="/login" className="block text-center text-sm font-medium text-primary-fixed underline underline-offset-4">
           Go to sign in
         </Link>
       </div>
@@ -74,7 +74,7 @@ function ResetForm() {
 export default function ResetPasswordPage() {
   return (
     <>
-      <h1 className="mb-8 text-2xl font-semibold tracking-tight text-zinc-900">Set a new password</h1>
+      <h1 className="mb-8 text-2xl font-semibold tracking-tight text-primary">Set a new password</h1>
       <Suspense>
         <ResetForm />
       </Suspense>

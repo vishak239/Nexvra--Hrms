@@ -19,8 +19,8 @@ export function OvertimeTable({ rows, showEmployee }: { rows: OvertimeSession[];
           <tr key={o.id}>
             {showEmployee && (
               <Td>
-                <span className="font-medium text-zinc-900">{o.employee.full_name}</span>
-                <span className="ml-2 font-mono text-xs text-zinc-400">{o.employee.employee_code}</span>
+                <span className="font-medium text-primary">{o.employee.full_name}</span>
+                <span className="ml-2 font-code-mono text-code-mono text-outline">{o.employee.employee_code}</span>
               </Td>
             )}
             <Td>{fmtDate(o.date)}</Td>

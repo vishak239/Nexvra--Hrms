@@ -8,6 +8,7 @@ router.include_root_view = False
 router.register("departments", views.DepartmentViewSet, basename="department")
 router.register("designations", views.DesignationViewSet, basename="designation")
 router.register("holidays", views.HolidayViewSet, basename="holiday")
+router.register("policies", views.PolicyViewSet, basename="policy")
 
 urlpatterns = [
     path("company/", views.CompanyView.as_view(), name="company"),

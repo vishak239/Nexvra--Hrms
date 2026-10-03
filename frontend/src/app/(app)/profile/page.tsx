@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Pencil } from "lucide-react";
+import { KeyRound, Pencil } from "@/components/ui/icons";
 import { useState, type FormEvent } from "react";
 import { EmployeeProfile } from "@/components/employees/EmployeeProfile";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -64,7 +64,7 @@ export default function ProfilePage() {
           </>
         }
       />
-      <p className="mt-4 text-xs text-zinc-500">
+      <p className="mt-4 text-xs text-on-surface-variant">
         To change your name, email, department or other employment details, contact HR.
       </p>
 

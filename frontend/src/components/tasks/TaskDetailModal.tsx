@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CheckCircle2, Pencil, Play, XCircle } from "lucide-react";
+import { Bell, CheckCircle2, Pencil, Play, XCircle } from "@/components/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { DetailList } from "@/components/ui/Display";
@@ -69,12 +69,12 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: number
           <div className="flex flex-wrap items-center gap-2">
             <TaskStatusBadge task={task} />
             <PriorityBadge priority={task.priority} />
-            {task.is_blocking && <span className="text-xs font-medium text-amber-800">Response needed before checkout</span>}
+            {task.is_blocking && <span className="text-xs font-medium text-warning">Response needed before checkout</span>}
           </div>
           {action.error && <Alert>{action.error.message}</Alert>}
 
           {editing ? (
-            <div className="space-y-3 rounded-lg border border-zinc-200 p-4">
+            <div className="space-y-3 rounded-lg bg-surface-container p-4">
               <TextField label="Title" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} error={action.error?.fields.title} />
               <TextAreaField label="Description" value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} />
               <div className="grid gap-3 sm:grid-cols-2">
@@ -98,7 +98,7 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: number
             </div>
           ) : (
             <>
-              {task.description && <p className="whitespace-pre-line text-sm text-zinc-700">{task.description}</p>}
+              {task.description && <p className="whitespace-pre-line text-sm text-on-surface">{task.description}</p>}
               <DetailList
                 items={[
                   { label: "Assigned to", value: `${task.assigned_to.full_name} (${task.assigned_to.employee_code}${task.assigned_to.username ? ` · @${task.assigned_to.username}` : ""})` },
@@ -115,25 +115,25 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: number
           )}
 
           <section aria-label="Responses">
-            <h3 className="text-sm font-semibold text-zinc-900">Responses</h3>
+            <h3 className="text-sm font-semibold text-primary">Responses</h3>
             {task.responses?.length ? (
               <ul className="mt-2 space-y-2">
                 {task.responses.map((r) => (
-                  <li key={r.id} className="rounded-lg bg-zinc-50 px-3 py-2 text-sm">
-                    <p className="whitespace-pre-line text-zinc-800">{r.message}</p>
-                    <p className="mt-1 text-xs text-zinc-500">
+                  <li key={r.id} className="rounded-lg bg-surface-container px-3 py-2 text-sm">
+                    <p className="whitespace-pre-line text-on-surface">{r.message}</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">
                       {r.author ? handleOf(r.author) : "—"} · {fmtDateTime(r.created_at)}
                     </p>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-1 text-sm text-zinc-500">No response yet.</p>
+              <p className="mt-1 text-sm text-on-surface-variant">No response yet.</p>
             )}
           </section>
 
           {task.is_assignee && isOpen && (
-            <div className="space-y-3 border-t border-zinc-100 pt-4">
+            <div className="space-y-3 border-t border-surface-container-high/40 pt-4">
               <TextAreaField label="Your response" value={message} onChange={(e) => setMessage(e.target.value)} error={action.error?.fields.message ?? action.error?.fields.response} placeholder="Update, answer or acknowledgement" />
               <div className="flex flex-wrap gap-2">
                 {task.status === "PENDING" && (
@@ -148,12 +148,12 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: number
                   Mark completed
                 </Button>
               </div>
-              {task.requires_response && !task.responded_at && <p className="text-xs text-zinc-500">A response is required before this task can be completed.</p>}
+              {task.requires_response && !task.responded_at && <p className="text-xs text-on-surface-variant">A response is required before this task can be completed.</p>}
             </div>
           )}
 
           {task.can_manage && !editing && (
-            <div className="flex flex-wrap gap-2 border-t border-zinc-100 pt-4">
+            <div className="flex flex-wrap gap-2 border-t border-surface-container-high/40 pt-4">
               <Button
                 size="sm"
                 variant="secondary"

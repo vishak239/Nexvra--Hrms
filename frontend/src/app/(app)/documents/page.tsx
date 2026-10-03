@@ -1,10 +1,10 @@
 "use client";
 
-import { Download, Eye, EyeOff, FileText, Trash2, Upload } from "lucide-react";
+import { Download, Eye, EyeOff, FileText, Trash2, Upload } from "@/components/ui/icons";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { Badge, Card, CardHeader, PageHeader } from "@/components/ui/Display";
+import { Badge, Card, PageHeader } from "@/components/ui/Display";
 import { CheckboxField, FilterSelect, SelectField, TextField } from "@/components/ui/Field";
 import { ConfirmDialog, Modal, useToast } from "@/components/ui/Overlay";
 import { EmptyState, ErrorState, FormError, Loading, NoAccess, SkeletonRows } from "@/components/ui/States";
@@ -186,7 +186,7 @@ function DocumentsContent() {
         }
       />
       <Card>
-        <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:flex-row">
+        <div className="flex flex-col gap-3 border-b border-surface-container-high/40 p-4 sm:flex-row">
           {viewAll && (
             <FilterSelect label="Employee" value={employee} onChange={(e) => { setEmployee(e.target.value); setPage(1); }}>
               <option value="">All employees</option>
@@ -227,8 +227,8 @@ function DocumentsContent() {
                 {data.results.map((d) => (
                   <tr key={d.id}>
                     <Td>
-                      <p className="font-medium text-zinc-900">{d.title}</p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="font-medium text-primary">{d.title}</p>
+                      <p className="text-xs text-on-surface-variant">
                         {d.original_filename} · {fmtBytes(d.size)}
                       </p>
                     </Td>
@@ -236,24 +236,24 @@ function DocumentsContent() {
                     <Td>{humanize(d.category)}</Td>
                     <Td>
                       {fmtDate(d.created_at)}
-                      {d.uploaded_by_name && <p className="text-xs text-zinc-500">by {d.uploaded_by_name}</p>}
+                      {d.uploaded_by_name && <p className="text-xs text-on-surface-variant">by {d.uploaded_by_name}</p>}
                     </Td>
                     {viewAll && <Td>{d.visible_to_employee ? <Badge tone="green">Shared</Badge> : <Badge>HR only</Badge>}</Td>}
                     <Td className="text-right">
                       <div className="flex justify-end gap-1">
                         <a
                           href={`/api/documents/${d.id}/download/`}
-                          className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                          className="rounded-md p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary"
                           aria-label={`Download ${d.title}`}
                         >
                           <Download className="h-4 w-4" />
                         </a>
                         {manage && (
                           <>
-                            <button onClick={() => void toggleVisibility(d)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label={d.visible_to_employee ? `Hide ${d.title} from employee` : `Share ${d.title} with employee`}>
+                            <button onClick={() => void toggleVisibility(d)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary" aria-label={d.visible_to_employee ? `Hide ${d.title} from employee` : `Share ${d.title} with employee`}>
                               {d.visible_to_employee ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
-                            <button onClick={() => setDeleting(d)} className="rounded-md p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600" aria-label={`Delete ${d.title}`}>
+                            <button onClick={() => setDeleting(d)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-error-container/25 hover:text-error" aria-label={`Delete ${d.title}`}>
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Trash2 } from "lucide-react";
+import { Camera, Trash2 } from "@/components/ui/icons";
 import { useRef, useState, type ReactNode } from "react";
 import { Avatar, Badge, Card, CardHeader, DetailList, StatusBadge } from "@/components/ui/Display";
 import { useToast } from "@/components/ui/Overlay";
@@ -62,7 +62,7 @@ export function EmployeeProfile({
                   <button
                     onClick={() => fileInput.current?.click()}
                     disabled={pending}
-                    className="absolute -bottom-1 -right-1 rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-700 shadow-sm hover:bg-zinc-50"
+                    className="absolute -bottom-1 -right-1 rounded-[50%] border border-surface-container-high bg-surface-container p-1.5 text-on-surface hover:bg-surface-container-high"
                     aria-label="Change photo"
                   >
                     <Camera className="h-3.5 w-3.5" />
@@ -82,8 +82,8 @@ export function EmployeeProfile({
               )}
             </div>
             <div>
-              <h1 className="text-xl font-semibold tracking-tight text-zinc-900">{employee.full_name}</h1>
-              <p className="text-sm text-zinc-500">
+              <h1 className="text-xl font-semibold tracking-tight text-primary">{employee.full_name}</h1>
+              <p className="text-sm text-on-surface-variant">
                 {employee.designation?.name ?? "No designation"} · {employee.department?.name ?? "No department"}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -99,7 +99,7 @@ export function EmployeeProfile({
               <button
                 onClick={removePhoto}
                 disabled={pending}
-                className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-red-600"
+                className="inline-flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-error"
               >
                 <Trash2 className="h-4 w-4" /> Remove photo
               </button>

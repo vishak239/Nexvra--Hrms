@@ -1,7 +1,7 @@
 "use client";
 
 import { ActivityMonitor } from "@/components/reports/ActivityMonitor";
-import { Download } from "lucide-react";
+import { Download } from "@/components/ui/icons";
 import { useState } from "react";
 import { RequirePermission } from "@/components/layout/AppShell";
 import { Card, CardHeader, PageHeader, StatCard, StatusBadge } from "@/components/ui/Display";
@@ -39,11 +39,11 @@ function Bars({ rows, enumLabels = false }: { rows: Group[]; enumLabels?: boolea
       {rows.map((r) => (
         <li key={String(r.key)}>
           <div className="mb-1 flex justify-between text-sm">
-            <span className="text-zinc-700">{r.label ? (enumLabels ? humanize(String(r.label)) : r.label) : "Unassigned"}</span>
-            <span className="font-medium tabular-nums text-zinc-900">{r.count}</span>
+            <span className="text-on-surface">{r.label ? (enumLabels ? humanize(String(r.label)) : r.label) : "Unassigned"}</span>
+            <span className="font-medium tabular-nums text-primary">{r.count}</span>
           </div>
-          <div className="h-2 rounded-full bg-zinc-100">
-            <div className="h-2 rounded-full bg-zinc-900" style={{ width: `${(r.count / max) * 100}%` }} />
+          <div className="h-2 rounded-full bg-surface-container-high">
+            <div className="h-2 rounded-full bg-primary-container" style={{ width: `${(r.count / max) * 100}%` }} />
           </div>
         </li>
       ))}
@@ -126,8 +126,8 @@ function AttendanceSummary() {
         description="Up to 93 days. Absence is counted only when working days are configured."
         actions={
           <>
-            <input type="date" aria-label="From" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 rounded-lg border border-zinc-300 px-2 text-sm" />
-            <input type="date" aria-label="To" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 rounded-lg border border-zinc-300 px-2 text-sm" />
+            <input type="date" aria-label="From" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 rounded-lg border border-surface-container-high px-2 text-sm" />
+            <input type="date" aria-label="To" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 rounded-lg border border-surface-container-high px-2 text-sm" />
             <FilterSelect label="Department" value={department} onChange={(e) => setDepartment(e.target.value)}>
               <option value="">All departments</option>
               {departments.data?.results.map((d) => (
@@ -161,8 +161,8 @@ function AttendanceSummary() {
             {data.results.map((r) => (
               <tr key={r.employee_id}>
                 <Td>
-                  <span className="font-medium text-zinc-900">{r.full_name}</span>
-                  <span className="ml-2 font-mono text-xs text-zinc-400">{r.employee_code}</span>
+                  <span className="font-medium text-primary">{r.full_name}</span>
+                  <span className="ml-2 font-code-mono text-code-mono text-outline">{r.employee_code}</span>
                 </Td>
                 <Td>{r.department ?? "—"}</Td>
                 {cols.map(([key]) => (
@@ -224,7 +224,7 @@ function LeaveSummary() {
             <TBody>
               {data.by_type.map((t) => (
                 <tr key={t.leave_type}>
-                  <Td className="font-medium text-zinc-900">{t.leave_type}</Td>
+                  <Td className="font-medium text-primary">{t.leave_type}</Td>
                   {["PENDING", "APPROVED", "REJECTED", "CANCELLED"].map((s) => (
                     <Td key={s} className="text-right tabular-nums">
                       {t.requests[s] ?? 0}
@@ -249,7 +249,7 @@ function LeaveSummary() {
             <TBody>
               {data.approved_by_employee.map((r) => (
                 <tr key={`${r.employee_id}-${r.leave_type}`}>
-                  <Td className="font-medium text-zinc-900">{r.full_name}</Td>
+                  <Td className="font-medium text-primary">{r.full_name}</Td>
                   <Td>{r.leave_type}</Td>
                   <Td className="text-right tabular-nums">{fmtDays(r.days)}</Td>
                 </tr>
@@ -315,7 +315,7 @@ function PayrollSummary() {
             <TBody>
               {data.by_department.map((r) => (
                 <tr key={r.department ?? "none"}>
-                  <Td className="font-medium text-zinc-900">{r.department ?? "Unassigned"}</Td>
+                  <Td className="font-medium text-primary">{r.department ?? "Unassigned"}</Td>
                   <Td className="text-right tabular-nums">{r.count}</Td>
                   <Td className="text-right tabular-nums">{fmtMoney(r.gross, currency)}</Td>
                   <Td className="text-right tabular-nums">{fmtMoney(r.net, currency)}</Td>

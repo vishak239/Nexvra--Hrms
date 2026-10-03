@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Bell, CalendarDays, ClipboardCheck, ListTodo, MessageSquare, Users, Wallet } from "lucide-react";
+import { ArrowRight, Bell, CalendarDays, ClipboardCheck, ListTodo, MessageSquare, Users, Wallet } from "@/components/ui/icons";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { WorkSessionCard } from "@/components/attendance/WorkSessionCard";
@@ -30,7 +30,7 @@ export default function DashboardPage() {
     data.pending_approvals !== undefined && {
       label: "Pending approvals",
       value: data.pending_approvals,
-      hint: <Link href="/leave?tab=approvals" className="font-medium text-zinc-700 hover:underline">Review requests →</Link>,
+      hint: <Link href="/leave?tab=approvals" className="font-medium text-primary-fixed hover:underline">Review requests →</Link>,
       icon: <ClipboardCheck className="h-5 w-5" />,
     },
     data.headcount !== undefined && {
@@ -55,7 +55,7 @@ export default function DashboardPage() {
       label: "Open HR tasks",
       value: data.tasks_overview.open,
       hint: (
-        <Link href="/tasks" className="font-medium text-zinc-700 hover:underline">
+        <Link href="/tasks" className="font-medium text-primary-fixed hover:underline">
           {data.tasks_overview.awaiting_response} awaiting response · {data.tasks_overview.overdue} overdue →
         </Link>
       ),
@@ -65,7 +65,7 @@ export default function DashboardPage() {
       label: "My tasks",
       value: mine.open_tasks,
       hint: (
-        <Link href="/tasks" className="font-medium text-zinc-700 hover:underline">
+        <Link href="/tasks" className="font-medium text-primary-fixed hover:underline">
           {mine.blocking_tasks ? `${mine.blocking_tasks} need a response →` : "View tasks →"}
         </Link>
       ),
@@ -74,13 +74,13 @@ export default function DashboardPage() {
     data.unread_messages !== undefined && {
       label: "Unread messages",
       value: data.unread_messages,
-      hint: <Link href="/messages" className="font-medium text-zinc-700 hover:underline">Open messages →</Link>,
+      hint: <Link href="/messages" className="font-medium text-primary-fixed hover:underline">Open messages →</Link>,
       icon: <MessageSquare className="h-5 w-5" />,
     },
     {
       label: "Unread notifications",
       value: data.unread_notifications,
-      hint: <Link href="/notifications" className="font-medium text-zinc-700 hover:underline">Open inbox →</Link>,
+      hint: <Link href="/notifications" className="font-medium text-primary-fixed hover:underline">Open inbox →</Link>,
       icon: <Bell className="h-5 w-5" />,
     },
   ].filter(Boolean) as { label: string; value: ReactNode; hint: ReactNode; icon: ReactNode }[];
@@ -112,7 +112,7 @@ export default function DashboardPage() {
                     : ""
                 }`}
                 actions={
-                  <Link href="/attendance?tab=daily" className="text-sm font-medium text-zinc-700 hover:underline">
+                  <Link href="/attendance?tab=daily" className="text-sm font-medium text-primary-fixed hover:underline">
                     Details
                   </Link>
                 }
@@ -122,9 +122,9 @@ export default function DashboardPage() {
               ) : (
                 <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
                   {DAY_ORDER.filter((s) => data.attendance_today?.by_status[s]).map((s) => (
-                    <div key={s} className="rounded-lg border border-zinc-100 p-3">
-                      <p className="text-xs text-zinc-500">{humanize(s)}</p>
-                      <p className="mt-1 text-xl font-semibold text-zinc-900">{data.attendance_today?.by_status[s]}</p>
+                    <div key={s} className="rounded-lg bg-surface-container p-3">
+                      <p className="text-xs text-on-surface-variant">{humanize(s)}</p>
+                      <p className="mt-1 text-xl font-semibold text-primary">{data.attendance_today?.by_status[s]}</p>
                     </div>
                   ))}
                 </div>
@@ -138,7 +138,7 @@ export default function DashboardPage() {
                 title="My leave balance"
                 description={`Leave year ${mine.leave_year}`}
                 actions={
-                  <Link href="/leave" className="text-sm font-medium text-zinc-700 hover:underline">
+                  <Link href="/leave" className="text-sm font-medium text-primary-fixed hover:underline">
                     Apply for leave
                   </Link>
                 }
@@ -151,20 +151,20 @@ export default function DashboardPage() {
               ) : (
                 <div className="grid gap-4 p-5 sm:grid-cols-2">
                   {mine.leave_balances.map((b) => (
-                    <div key={b.leave_type} className="rounded-lg border border-zinc-100 p-4">
-                      <p className="text-sm font-medium text-zinc-900">{b.leave_type}</p>
+                    <div key={b.leave_type} className="rounded-lg bg-surface-container p-4">
+                      <p className="text-sm font-medium text-primary">{b.leave_type}</p>
                       {b.has_allocation ? (
                         <>
-                          <p className="mt-2 text-2xl font-semibold text-zinc-900">
+                          <p className="mt-2 text-2xl font-semibold text-primary">
                             {fmtDays(b.available)}
-                            <span className="ml-1 text-sm font-normal text-zinc-500">of {fmtDays(b.allocated)} days left</span>
+                            <span className="ml-1 text-sm font-normal text-on-surface-variant">of {fmtDays(b.allocated)} days left</span>
                           </p>
-                          <p className="mt-1 text-xs text-zinc-500">
+                          <p className="mt-1 text-xs text-on-surface-variant">
                             {fmtDays(b.used)} used · {fmtDays(b.pending)} pending approval (not deducted yet)
                           </p>
                         </>
                       ) : (
-                        <p className="mt-2 text-sm text-zinc-500">Not allocated for this year.</p>
+                        <p className="mt-2 text-sm text-on-surface-variant">Not allocated for this year.</p>
                       )}
                     </div>
                   ))}
@@ -180,16 +180,16 @@ export default function DashboardPage() {
               <CardHeader title="Latest payslip" />
               {mine.latest_payslip ? (
                 <div className="p-5">
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-on-surface-variant">
                     {fmtPeriod(mine.latest_payslip.year, mine.latest_payslip.month)}
                   </p>
-                  <p className="mt-1 text-2xl font-semibold text-zinc-900">
+                  <p className="mt-1 text-2xl font-semibold text-primary">
                     {fmtMoney(mine.latest_payslip.net_pay, mine.latest_payslip.currency)}
                   </p>
-                  <p className="text-xs text-zinc-500">Net pay</p>
+                  <p className="text-xs text-on-surface-variant">Net pay</p>
                   <Link
                     href={`/payslips/${mine.latest_payslip.id}`}
-                    className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-zinc-900 hover:underline"
+                    className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-fixed hover:underline"
                   >
                     View payslip <ArrowRight className="h-4 w-4" />
                   </Link>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
             <CardHeader
               title="Upcoming holidays"
               actions={
-                <Link href="/holidays" className="text-sm font-medium text-zinc-700 hover:underline">
+                <Link href="/holidays" className="text-sm font-medium text-primary-fixed hover:underline">
                   Calendar
                 </Link>
               }
@@ -212,12 +212,12 @@ export default function DashboardPage() {
             {data.upcoming_holidays.length === 0 ? (
               <EmptyState icon={<CalendarDays className="h-5 w-5" />} title="No upcoming holidays" />
             ) : (
-              <ul className="divide-y divide-zinc-100">
+              <ul className="divide-y divide-surface-container-high/40">
                 {data.upcoming_holidays.map((h) => (
                   <li key={h.id} className="flex items-center justify-between gap-3 px-5 py-3">
                     <div>
-                      <p className="text-sm font-medium text-zinc-900">{h.name}</p>
-                      <p className="text-xs text-zinc-500">{fmtDate(h.date)}</p>
+                      <p className="text-sm font-medium text-primary">{h.name}</p>
+                      <p className="text-xs text-on-surface-variant">{fmtDate(h.date)}</p>
                     </div>
                     {h.is_optional && <Badge>Optional</Badge>}
                   </li>

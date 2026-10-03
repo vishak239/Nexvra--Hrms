@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ExternalLink, LogOut } from "lucide-react";
+import { CheckCircle2, ExternalLink, LogOut } from "@/components/ui/icons";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -20,26 +20,26 @@ function TaskResponseForm({ task, onDone }: { task: Task; onDone: () => void }) 
   const handle = task.assigned_to.username ? `@${task.assigned_to.username}` : task.assigned_to.full_name;
 
   return (
-    <li className="rounded-xl border border-amber-200 bg-amber-50/40 p-4">
+    <li className="rounded-xl border border-warning-outline bg-warning-container/40 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Pending task</p>
-          <p className="mt-0.5 font-medium text-zinc-900">
+          <p className="text-xs font-semibold uppercase tracking-wide text-warning">Pending task</p>
+          <p className="mt-0.5 font-medium text-primary">
             {handle} — {task.title}
           </p>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-0.5 text-xs text-on-surface-variant">
             Assigned by {task.assigned_by?.full_name ?? "HR"}
             {task.due_date ? ` · due ${fmtDate(task.due_date)}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={task.priority === "URGENT" || task.priority === "HIGH" ? "red" : "neutral"}>{humanize(task.priority)}</Badge>
-          <Link href={`/tasks?task=${task.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-zinc-700 hover:underline">
+          <Link href={`/tasks?task=${task.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-primary-fixed hover:underline">
             Open task <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
       </div>
-      {task.description && <p className="mt-2 whitespace-pre-line text-sm text-zinc-600">{task.description}</p>}
+      {task.description && <p className="mt-2 whitespace-pre-line text-sm text-on-surface-variant">{task.description}</p>}
       <form
         className="mt-3 space-y-2"
         onSubmit={async (e) => {

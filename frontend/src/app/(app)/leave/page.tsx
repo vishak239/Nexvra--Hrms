@@ -2,7 +2,7 @@
 
 import { BalanceCard } from "@/components/leave/BalanceCard";
 import { LockedBadge, canCancelLeave } from "@/components/leave/LeaveLock";
-import { CalendarRange, Check, Pencil, Plus, X } from "lucide-react";
+import { CalendarRange, Check, Pencil, Plus, X } from "@/components/ui/icons";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
@@ -106,7 +106,7 @@ function ApplyModal({ open, onClose, onDone }: { open: boolean; onClose: () => v
           )}
         </div>
         <TextAreaField label="Reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} error={f.reason} />
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-on-surface-variant">
           Days are counted from configured working days and holidays, and checked against your balance.
         </p>
       </form>
@@ -177,7 +177,7 @@ function MyLeave({ employeeId }: { employeeId: number }) {
                   const cancellable = canCancelLeave(r);
                   return (
                     <tr key={r.id}>
-                      <Td className="font-medium text-zinc-900">{r.leave_type_name}</Td>
+                      <Td className="font-medium text-primary">{r.leave_type_name}</Td>
                       <Td>{dateRange(r)}</Td>
                       <Td>{fmtDays(r.days)}</Td>
                       <Td>
@@ -186,9 +186,9 @@ function MyLeave({ employeeId }: { employeeId: number }) {
                           <LockedBadge request={r} />
                         </div>
                       </Td>
-                      <Td className="max-w-xs truncate text-xs text-zinc-500">
+                      <Td className="max-w-xs truncate text-xs text-on-surface-variant">
                         {r.decided_by_name ? `${r.decided_by_name}${r.decision_note ? `: ${r.decision_note}` : ""}` : "—"}
-                        {r.balance_deducted && <span className="block text-zinc-400">{fmtDays(r.balance_deducted)} day(s) deducted</span>}
+                        {r.balance_deducted && <span className="block text-outline">{fmtDays(r.balance_deducted)} day(s) deducted</span>}
                       </Td>
                       <Td className="text-right">
                         {cancellable && (
@@ -288,12 +288,12 @@ function DecisionModal({
       {request && (
         <div className="space-y-4">
           <FormError error={error} />
-          <div className="rounded-lg bg-zinc-50 p-4 text-sm">
-            <p className="font-medium text-zinc-900">{request.employee.full_name}</p>
-            <p className="text-zinc-600">
+          <div className="rounded-lg bg-surface-container p-4 text-sm">
+            <p className="font-medium text-primary">{request.employee.full_name}</p>
+            <p className="text-on-surface-variant">
               {request.leave_type_name} · {dateRange(request)} · {fmtDays(request.days)} day(s)
             </p>
-            {request.reason && <p className="mt-2 text-zinc-600">“{request.reason}”</p>}
+            {request.reason && <p className="mt-2 text-on-surface-variant">“{request.reason}”</p>}
           </div>
           <TextAreaField label="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} error={error?.fields.note} />
         </div>
@@ -324,8 +324,8 @@ function RequestsTable({
         {rows.map((r) => (
           <tr key={r.id}>
             <Td>
-              <span className="font-medium text-zinc-900">{r.employee.full_name}</span>
-              <span className="ml-2 font-mono text-xs text-zinc-400">{r.employee.employee_code}</span>
+              <span className="font-medium text-primary">{r.employee.full_name}</span>
+              <span className="ml-2 font-code-mono text-code-mono text-outline">{r.employee.employee_code}</span>
             </Td>
             <Td>{r.leave_type_name}</Td>
             <Td>{dateRange(r)}</Td>
@@ -514,13 +514,13 @@ function Balances() {
             <TBody>
               {data.results.map((b) => (
                 <tr key={b.id}>
-                  <Td className="font-medium text-zinc-900">{b.employee_detail.full_name}</Td>
+                  <Td className="font-medium text-primary">{b.employee_detail.full_name}</Td>
                   <Td>{b.leave_type_name}</Td>
                   <Td>{b.year}</Td>
                   <Td>{fmtDays(b.allocated)}</Td>
                   <Td>{fmtDays(b.used)}</Td>
                   <Td>{fmtDays(b.pending)}</Td>
-                  <Td className="font-medium text-zinc-900">{fmtDays(b.available)}</Td>
+                  <Td className="font-medium text-primary">{fmtDays(b.available)}</Td>
                   <Td className="text-right">
                     <button
                       onClick={() => {
@@ -528,7 +528,7 @@ function Balances() {
                         setAllocated(b.allocated);
                         setEditing(b);
                       }}
-                      className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                      className="rounded-md p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary"
                       aria-label={`Edit balance for ${b.employee_detail.full_name}`}
                     >
                       <Pencil className="h-4 w-4" />
@@ -587,7 +587,7 @@ function Balances() {
             ))}
           </SelectField>
           <CheckboxField label="Overwrite existing balances" checked={form.overwrite} onChange={(e) => setForm({ ...form, overwrite: e.target.checked })} />
-          <p className="text-xs text-zinc-500">You can&apos;t allocate leave to yourself; another administrator must do that.</p>
+          <p className="text-xs text-on-surface-variant">You can&apos;t allocate leave to yourself; another administrator must do that.</p>
         </form>
       </Modal>
 
@@ -692,14 +692,14 @@ function LeaveTypes() {
           <TBody>
             {data.map((t) => (
               <tr key={t.id}>
-                <Td className="font-medium text-zinc-900">{t.name}</Td>
-                <Td className="font-mono text-xs">{t.code}</Td>
+                <Td className="font-medium text-primary">{t.name}</Td>
+                <Td className="font-code-mono text-code-mono text-on-surface-variant">{t.code}</Td>
                 <Td>{t.is_paid ? "Paid" : "Unpaid"}</Td>
                 <Td>{t.tracks_balance ? `${fmtDays(t.annual_allocation)} days` : "Not tracked"}</Td>
                 <Td>{t.allow_half_day ? "Allowed" : "No"}</Td>
                 <Td>{t.is_active ? <Badge tone="green">Active</Badge> : <Badge>Inactive</Badge>}</Td>
                 <Td className="text-right">
-                  <button onClick={() => open(t)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label={`Edit ${t.name}`}>
+                  <button onClick={() => open(t)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary" aria-label={`Edit ${t.name}`}>
                     <Pencil className="h-4 w-4" />
                   </button>
                 </Td>

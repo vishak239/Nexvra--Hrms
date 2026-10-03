@@ -21,6 +21,7 @@ function state(overrides: Partial<WorkSessionState> = {}, record: Partial<NonNul
     date: "2026-10-02",
     server_time: T("12:00"),
     self_attendance_enabled: true,
+    break_allowance_minutes: null,
     record:
       record === null
         ? null
@@ -36,6 +37,7 @@ function state(overrides: Partial<WorkSessionState> = {}, record: Partial<NonNul
             session_minutes: null,
             break_minutes: 0,
             total_break_seconds: 0,
+            break_over_allowance_minutes: null,
             source: "SELF",
             remarks: "",
             updated_at: T("09:00"),

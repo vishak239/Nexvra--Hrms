@@ -33,6 +33,10 @@ export class Session {
     return this.ctx.patch(url, { data, headers: { "X-CSRFToken": await this.csrf() } });
   }
 
+  async delete(url: string) {
+    return this.ctx.delete(url, { headers: { "X-CSRFToken": await this.csrf() } });
+  }
+
   async dispose() {
     await this.ctx.dispose();
   }

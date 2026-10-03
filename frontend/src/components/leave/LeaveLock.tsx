@@ -1,4 +1,4 @@
-import { Lock } from "lucide-react";
+import { Lock } from "@/components/ui/icons";
 import { Badge } from "@/components/ui/Display";
 import type { LeaveRequest } from "@/lib/types";
 

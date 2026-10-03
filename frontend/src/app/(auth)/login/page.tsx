@@ -34,8 +34,8 @@ function LoginForm() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Sign in</h1>
-      <p className="mt-1 text-sm text-zinc-500">Use your Nexvra work email and password.</p>
+      <h1 className="text-2xl font-semibold tracking-tight text-primary">Sign in</h1>
+      <p className="mt-1 text-sm text-on-surface-variant">Use your Nexvra work email and password.</p>
       <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
         <FormError error={error} />
         <TextField
@@ -58,7 +58,7 @@ function LoginForm() {
           required
         />
         <div className="flex justify-end">
-          <Link href="/forgot-password" className="text-sm font-medium text-zinc-700 underline-offset-4 hover:underline">
+          <Link href="/forgot-password" className="text-sm font-medium text-primary-fixed underline-offset-4 hover:underline">
             Forgot password?
           </Link>
         </div>

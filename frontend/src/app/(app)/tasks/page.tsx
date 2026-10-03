@@ -1,6 +1,6 @@
 "use client";
 
-import { ListTodo, Plus } from "lucide-react";
+import { ListTodo, Plus } from "@/components/ui/icons";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { AssignTaskModal } from "@/components/tasks/AssignTaskModal";
@@ -82,18 +82,18 @@ function TaskTable({ tab, onOpen, version }: { tab: Tab; onOpen: (id: number) =>
             </THead>
             <TBody>
               {data.results.map((t) => (
-                <tr key={t.id} className="cursor-pointer hover:bg-zinc-50" onClick={() => onOpen(t.id)}>
+                <tr key={t.id} className="cursor-pointer hover:bg-surface-container" onClick={() => onOpen(t.id)}>
                   <Td className="max-w-xs whitespace-normal">
-                    <button className="text-left font-medium text-zinc-900 hover:underline" onClick={(e) => { e.stopPropagation(); onOpen(t.id); }}>
+                    <button className="text-left font-medium text-primary hover:underline" onClick={(e) => { e.stopPropagation(); onOpen(t.id); }}>
                       {t.title}
                     </button>
-                    <p className="text-xs text-zinc-500">by {t.assigned_by ? handleOf(t.assigned_by) : "—"}</p>
+                    <p className="text-xs text-on-surface-variant">by {t.assigned_by ? handleOf(t.assigned_by) : "—"}</p>
                     {t.is_blocking && <Badge tone="amber">Response needed before checkout</Badge>}
                   </Td>
                   {showAssignee && (
                     <Td>
-                      <span className="font-medium text-zinc-900">{t.assigned_to.full_name}</span>
-                      <span className="ml-2 font-mono text-xs text-zinc-400">{t.assigned_to.employee_code}</span>
+                      <span className="font-medium text-primary">{t.assigned_to.full_name}</span>
+                      <span className="ml-2 font-code-mono text-code-mono text-outline">{t.assigned_to.employee_code}</span>
                     </Td>
                   )}
                   <Td>
@@ -104,7 +104,7 @@ function TaskTable({ tab, onOpen, version }: { tab: Tab; onOpen: (id: number) =>
                     <TaskStatusBadge task={t} />
                   </Td>
                   <Td className="max-w-[16rem] truncate" title={t.response || undefined}>
-                    {t.response ? t.response : <span className="text-zinc-400">—</span>}
+                    {t.response ? t.response : <span className="text-outline">—</span>}
                   </Td>
                   <Td>{fmtDateTime(t.updated_at)}</Td>
                 </tr>

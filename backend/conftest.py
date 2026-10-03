@@ -23,12 +23,14 @@ def _rbac_seeded(request):
     request.getfixturevalue("db")  # honours a transaction=True marker
     from apps.accounts.models import Permission
     from apps.accounts.rbac import sync_rbac
+    from apps.organization.models import Company
 
+    # Checked separately: a reused test DB may have been flushed and then partly re-seeded
+    # by a newer data migration (e.g. roles only).
     if not Role.objects.exists():
         sync_rbac(Permission, Role)
-        from apps.organization.models import Company
-
-        Company.objects.get_or_create(pk=1, defaults={"name": "Nexvra Solutions"})
+    if not Company.objects.filter(pk=1).exclude(name="").exists():
+        Company.objects.update_or_create(pk=1, defaults={"name": "Nexvra Solutions"})
 
 
 @pytest.fixture(autouse=True)

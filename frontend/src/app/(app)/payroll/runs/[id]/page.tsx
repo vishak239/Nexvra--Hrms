@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CheckCircle2, FileText, Lock, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileText, Lock, Plus, RefreshCw, Trash2 } from "@/components/ui/icons";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -54,12 +54,12 @@ function AdjustmentsModal({ payslip, onClose, onChange }: { payslip: Payslip | n
       {payslip && (
         <div className="space-y-5">
           <table className="w-full text-sm">
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-surface-container-high/40">
               {payslip.items.map((i) => (
                 <tr key={i.id}>
-                  <td className="py-2 text-zinc-700">
+                  <td className="py-2 text-on-surface">
                     {i.name}
-                    {i.source === "ADJUSTMENT" && <span className="ml-2 text-xs text-zinc-400">adjustment</span>}
+                    {i.source === "ADJUSTMENT" && <span className="ml-2 text-xs text-outline">adjustment</span>}
                   </td>
                   <td className="py-2">
                     <StatusBadge status={i.kind} />
@@ -67,7 +67,7 @@ function AdjustmentsModal({ payslip, onClose, onChange }: { payslip: Payslip | n
                   <td className="py-2 text-right tabular-nums">{fmtMoney(i.amount, payslip.currency)}</td>
                   <td className="w-10 py-2 text-right">
                     {i.source === "ADJUSTMENT" && (
-                      <button onClick={() => void remove(i.id)} className="rounded-md p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600" aria-label={`Remove ${i.name}`}>
+                      <button onClick={() => void remove(i.id)} className="rounded-md p-1 text-outline hover:bg-error-container/25 hover:text-error" aria-label={`Remove ${i.name}`}>
                         <Trash2 className="h-4 w-4" />
                       </button>
                     )}
@@ -76,7 +76,7 @@ function AdjustmentsModal({ payslip, onClose, onChange }: { payslip: Payslip | n
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-zinc-300">
+              <tr className="border-t border-surface-container-high">
                 <td className="py-2 font-semibold" colSpan={2}>
                   Net pay
                 </td>
@@ -85,8 +85,8 @@ function AdjustmentsModal({ payslip, onClose, onChange }: { payslip: Payslip | n
               </tr>
             </tfoot>
           </table>
-          <form onSubmit={onAdd} className="space-y-3 rounded-lg border border-zinc-200 p-4" noValidate>
-            <p className="text-sm font-medium text-zinc-900">Add adjustment</p>
+          <form onSubmit={onAdd} className="space-y-3 rounded-lg bg-surface-container p-4" noValidate>
+            <p className="text-sm font-medium text-primary">Add adjustment</p>
             <FormError error={error} />
             <div className="grid gap-3 sm:grid-cols-3">
               <TextField label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={error?.fields.name} required />
@@ -160,7 +160,7 @@ function RunDetail() {
 
   return (
     <>
-      <Link href="/payroll" className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900">
+      <Link href="/payroll" className="mb-4 inline-flex items-center gap-1 text-sm text-on-surface-variant hover:text-primary">
         <ArrowLeft className="h-4 w-4" /> Payroll
       </Link>
       <PageHeader
@@ -222,13 +222,13 @@ function RunDetail() {
                 {slips.data.results.map((p) => (
                   <tr key={p.id}>
                     <Td>
-                      <span className="font-medium text-zinc-900">{p.employee.full_name}</span>
-                      <span className="ml-2 font-mono text-xs text-zinc-400">{p.employee.employee_code}</span>
+                      <span className="font-medium text-primary">{p.employee.full_name}</span>
+                      <span className="ml-2 font-code-mono text-code-mono text-outline">{p.employee.employee_code}</span>
                     </Td>
                     <Td>{p.employee.department ?? "—"}</Td>
                     <Td className="text-right tabular-nums">{fmtMoney(p.gross_earnings, p.currency)}</Td>
                     <Td className="text-right tabular-nums">{fmtMoney(p.total_deductions, p.currency)}</Td>
-                    <Td className="text-right font-medium tabular-nums text-zinc-900">{fmtMoney(p.net_pay, p.currency)}</Td>
+                    <Td className="text-right font-medium tabular-nums text-primary">{fmtMoney(p.net_pay, p.currency)}</Td>
                     <Td className="text-right">
                       <div className="flex justify-end gap-2">
                         {manage && draft && (
@@ -236,7 +236,7 @@ function RunDetail() {
                             Adjust
                           </Button>
                         )}
-                        <Link href={`/payslips/${p.id}`} className="inline-flex h-8 items-center rounded-lg px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-100">
+                        <Link href={`/payslips/${p.id}`} className="inline-flex h-8 items-center rounded-lg px-3 text-xs font-medium text-on-surface hover:bg-surface-container-high">
                           View
                         </Link>
                       </div>

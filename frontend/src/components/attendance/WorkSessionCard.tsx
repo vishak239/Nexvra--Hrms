@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Coffee, History, LogIn, LogOut, Moon, Play, RotateCcw, Square, Timer } from "lucide-react";
+import { Clock, Coffee, History, LogIn, LogOut, Moon, Play, RotateCcw, Square, Timer } from "@/components/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, StatusBadge } from "@/components/ui/Display";
@@ -51,15 +51,41 @@ const ACTIONS: Record<SyncEventType, { path: string; done: string }> = {
   OVERTIME_END: { path: "/api/attendance/overtime/end/", done: "Overtime ended." },
 };
 
-function Stat({ label, value, testId }: { label: string; value: string; testId?: string }) {
+function Stat({
+  label,
+  value,
+  testId,
+  hint,
+  hintTone = "muted",
+}: {
+  label: string;
+  value: string;
+  testId?: string;
+  hint?: string;
+  hintTone?: "muted" | "warning";
+}) {
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-1 font-mono text-base font-semibold tabular-nums text-zinc-900 sm:text-lg" data-testid={testId}>
+      <p className="font-label-sm text-label-sm uppercase text-on-surface-variant">{label}</p>
+      <p className="mt-1 font-headline-md text-headline-md text-primary" data-testid={testId}>
         {value}
       </p>
+      {hint && (
+        <p className={`mt-0.5 text-body-sm ${hintTone === "warning" ? "text-warning" : "text-on-surface-variant"}`} data-testid={testId && `${testId}-hint`}>
+          {hint}
+        </p>
+      )}
     </div>
   );
+}
+
+/** Daily break allowance from Settings (e.g. 60 min); null when no limit is configured. */
+function allowanceHint(allowanceMinutes: number | null | undefined, breakSeconds: number) {
+  if (!allowanceMinutes) return null;
+  const left = allowanceMinutes * 60 - breakSeconds;
+  return left >= 0
+    ? { text: `${fmtDuration(left)} left of ${allowanceMinutes} min allowance`, tone: "muted" as const }
+    : { text: `${fmtDuration(-left)} over the ${allowanceMinutes} min allowance`, tone: "warning" as const };
 }
 
 const SEEN_KEY = (userId: number) => `nexvra.session-seen.${userId}`;
@@ -257,6 +283,8 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
   const phase = view.phase;
   const record = state.record;
   const breakNow = currentBreakSeconds(view, serverNow);
+  const breakSeconds = totalBreakSeconds(view, serverNow);
+  const breakAllowance = allowanceHint(state.break_allowance_minutes, breakSeconds);
   const needsConnection = !online;
 
   let headline = { label: "Worked today", seconds: workedSeconds(view, serverNow), testId: "work-timer" };
@@ -310,21 +338,27 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
 
         {phase !== "NOT_CHECKED_IN" && phase !== "DISABLED" && (
           <div
-            className={`rounded-xl px-5 py-4 ${phase === "ON_BREAK" ? "bg-amber-50" : phase === "OVERTIME" ? "bg-sky-50" : "bg-zinc-50"}`}
+            className={`rounded-xl px-5 py-4 ${phase === "ON_BREAK" ? "bg-warning-container" : phase === "OVERTIME" ? "bg-surface-container-high" : "bg-surface-container"}`}
           >
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{headline.label}</p>
-            <p role="timer" aria-label={headline.label} data-testid={headline.testId} className="mt-1 font-mono text-3xl font-semibold tabular-nums text-zinc-900 sm:text-4xl">
+            <p className="font-label-sm text-label-sm uppercase text-on-surface-variant">{headline.label}</p>
+            <p role="timer" aria-label={headline.label} data-testid={headline.testId} className="mt-1 font-display text-display-lg-mobile font-bold text-primary sm:text-display-lg">
               {fmtClock(headline.seconds)}
             </p>
-            {phase === "ON_BREAK" && view.breakStart && <p className="mt-1 text-xs text-zinc-500">Since {fmtTime(view.breakStart)} — break time is not counted as work.</p>}
-            {phase === "OVERTIME" && view.overtimeStart && <p className="mt-1 text-xs text-zinc-500">Since {fmtTime(view.overtimeStart)} — recorded separately from normal hours.</p>}
+            {phase === "ON_BREAK" && view.breakStart && <p className="mt-1 text-xs text-on-surface-variant">Since {fmtTime(view.breakStart)} — break time is not counted as work.</p>}
+            {phase === "OVERTIME" && view.overtimeStart && <p className="mt-1 text-xs text-on-surface-variant">Since {fmtTime(view.overtimeStart)} — recorded separately from normal hours.</p>}
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <Stat label="Check-in" value={fmtTime(view.checkIn)} />
           <Stat label="Check-out" value={fmtTime(view.checkOut)} />
-          <Stat label="Total break" value={fmtDuration(totalBreakSeconds(view, serverNow))} testId="total-break" />
+          <Stat
+            label="Total break"
+            value={fmtDuration(breakSeconds)}
+            testId="total-break"
+            hint={breakAllowance?.text}
+            hintTone={breakAllowance?.tone}
+          />
           <Stat label="Actual working" value={fmtDuration(workedSeconds(view, serverNow))} testId="actual-working" />
           <Stat label="Overtime" value={fmtDuration(overtimeSeconds(view, serverNow))} testId="overtime-total" />
         </div>
@@ -362,7 +396,7 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
             )}
             {phase === "CHECKED_OUT" && (
               <>
-                <p className="flex items-center gap-2 text-sm text-zinc-500">
+                <p className="flex items-center gap-2 text-sm text-on-surface-variant">
                   <Clock className="h-4 w-4" /> Normal work is done for today.
                 </p>
                 <Button variant="secondary" icon={<Moon className="h-4 w-4" />} loading={busy === "OVERTIME_START"} onClick={() => void sessionAction("OVERTIME_START")}>
@@ -378,28 +412,28 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
           </div>
         )}
         {needsConnection && (phase === "NOT_CHECKED_IN" || phase === "WORKING") && (
-          <p className="text-xs text-zinc-500">Check-in and check-out need a connection (the server verifies them). Breaks work offline.</p>
+          <p className="text-xs text-on-surface-variant">Check-in and check-out need a connection (the server verifies them). Breaks work offline.</p>
         )}
         {phase === "WORKING" && view.pendingEvents > 0 && online && (
-          <p className="text-xs text-zinc-500">Check-out is available once your offline actions have synced.</p>
+          <p className="text-xs text-on-surface-variant">Check-out is available once your offline actions have synced.</p>
         )}
 
         {view.breaks.length > 0 && (
-          <div className="border-t border-zinc-100 pt-4">
-            <button onClick={() => setShowHistory((s) => !s)} className="inline-flex items-center gap-2 text-sm font-medium text-zinc-700 hover:underline" aria-expanded={showHistory}>
+          <div className="border-t border-surface-container-high/40 pt-4">
+            <button onClick={() => setShowHistory((s) => !s)} className="inline-flex items-center gap-2 text-sm font-medium text-primary-fixed hover:underline" aria-expanded={showHistory}>
               <History className="h-4 w-4" /> Break history ({view.breaks.length})
             </button>
             {showHistory && (
-              <ul className="mt-3 divide-y divide-zinc-100 rounded-lg border border-zinc-100" aria-label="Break history">
+              <ul className="mt-3 divide-y divide-surface-container-high/40 rounded-lg border border-surface-container-high/40" aria-label="Break history">
                 {view.breaks.map((b, i) => (
                   <li key={`${b.start}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                    <span className="flex items-center gap-2 text-zinc-700">
-                      <Timer className="h-4 w-4 text-zinc-400" />
+                    <span className="flex items-center gap-2 text-on-surface">
+                      <Timer className="h-4 w-4 text-outline" />
                       {fmtTime(b.start)} – {b.end ? fmtTime(b.end) : "now"}
                     </span>
                     <span className="flex items-center gap-2">
                       {b.pending && <Badge tone="amber">Waiting to sync</Badge>}
-                      <span className="font-mono text-zinc-900">{b.end ? fmtDuration(b.seconds) : fmtClock(breakNow)}</span>
+                      <span className="text-primary">{b.end ? fmtDuration(b.seconds) : fmtClock(breakNow)}</span>
                     </span>
                   </li>
                 ))}

@@ -116,6 +116,7 @@ export interface CompanySettings {
   work_start_time: string | null;
   work_end_time: string | null;
   late_grace_minutes: number | null;
+  break_allowance_minutes: number | null;
   half_day_min_hours: string | null;
   full_day_min_hours: string | null;
   self_attendance_enabled: boolean;
@@ -142,6 +143,8 @@ export interface AttendanceRecord {
   session_minutes: number | null;
   break_minutes: number;
   total_break_seconds: number;
+  /** Break time beyond the daily allowance; null when no allowance is configured. */
+  break_over_allowance_minutes: number | null;
   source: "SELF" | "ADMIN";
   remarks: string;
   updated_at: string;
@@ -183,6 +186,7 @@ export interface WorkSessionState {
   date: string;
   server_time: string;
   self_attendance_enabled: boolean;
+  break_allowance_minutes: number | null;
   record: AttendanceRecord | null;
   breaks: BreakSession[];
   active_break: BreakSession | null;
@@ -545,4 +549,27 @@ export interface Dashboard {
   unread_messages?: number;
   work_sessions_now?: { on_break: number; overtime_running: number };
   tasks_overview?: { open: number; overdue: number; awaiting_response: number };
+}
+
+export type PolicyCategory =
+  | "WORKING_HOURS"
+  | "ATTENDANCE"
+  | "BREAKS"
+  | "LEAVE"
+  | "HOLIDAYS"
+  | "CONDUCT"
+  | "COMMUNICATION"
+  | "OTHER";
+
+export interface Policy {
+  id: number;
+  title: string;
+  category: PolicyCategory;
+  category_label: string;
+  body: string;
+  effective_date: string | null;
+  is_published: boolean;
+  updated_by_name: string | null;
+  created_at: string;
+  updated_at: string;
 }

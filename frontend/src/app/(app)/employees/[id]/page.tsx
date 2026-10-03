@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, FileText, Pencil } from "lucide-react";
+import { ArrowLeft, FileText, Pencil } from "@/components/ui/icons";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { EmployeeProfile } from "@/components/employees/EmployeeProfile";
@@ -17,7 +17,7 @@ export default function EmployeeDetailPage() {
 
   return (
     <>
-      <Link href="/employees" className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900">
+      <Link href="/employees" className="mb-4 inline-flex items-center gap-1 text-sm text-on-surface-variant hover:text-primary">
         <ArrowLeft className="h-4 w-4" /> Employees
       </Link>
       {loading && !data ? (

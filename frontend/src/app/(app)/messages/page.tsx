@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, FileText, MessageSquare, Paperclip, Search, Send, X } from "lucide-react";
+import { ArrowLeft, Download, FileText, MessageSquare, Paperclip, Search, Send, X } from "@/components/ui/icons";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
@@ -75,27 +75,27 @@ function PeopleSearch({ onPick }: { onPick: (p: Person) => void }) {
   }, [q]);
 
   return (
-    <div className="border-b border-zinc-100 p-3">
+    <div className="border-b border-surface-container-high/40 p-3">
       <label className="relative block">
         <span className="sr-only">Find people by @username, Employee ID or name</span>
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Find @username, Employee ID or name"
-          className="h-10 w-full rounded-lg border border-zinc-300 pl-9 pr-3 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+          className="h-10 w-full rounded-lg border border-surface-container-high pl-9 pr-3 text-sm focus:border-primary-container focus:outline-none focus:ring-1 focus:ring-primary-container"
         />
       </label>
       {q.trim() && (
-        <div className="mt-2 max-h-72 overflow-y-auto rounded-lg border border-zinc-200" aria-live="polite">
+        <div className="mt-2 max-h-72 overflow-y-auto rounded-lg border border-surface-container-high/60" aria-live="polite">
           {loading && !results ? (
-            <p className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-500">
+            <p className="flex items-center gap-2 px-3 py-2 text-sm text-on-surface-variant">
               <Spinner className="h-4 w-4" /> Searching…
             </p>
           ) : error ? (
-            <p className="px-3 py-2 text-sm text-red-700">{error}</p>
+            <p className="px-3 py-2 text-sm text-error">{error}</p>
           ) : !results?.length ? (
-            <p className="px-3 py-2 text-sm text-zinc-500">No one found.</p>
+            <p className="px-3 py-2 text-sm text-on-surface-variant">No one found.</p>
           ) : (
             <ul>
               {results.map((p) => (
@@ -105,13 +105,13 @@ function PeopleSearch({ onPick }: { onPick: (p: Person) => void }) {
                       onPick(p);
                       setQ("");
                     }}
-                    className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-zinc-50"
+                    className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-surface-container"
                     aria-label={`Message ${p.full_name}`}
                   >
                     <Avatar name={p.full_name} src={photoOf(p)} size={32} />
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-zinc-900">{p.full_name}</span>
-                      <span className="block truncate text-xs text-zinc-500">{personLine(p)}</span>
+                      <span className="block truncate text-sm font-medium text-primary">{p.full_name}</span>
+                      <span className="block truncate text-xs text-on-surface-variant">{personLine(p)}</span>
                     </span>
                   </button>
                 </li>
@@ -137,7 +137,7 @@ function ConversationList({
     return <EmptyState icon={<MessageSquare className="h-5 w-5" />} title="No conversations yet" description="Search for a colleague above to start one." />;
   }
   return (
-    <ul className="divide-y divide-zinc-100" aria-label="Conversations">
+    <ul className="divide-y divide-surface-container-high/40" aria-label="Conversations">
       {conversations.map((c) => {
         const preview = c.last_message
           ? `${c.last_message.is_mine ? "You: " : ""}${c.last_message.body || (c.last_message.attachment_count ? `📎 ${c.last_message.attachment_count} file(s)` : "")}`
@@ -146,19 +146,19 @@ function ConversationList({
           <li key={c.id}>
             <button
               onClick={() => onOpen(c.id)}
-              className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50 ${activeId === c.id ? "bg-zinc-100" : ""}`}
+              className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-container ${activeId === c.id ? "bg-surface-container-high" : ""}`}
               aria-current={activeId === c.id ? "true" : undefined}
             >
               <Avatar name={c.other?.full_name ?? "?"} src={photoOf(c.other)} size={36} />
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2">
-                  <span className={`truncate text-sm ${c.unread_count ? "font-semibold text-zinc-900" : "font-medium text-zinc-800"}`}>{c.other?.full_name ?? "Unknown"}</span>
-                  <span className="shrink-0 text-[11px] text-zinc-400">{c.last_message_at ? fmtTime(c.last_message_at) : ""}</span>
+                  <span className={`truncate text-sm ${c.unread_count ? "font-semibold text-primary" : "font-medium text-on-surface"}`}>{c.other?.full_name ?? "Unknown"}</span>
+                  <span className="shrink-0 text-[11px] text-outline">{c.last_message_at ? fmtTime(c.last_message_at) : ""}</span>
                 </span>
                 <span className="flex items-center justify-between gap-2">
-                  <span className="truncate text-xs text-zinc-500">{preview}</span>
+                  <span className="truncate text-xs text-on-surface-variant">{preview}</span>
                   {c.unread_count > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-nexvra-lime px-1.5 text-[10px] font-bold text-black" aria-label={`${c.unread_count} unread`}>
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-container px-1.5 text-[10px] font-bold text-on-primary-fixed" aria-label={`${c.unread_count} unread`}>
                       {c.unread_count}
                     </span>
                   )}
@@ -278,18 +278,18 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3">
-        <button onClick={onBack} className="rounded-md p-1 text-zinc-500 hover:bg-zinc-100 lg:hidden" aria-label="Back to conversations">
+      <div className="flex items-center gap-3 border-b border-surface-container-high/40 px-4 py-3">
+        <button onClick={onBack} className="rounded-md p-1 text-on-surface-variant hover:bg-surface-container-high lg:hidden" aria-label="Back to conversations">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <Avatar name={other?.full_name ?? "?"} src={photoOf(other)} size={36} />
         <div className="min-w-0">
-          <h2 className="truncate text-sm font-semibold text-zinc-900">{other?.full_name ?? "Conversation"}</h2>
-          {other && <p className="truncate text-xs text-zinc-500">{personLine(other)}</p>}
+          <h2 className="truncate text-sm font-semibold text-primary">{other?.full_name ?? "Conversation"}</h2>
+          {other && <p className="truncate text-xs text-on-surface-variant">{personLine(other)}</p>}
         </div>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto bg-zinc-50/60 px-4 py-4" aria-label="Messages" role="log">
+      <div className="flex-1 space-y-3 overflow-y-auto bg-surface-container/60 px-4 py-4" aria-label="Messages" role="log">
         {hasMore && (
           <div className="text-center">
             <Button size="sm" variant="secondary" loading={loadingOlder} onClick={() => void loadOlder()}>
@@ -297,10 +297,10 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
             </Button>
           </div>
         )}
-        {!messages.length && <p className="py-10 text-center text-sm text-zinc-500">No messages yet. Say hello 👋</p>}
+        {!messages.length && <p className="py-10 text-center text-sm text-on-surface-variant">No messages yet. Say hello 👋</p>}
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.is_mine ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm shadow-sm sm:max-w-[70%] ${m.is_mine ? "bg-zinc-900 text-white" : "bg-white text-zinc-900 ring-1 ring-zinc-200"}`}>
+            <div className={`max-w-[85%] rounded-xl px-3.5 py-2 text-sm sm:max-w-[70%] ${m.is_mine ? "bg-primary-container/15 text-primary ring-1 ring-inset ring-primary-container/25" : "bg-surface-container-high text-on-surface"}`}>
               {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
               {m.attachments.length > 0 && (
                 <ul className="mt-1.5 space-y-1">
@@ -309,7 +309,7 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
                       <a
                         href={a.download_url}
                         download={a.original_filename}
-                        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs ${m.is_mine ? "bg-white/10 hover:bg-white/20" : "bg-zinc-100 hover:bg-zinc-200"}`}
+                        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs ${m.is_mine ? "bg-black/30 hover:bg-black/50" : "bg-surface-container-highest hover:bg-surface-bright"}`}
                         aria-label={`Download ${a.original_filename}`}
                       >
                         <FileText className="h-4 w-4 shrink-0" />
@@ -321,14 +321,14 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
                   ))}
                 </ul>
               )}
-              <p className={`mt-1 text-[10px] ${m.is_mine ? "text-zinc-400" : "text-zinc-400"}`}>{fmtDateTime(m.created_at)}</p>
+              <p className={`mt-1 text-[10px] ${m.is_mine ? "text-outline" : "text-outline"}`}>{fmtDateTime(m.created_at)}</p>
             </div>
           </div>
         ))}
         <div ref={bottom} />
       </div>
 
-      <form onSubmit={onSend} className="border-t border-zinc-100 p-3">
+      <form onSubmit={onSend} className="border-t border-surface-container-high/40 p-3">
         {send.error && (
           <div className="mb-2">
             <Alert>{send.error.fields.files?.join(" ") || send.error.fields.body?.join(" ") || send.error.message}</Alert>
@@ -337,9 +337,9 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
         {files.length > 0 && (
           <ul className="mb-2 flex flex-wrap gap-2" aria-label="Files to send">
             {files.map((f, i) => (
-              <li key={`${f.name}-${i}`} className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-700">
-                <Paperclip className="h-3 w-3" /> {f.name} <span className="text-zinc-400">{fmtBytes(f.size)}</span>
-                <button type="button" onClick={() => setFiles((all) => all.filter((_, j) => j !== i))} aria-label={`Remove ${f.name}`} className="ml-1 text-zinc-500 hover:text-zinc-900">
+              <li key={`${f.name}-${i}`} className="flex items-center gap-1.5 rounded-full bg-surface-container-high px-3 py-1 text-xs text-on-surface">
+                <Paperclip className="h-3 w-3" /> {f.name} <span className="text-outline">{fmtBytes(f.size)}</span>
+                <button type="button" onClick={() => setFiles((all) => all.filter((_, j) => j !== i))} aria-label={`Remove ${f.name}`} className="ml-1 text-on-surface-variant hover:text-primary">
                   <X className="h-3 w-3" />
                 </button>
               </li>
@@ -347,7 +347,7 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
           </ul>
         )}
         <div className="flex items-end gap-2">
-          <label className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-zinc-300 text-zinc-600 hover:bg-zinc-50" title="Attach files">
+          <label className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-surface-container-high text-on-surface-variant hover:bg-surface-container" title="Attach files">
             <span className="sr-only">Attach files</span>
             <Paperclip className="h-4 w-4" />
             <input
@@ -377,14 +377,14 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
               rows={1}
               maxLength={5000}
               placeholder="Write a message…"
-              className="block max-h-40 min-h-10 w-full resize-y rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+              className="block max-h-40 min-h-10 w-full resize-y rounded-lg border border-surface-container-high px-3 py-2 text-sm focus:border-primary-container focus:outline-none focus:ring-1 focus:ring-primary-container"
             />
           </label>
           <Button type="submit" variant="dark" icon={<Send className="h-4 w-4" />} loading={send.pending} disabled={!body.trim() && !files.length}>
             Send
           </Button>
         </div>
-        <p className="mt-1.5 text-[11px] text-zinc-400">PDF, Word, Excel, CSV, text and images · up to {MAX_FILES} files · Enter to send, Shift+Enter for a new line</p>
+        <p className="mt-1.5 text-[11px] text-outline">PDF, Word, Excel, CSV, text and images · up to {MAX_FILES} files · Enter to send, Shift+Enter for a new line</p>
       </form>
     </div>
   );
@@ -435,7 +435,7 @@ function MessagesContent() {
       <PageHeader title="Messages" description="Private one-to-one conversations. Only the two participants can read them." />
       <Card className="overflow-hidden">
         <div className="grid h-[calc(100vh-14rem)] min-h-[28rem] lg:grid-cols-[20rem_1fr]">
-          <aside className={`min-h-0 flex-col border-zinc-100 lg:flex lg:border-r ${activeId ? "hidden" : "flex"}`}>
+          <aside className={`min-h-0 flex-col border-surface-container-high/40 lg:flex lg:border-r ${activeId ? "hidden" : "flex"}`}>
             <PeopleSearch onPick={(p) => void startWith(p)} />
             <div className="min-h-0 flex-1 overflow-y-auto">
               {listError ? (

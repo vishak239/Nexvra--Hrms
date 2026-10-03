@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from apps.core.models import TimeStampedModel
@@ -65,6 +66,12 @@ class CompanySettings(SingletonModel):
     work_start_time = models.TimeField(null=True, blank=True)
     work_end_time = models.TimeField(null=True, blank=True)
     late_grace_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
+    break_allowance_minutes = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(480)],
+        help_text="Total break time allowed per working day, e.g. 60. Empty = no limit is applied.",
+    )
     half_day_min_hours = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     full_day_min_hours = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     self_attendance_enabled = models.BooleanField(default=True)
@@ -150,3 +157,43 @@ class Holiday(TimeStampedModel):
 
     def __str__(self):
         return f"{self.date} {self.name}"
+
+
+class Policy(TimeStampedModel):
+    """A company policy document written by HR (e.g. conduct or communication rules).
+
+    Nexvra supplied no policy texts, so none are seeded. Numeric rules that the system
+    enforces (working hours, grace time, break allowance, ...) live in CompanySettings,
+    not here, so each value has exactly one source.
+    """
+
+    class Category(models.TextChoices):
+        WORKING_HOURS = "WORKING_HOURS", "Working hours"
+        ATTENDANCE = "ATTENDANCE", "Attendance"
+        BREAKS = "BREAKS", "Breaks"
+        LEAVE = "LEAVE", "Leave"
+        HOLIDAYS = "HOLIDAYS", "Holidays"
+        CONDUCT = "CONDUCT", "Employee conduct"
+        COMMUNICATION = "COMMUNICATION", "Communication"
+        OTHER = "OTHER", "Other"
+
+    title = models.CharField(max_length=200)
+    category = models.CharField(max_length=20, choices=Category.choices, default=Category.OTHER)
+    body = models.TextField()
+    effective_date = models.DateField(null=True, blank=True)
+    is_published = models.BooleanField(default=False, help_text="Drafts are visible only to policy managers.")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["category", "title"]
+        verbose_name_plural = "policies"
+        indexes = [models.Index(fields=["is_published", "category"], name="policy_published_category")]
+        constraints = [models.UniqueConstraint(Lower("title"), name="policy_unique_title_ci")]
+
+    def __str__(self):
+        return self.title

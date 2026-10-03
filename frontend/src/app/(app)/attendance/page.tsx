@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarCheck, Pencil, Plus, Trash2 } from "@/components/ui/icons";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { OvertimeTable } from "@/components/attendance/OvertimeTable";
@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { fmtDate, fmtMinutes, fmtTime, humanize, todayISO } from "@/lib/format";
 import { tryApi, useAction, useResource } from "@/lib/hooks";
 import type { AttendanceRecord, Department, Employee, EmployeeRef, OvertimeSession, Paginated } from "@/lib/types";
+import { BreakTotal } from "@/components/attendance/BreakTotal";
 
 type Tab = "mine" | "daily" | "records";
 
@@ -52,14 +53,14 @@ function RecordsTable({
           <tr key={r.id}>
             {showEmployee && (
               <Td>
-                <span className="font-medium text-zinc-900">{r.employee.full_name}</span>
-                <span className="ml-2 font-mono text-xs text-zinc-400">{r.employee.employee_code}</span>
+                <span className="font-medium text-primary">{r.employee.full_name}</span>
+                <span className="ml-2 font-code-mono text-code-mono text-outline">{r.employee.employee_code}</span>
               </Td>
             )}
             <Td>{fmtDate(r.date)}</Td>
             <Td>{fmtTime(r.check_in)}</Td>
             <Td>{fmtTime(r.check_out)}</Td>
-            <Td>{r.break_minutes ? fmtMinutes(r.break_minutes) : "—"}</Td>
+            <Td><BreakTotal record={r} /></Td>
             <Td>{fmtMinutes(r.worked_minutes)}</Td>
             <Td>
               <div className="flex gap-1.5">
@@ -74,12 +75,12 @@ function RecordsTable({
               <Td className="text-right">
                 <div className="flex justify-end gap-1">
                   {onEdit && (
-                    <button onClick={() => onEdit(r)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label={`Edit record for ${r.employee.full_name} on ${r.date}`}>
+                    <button onClick={() => onEdit(r)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary" aria-label={`Edit record for ${r.employee.full_name} on ${r.date}`}>
                       <Pencil className="h-4 w-4" />
                     </button>
                   )}
                   {onDelete && (
-                    <button onClick={() => onDelete(r)} className="rounded-md p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-600" aria-label={`Delete record for ${r.employee.full_name} on ${r.date}`}>
+                    <button onClick={() => onDelete(r)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-error-container/25 hover:text-error" aria-label={`Delete record for ${r.employee.full_name} on ${r.date}`}>
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
@@ -120,9 +121,9 @@ function MyAttendance({ employeeId }: { employeeId: number }) {
           title="My history"
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <input type="date" aria-label="From" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-9 rounded-lg border border-zinc-300 px-2 text-sm" />
-              <span className="text-sm text-zinc-400">to</span>
-              <input type="date" aria-label="To" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-9 rounded-lg border border-zinc-300 px-2 text-sm" />
+              <input type="date" aria-label="From" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-9 rounded-lg border border-surface-container-high px-2 text-sm" />
+              <span className="text-sm text-outline">to</span>
+              <input type="date" aria-label="To" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-9 rounded-lg border border-surface-container-high px-2 text-sm" />
             </div>
           }
         />
@@ -192,7 +193,7 @@ function DailyStatus() {
         description="Combines check-ins, approved leave, holidays and configured working days."
         actions={
           <>
-            <input type="date" aria-label="Date" value={date} onChange={(e) => setDate(e.target.value)} className="h-9 rounded-lg border border-zinc-300 px-2 text-sm" />
+            <input type="date" aria-label="Date" value={date} onChange={(e) => setDate(e.target.value)} className="h-9 rounded-lg border border-surface-container-high px-2 text-sm" />
             <FilterSelect label="Department" value={department} onChange={(e) => setDepartment(e.target.value)}>
               <option value="">All departments</option>
               {departments.data?.results.map((d) => (
@@ -212,9 +213,9 @@ function DailyStatus() {
         <EmptyState title="No one to show for this date" />
       ) : (
         <>
-          <div className="flex flex-wrap gap-2 border-b border-zinc-100 px-5 py-3">
+          <div className="flex flex-wrap gap-2 border-b border-surface-container-high/40 px-5 py-3">
             {Object.entries(counts).map(([status, n]) => (
-              <span key={status} className="inline-flex items-center gap-1.5 text-sm text-zinc-600">
+              <span key={status} className="inline-flex items-center gap-1.5 text-sm text-on-surface-variant">
                 <StatusBadge status={status} /> {n}
               </span>
             ))}
@@ -231,8 +232,8 @@ function DailyStatus() {
               {data.results.map((r) => (
                 <tr key={r.employee.id}>
                   <Td>
-                    <span className="font-medium text-zinc-900">{r.employee.full_name}</span>
-                    <span className="ml-2 font-mono text-xs text-zinc-400">{r.employee.employee_code}</span>
+                    <span className="font-medium text-primary">{r.employee.full_name}</span>
+                    <span className="ml-2 font-code-mono text-code-mono text-outline">{r.employee.employee_code}</span>
                   </Td>
                   <Td>
                     <div className="flex gap-1.5">
@@ -338,8 +339,8 @@ function RecordModal({
       <form id="attendance-form" onSubmit={onSubmit} className="space-y-4" noValidate>
         <FormError error={error} />
         {record ? (
-          <p className="text-sm text-zinc-600">
-            <span className="font-medium text-zinc-900">{record.employee.full_name}</span> · {fmtDate(record.date)}
+          <p className="text-sm text-on-surface-variant">
+            <span className="font-medium text-primary">{record.employee.full_name}</span> · {fmtDate(record.date)}
           </p>
         ) : (
           <>
@@ -412,8 +413,8 @@ function AllRecords() {
         title="Attendance records"
         actions={
           <>
-            <input type="date" aria-label="From" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-9 rounded-lg border border-zinc-300 px-2 text-sm" />
-            <input type="date" aria-label="To" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-9 rounded-lg border border-zinc-300 px-2 text-sm" />
+            <input type="date" aria-label="From" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="h-9 rounded-lg border border-surface-container-high px-2 text-sm" />
+            <input type="date" aria-label="To" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="h-9 rounded-lg border border-surface-container-high px-2 text-sm" />
             <FilterSelect label="Status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
               <option value="">All statuses</option>
               {["PRESENT", "HALF_DAY", "ABSENT"].map((s) => (

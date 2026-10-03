@@ -1,11 +1,27 @@
 import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { ChevronDown, Search } from "./icons";
 
+// Stitch inputs: dark well, 1px border, lime focus stroke (DESIGN.md "Input Fields & Controls").
 const CONTROL =
-  "block w-full rounded-lg border bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 " +
-  "focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-500";
+  "block w-full rounded border bg-surface-container-lowest px-3 text-body-md text-on-surface " +
+  "placeholder:text-on-surface-variant/60 transition-colors focus:border-primary-container focus:outline-none " +
+  "focus:ring-1 focus:ring-primary-container disabled:cursor-not-allowed disabled:opacity-60";
+const HEIGHT = "h-11 sm:h-9";
 
 function controlClass(error?: string[] | string) {
-  return `${CONTROL} ${error ? "border-red-400" : "border-zinc-300"}`;
+  return `${CONTROL} ${error ? "border-error" : "border-surface-container-high"}`;
+}
+
+/** Native select with the Stitch chevron (appearance-none + icon). */
+function SelectControl({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <div className="relative">
+      <select className={`${className} cursor-pointer appearance-none pr-9`} {...rest}>
+        {children}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-5 w-5 -translate-y-1/2 text-on-surface-variant" />
+    </div>
+  );
 }
 
 interface FieldProps {
@@ -23,17 +39,17 @@ export function Field({ label, error, hint, required, className = "", children }
   const describedBy = message ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-zinc-700">
+      <label htmlFor={id} className="mb-1.5 block font-label-sm text-label-sm uppercase text-on-surface-variant">
         {label}
-        {required && <span className="ml-0.5 text-red-600">*</span>}
+        {required && <span className="ml-0.5 text-error">*</span>}
       </label>
       {children(id, describedBy, !!message)}
       {message ? (
-        <p id={`${id}-error`} className="mt-1.5 text-xs text-red-600">
+        <p id={`${id}-error`} className="mt-1.5 text-body-sm text-error">
           {message}
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="mt-1.5 text-xs text-zinc-500">
+        <p id={`${id}-hint`} className="mt-1.5 text-body-sm text-on-surface-variant">
           {hint}
         </p>
       ) : null}
@@ -52,7 +68,7 @@ export function TextField({ label, error, hint, className, required, ...rest }: 
           aria-describedby={describedBy}
           aria-invalid={invalid}
           required={required}
-          className={`${controlClass(error)} h-10`}
+          className={`${controlClass(error)} ${HEIGHT}`}
           {...rest}
         />
       )}
@@ -72,16 +88,16 @@ export function SelectField({
   return (
     <Field label={label} error={error} hint={hint} required={required} className={className}>
       {(id, describedBy, invalid) => (
-        <select
+        <SelectControl
           id={id}
           aria-describedby={describedBy}
           aria-invalid={invalid}
           required={required}
-          className={`${controlClass(error)} h-10 pr-8`}
+          className={`${controlClass(error)} ${HEIGHT}`}
           {...rest}
         >
           {children}
-        </select>
+        </SelectControl>
       )}
     </Field>
   );
@@ -117,14 +133,14 @@ export function CheckboxField({
       <input
         id={id}
         type="checkbox"
-        className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-zinc-900 accent-zinc-900"
+        className="mt-0.5 h-4 w-4 cursor-pointer rounded-sm accent-primary-container"
         {...rest}
       />
       <div>
-        <label htmlFor={id} className="text-sm font-medium text-zinc-800">
+        <label htmlFor={id} className="text-body-md font-medium text-on-surface">
           {label}
         </label>
-        {hint && <p className="text-xs text-zinc-500">{hint}</p>}
+        {hint && <p className="text-body-sm text-on-surface-variant">{hint}</p>}
       </div>
     </div>
   );
@@ -132,13 +148,20 @@ export function CheckboxField({
 
 /** Plain search/filter input without a visible label (label provided for screen readers). */
 export function SearchInput({ label, ...rest }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
-  return <input aria-label={label} placeholder={label} className={`${controlClass()} h-10 sm:w-64`} {...rest} />;
+  return (
+    <div className="relative w-full sm:w-64">
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-on-surface-variant" />
+      <input aria-label={label} placeholder={label} className={`${controlClass()} ${HEIGHT} pl-9`} {...rest} />
+    </div>
+  );
 }
 
 export function FilterSelect({ label, children, ...rest }: { label: string } & SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select aria-label={label} className={`${controlClass()} h-10 pr-8 sm:w-48`} {...rest}>
-      {children}
-    </select>
+    <div className="w-full sm:w-48">
+      <SelectControl aria-label={label} className={`${controlClass()} ${HEIGHT}`} {...rest}>
+        {children}
+      </SelectControl>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, ShieldCheck } from "lucide-react";
+import { Pencil, Plus, ShieldCheck } from "@/components/ui/icons";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { RequirePermission } from "@/components/layout/AppShell";
@@ -77,7 +77,7 @@ function UsersTab() {
           )
         }
       />
-      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:flex-row">
+      <div className="flex flex-col gap-3 border-b border-surface-container-high/40 p-4 sm:flex-row">
         <SearchInput label="Search name, email or username" value={search} onChange={(e) => setSearch(e.target.value)} />
         <FilterSelect label="Role" value={role} onChange={(e) => setRole(e.target.value)}>
           <option value="">All roles</option>
@@ -109,10 +109,10 @@ function UsersTab() {
               {data.results.map((u) => (
                 <tr key={u.id}>
                   <Td>
-                    <p className="font-medium text-zinc-900">{u.full_name || "—"}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="font-medium text-primary">{u.full_name || "—"}</p>
+                    <p className="text-xs text-on-surface-variant">
                       {u.email}
-                      {u.username && <span className="ml-2 text-zinc-400">@{u.username}</span>}
+                      {u.username && <span className="ml-2 text-outline">@{u.username}</span>}
                     </p>
                   </Td>
                   <Td>
@@ -120,13 +120,13 @@ function UsersTab() {
                   </Td>
                   <Td>
                     {u.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="red">Disabled</Badge>}
-                    {u.must_change_password && <span className="ml-2 text-xs text-zinc-500">must change password</span>}
+                    {u.must_change_password && <span className="ml-2 text-xs text-on-surface-variant">must change password</span>}
                   </Td>
-                  <Td>{u.employee_id ? <Link href={`/employees/${u.employee_id}`} className="text-zinc-900 underline-offset-4 hover:underline">View</Link> : "—"}</Td>
+                  <Td>{u.employee_id ? <Link href={`/employees/${u.employee_id}`} className="text-primary-fixed underline-offset-4 hover:underline">View</Link> : "—"}</Td>
                   <Td>{fmtDateTime(u.last_login)}</Td>
                   {manage && (
                     <Td className="text-right">
-                      <button onClick={() => open(u)} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900" aria-label={`Edit ${u.email}`}>
+                      <button onClick={() => open(u)} className="rounded-md p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-primary" aria-label={`Edit ${u.email}`}>
                         <Pencil className="h-4 w-4" />
                       </button>
                     </Td>
@@ -226,11 +226,11 @@ function RolesTab() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-zinc-400" />
-                  <h3 className="text-sm font-semibold text-zinc-900">{r.name}</h3>
+                  <ShieldCheck className="h-4 w-4 text-outline" />
+                  <h3 className="text-sm font-semibold text-primary">{r.name}</h3>
                   {r.is_system && <Badge>System</Badge>}
                 </div>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-on-surface-variant">
                   Level {r.level} · {r.user_count} user(s) · {r.permissions.length} permission(s)
                 </p>
               </div>
@@ -253,7 +253,7 @@ function RolesTab() {
                 <Badge tone="dark">All permissions</Badge>
               ) : (
                 r.permissions.map((p) => (
-                  <span key={p} className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[11px] text-zinc-600">
+                  <span key={p} className="rounded bg-surface-container-high px-1.5 py-0.5 font-code-mono text-code-mono text-on-surface-variant">
                     {p}
                   </span>
                 ))
@@ -283,7 +283,7 @@ function RolesTab() {
           <FormError error={save.error} />
           {groups.map(([area, items]) => (
             <fieldset key={area}>
-              <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">{area}</legend>
+              <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-on-surface-variant">{area}</legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 {items.map((p) => (
                   <CheckboxField

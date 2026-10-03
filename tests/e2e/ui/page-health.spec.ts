@@ -11,6 +11,7 @@ const PAGES = [
   "/notifications",
   "/documents",
   "/holidays",
+  "/policies",
   "/profile",
   "/payslips",
   "/employees",
@@ -48,7 +49,7 @@ for (const who of [DEMO.superAdmin, DEMO.hr, DEMO.manager, DEMO.employee]) {
 test("new pages fit a phone screen without horizontal scrolling", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await uiLoginToDashboard(page, DEMO.hr);
-  for (const path of ["/dashboard", "/attendance", "/tasks", "/messages", "/leave", "/reports"]) {
+  for (const path of ["/dashboard", "/attendance", "/tasks", "/messages", "/leave", "/reports", "/policies", "/employees", "/settings"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await page.waitForLoadState("networkidle");
