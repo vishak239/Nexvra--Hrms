@@ -1,0 +1,548 @@
+<!DOCTYPE html><html class="dark" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-primary": "#1e3700", "outline-variant": "#404a34", "outline": "#8a957a", "on-error-container": "#ffdad6", "primary-fixed-dim": "#86dd00", "primary-fixed": "#9afc00", "surface-container-highest": "#353534", "on-secondary-fixed-variant": "#47464a", "on-surface": "#e5e2e1", "surface-container-high": "#2a2a2a", "error": "#ffb4ab", "on-tertiary": "#303033", "tertiary": "#ffffff", "primary": "#ffffff", "on-secondary-fixed": "#1b1b1e", "surface-container-low": "#1c1b1b", "inverse-on-surface": "#313030", "background": "#131313", "surface-tint": "#86dd00", "surface": "#131313", "on-primary-fixed-variant": "#2d5000", "tertiary-container": "#e4e1e6", "on-secondary-container": "#b6b4b8", "secondary-fixed": "#e4e1e5", "primary-container": "#9afc00", "surface-variant": "#353534", "surface-container-lowest": "#0e0e0e", "on-secondary": "#303033", "surface-bright": "#3a3939", "tertiary-fixed": "#e4e1e6", "error-container": "#93000a", "surface-container": "#201f1f", "on-primary-fixed": "#0f2000", "on-primary-container": "#427000", "secondary-container": "#47464a", "secondary-fixed-dim": "#c8c6c9", "on-background": "#e5e2e1", "secondary": "#c8c6c9", "on-error": "#690005", "surface-dim": "#131313", "on-tertiary-fixed": "#1b1b1e", "on-tertiary-container": "#656467", "on-surface-variant": "#bfcbae", "inverse-primary": "#3e6a00", "tertiary-fixed-dim": "#c8c5ca", "inverse-surface": "#e5e2e1", "on-tertiary-fixed-variant": "#47464a" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "space-xl": "1.5rem", "margin-md": "1.5rem", "space-xs": "0.25rem", "space-lg": "1rem", "space-md": "0.75rem", "margin-lg": "2rem", "margin": "1rem", "space-sm": "0.5rem", "gutter": "1rem", "gutter-lg": "1.5rem" }, "fontFamily": { "code-mono": [ "Inter" ], "label-lg": [ "Inter" ], "label-md": [ "Inter" ], "headline-md": [ "Space Grotesk" ], "headline-xl": [ "Space Grotesk" ], "headline-xl-mobile": [ "Space Grotesk" ], "label-sm": [ "Inter" ], "body-sm": [ "Inter" ], "headline-lg": [ "Space Grotesk" ], "display-lg": [ "Space Grotesk" ], "body-lg": [ "Inter" ], "body-md": [ "Inter" ], "headline-sm": [ "Space Grotesk" ], "data-metric": [ "Space Grotesk" ], "display-lg-mobile": [ "Space Grotesk" ] }, "fontSize": { "code-mono": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" } ], "label-lg": [ "14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" } ], "label-md": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" } ], "headline-md": [ "20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "headline-xl": [ "32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "headline-xl-mobile": [ "26px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "label-sm": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" } ], "body-sm": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" } ], "headline-lg": [ "24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "display-lg": [ "48px", { "lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "700" } ], "body-lg": [ "16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "400" } ], "body-md": [ "14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" } ], "headline-sm": [ "16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "data-metric": [ "28px", { "lineHeight": "32px", "letterSpacing": "-0.03em", "fontWeight": "700" } ], "display-lg-mobile": [ "36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" } ] } } } };</script></head><body class="bg-surface-container-lowest text-on-surface font-body-md text-body-md min-h-screen selection:bg-primary-container selection:text-on-primary-container"><aside class="fixed left-0 top-0 h-screen w-64 bg-surface-container-lowest z-50 flex flex-col justify-between border-r border-surface-container-high/40"><div class="flex flex-col flex-1 overflow-y-auto"><div class="h-16 px-space-md flex items-center justify-between border-b border-surface-container-high/40"><div class="flex items-center gap-space-sm"><img alt="Nexvra Solutions Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Xwd0avzhOo8e3YsZwYA1d-0fjmQ_EOz1Hxgq1UzpvllmyvDnJOPTwTKOPDe1U76ihkCU_nRelBhMMmI5-vtx3T44F1fyVW25dU2zNfzuihtuTBCEvyg4Dq7A4ThYDXcq9ct1BoqgULrR-2ks-gz96A9Oy1PGclT2OUdfXD_cuXPIAg13z-upWH6TpMSzChQHwocSrF4yFz9N_XbsihJAcT8f7aEYy0L5Vknxr1dsBEREvw9Zi0F1fyZro"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight font-semibold">NEXVRA</span><span class="font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase">Solutions</span></div></div><span class="font-code-mono text-code-mono px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">v2.4</span></div><nav class="flex flex-col gap-0.5 px-space-xs py-space-sm" data-active-classes="bg-surface-container-low text-primary-fixed border-l-2 border-primary-container font-medium"><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="overview" href="#"><span class="material-symbols-outlined text-space-lg">dashboard</span><span class="font-label-md text-label-md">Dashboard</span></a><div class="flex flex-col"><a aria-current="page" class="flex items-center justify-between px-space-md py-space-sm rounded-lg transition-colors bg-surface-container-low text-primary-fixed border-l-2 border-primary-container font-medium" data-path="people-employees" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-space-lg">group</span><span class="font-label-md text-label-md">People</span></div><span class="material-symbols-outlined text-space-md">expand_more</span></a><div class="flex flex-col pl-9 pr-space-xs py-0.5 space-y-0.5"><a aria-current="page" class="px-space-sm py-1 rounded transition-colors bg-surface-container-low text-primary-fixed border-l-2 border-primary-container font-medium" data-path="people-employees" href="#">Employees</a><a class="px-space-sm py-1 rounded text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface font-label-sm text-label-sm transition-colors" data-path="people-departments" href="#">Departments</a><a class="px-space-sm py-1 rounded text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface font-label-sm text-label-sm transition-colors" data-path="people-designations" href="#">Designations</a></div></div><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="attendance" href="#"><span class="material-symbols-outlined text-space-lg">timer</span><span class="font-label-md text-label-md">Attendance</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="leave-management" href="#"><span class="material-symbols-outlined text-space-lg">event_available</span><span class="font-label-md text-label-md">Leave</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="payroll" href="#"><span class="material-symbols-outlined text-space-lg">payments</span><span class="font-label-md text-label-md">Payroll</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="documents" href="#"><span class="material-symbols-outlined text-space-lg">folder_shared</span><span class="font-label-md text-label-md">Documents</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="reports" href="#"><span class="material-symbols-outlined text-space-lg">analytics</span><span class="font-label-md text-label-md">Reports</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="audit-logs" href="#"><span class="material-symbols-outlined text-space-lg">receipt_long</span><span class="font-label-md text-label-md">Audit Logs</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-space-lg">settings</span><span class="font-label-md text-label-md">Settings</span></a></nav></div><div class="p-space-sm border-t border-surface-container-high/40 bg-surface-container-lowest"><div class="flex items-center justify-between p-space-xs rounded-lg hover:bg-surface-container-low transition-colors"><div class="flex items-center gap-space-sm"><div class="relative"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfH9tXWLXdxkUTdaTNENgRxt-lro9H-mMAd1wBN1s0834vYVb7FgM2mwePz7kj7QdqwQvf0QbmFNnDGRuswXU9R8316g-aWBmowYD7Tr2hrPymfA0-ayzGSnBfJAWAxR6Uy0XULFvAE30PPL7QHw-G_EmbH7fO_sCaz5RhjRmAyeIt5TGx4SIi4y1HBdi2SJMsAbiIaNxmuSOZFfCmJmo18hQrumoEMNBZRecHcNJTPP2p6aIduijB"><span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-primary-container ring-1 ring-surface-container-lowest"></span></div><div class="flex flex-col"><span class="font-label-sm text-label-sm font-semibold text-primary truncate w-24">Elena Rostova</span><span class="font-code-mono text-code-mono text-primary-fixed">Super Admin</span></div></div><button class="text-on-surface-variant hover:text-on-surface p-1 rounded transition-colors" title="Logout / Switch Account" type="button"><span class="material-symbols-outlined text-space-lg">logout</span></button></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl border-b border-surface-container-high/40 z-40 px-space-lg flex items-center justify-between"><div class="flex items-center gap-space-sm"><img alt="Nexvra Solutions Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Xwd0avzhOo8e3YsZwYA1d-0fjmQ_EOz1Hxgq1UzpvllmyvDnJOPTwTKOPDe1U76ihkCU_nRelBhMMmI5-vtx3T44F1fyVW25dU2zNfzuihtuTBCEvyg4Dq7A4ThYDXcq9ct1BoqgULrR-2ks-gz96A9Oy1PGclT2OUdfXD_cuXPIAg13z-upWH6TpMSzChQHwocSrF4yFz9N_XbsihJAcT8f7aEYy0L5Vknxr1dsBEREvw9Zi0F1fyZro"><span class="font-headline-sm text-headline-sm text-primary tracking-tight font-semibold">NEXVRA</span><span class="text-on-surface-variant/40">/</span><span class="font-code-mono text-code-mono text-on-surface-variant uppercase">HQ Desk</span></div><div class="flex-1 max-w-lg mx-space-lg"><div class="relative flex items-center w-full"><span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-space-lg pointer-events-none">search</span><input class="w-full h-9 bg-surface-container-low border border-surface-container-high text-on-surface placeholder:text-on-surface-variant/70 text-body-sm font-body-sm pl-10 pr-4 rounded-lg focus:outline-none focus:border-primary-container transition-all" placeholder="Search employees, records, audit trails... [⌘K]" type="text"></div></div><div class="flex items-center gap-space-md"><div class="hidden xl:flex items-center gap-1.5 px-space-sm py-1 rounded bg-surface-container-low border border-surface-container-high/40"><span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span><span class="font-code-mono text-code-mono text-on-surface-variant">All systems operational</span></div><div class="flex items-center gap-1.5 bg-surface-container-low border border-surface-container-high px-space-sm py-1 rounded-lg"><span class="font-label-sm text-label-sm text-primary-fixed">Super Admin</span><span class="material-symbols-outlined text-space-md text-on-surface-variant">unfold_more</span></div><button class="relative p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" type="button"><span class="material-symbols-outlined text-space-lg">notifications</span><span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-container"></span></button><a class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-space-lg">help_outline</span></a><div class="pl-space-xs border-l border-surface-container-high/50 flex items-center"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfH9tXWLXdxkUTdaTNENgRxt-lro9H-mMAd1wBN1s0834vYVb7FgM2mwePz7kj7QdqwQvf0QbmFNnDGRuswXU9R8316g-aWBmowYD7Tr2hrPymfA0-ayzGSnBfJAWAxR6Uy0XULFvAE30PPL7QHw-G_EmbH7fO_sCaz5RhjRmAyeIt5TGx4SIi4y1HBdi2SJMsAbiIaNxmuSOZFfCmJmo18hQrumoEMNBZRecHcNJTPP2p6aIduijB"></div></div></header><main class="w-full pt-16 bg-surface-container-lowest min-h-screen"><div class="flex flex-col w-full">
+<div class="w-full max-w-7xl mx-auto px-space-lg py-space-xl flex flex-col gap-space-lg">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex flex-col gap-0.5">
+<div class="flex items-center gap-space-sm">
+<h1 class="font-headline-xl text-headline-xl text-primary tracking-tight font-semibold">Employees</h1>
+<span class="font-code-mono text-code-mono px-2 py-0.5 rounded bg-surface-container text-primary-fixed">1,428 ACTIVE DIRECTORY</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">
+          Manage organization directory, roles, employment statuses, and profile records (1,428 total)
+        </p>
+</div>
+<div class="flex items-center gap-space-sm flex-wrap">
+<button class="h-9 px-space-md bg-surface-container-high text-on-surface hover:bg-surface-container-highest text-label-md font-label-md rounded flex items-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-space-lg text-on-surface-variant">upload_file</span>
+<span>Bulk Import</span>
+</button>
+<button class="h-9 px-space-md bg-surface-container-high text-on-surface hover:bg-surface-container-highest text-label-md font-label-md rounded flex items-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-space-lg text-on-surface-variant">ios_share</span>
+<span>Export Directory (.CSV)</span>
+</button>
+<button class="h-9 px-space-md bg-primary-container text-on-primary-container hover:bg-primary-fixed-dim text-label-md font-label-md font-semibold rounded flex items-center gap-1.5 transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-space-lg">add</span>
+<span>+ Add Employee</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-space-md">
+<div class="p-space-md bg-surface-container-low rounded flex flex-col justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Total Headcount</span>
+<div class="flex items-baseline justify-between mt-2">
+<span class="font-data-metric text-data-metric text-primary">1,428</span>
+<span class="font-code-mono text-code-mono text-primary-fixed bg-surface-container px-1.5 py-0.5 rounded">+4.2% QoQ</span>
+</div>
+</div>
+<div class="p-space-md bg-surface-container-low rounded flex flex-col justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Active Workforce</span>
+<div class="flex items-baseline justify-between mt-2">
+<span class="font-data-metric text-data-metric text-primary">1,396</span>
+<span class="font-code-mono text-code-mono text-primary-fixed bg-surface-container px-1.5 py-0.5 rounded">97.8%</span>
+</div>
+</div>
+<div class="p-space-md bg-surface-container-low rounded flex flex-col justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Onboarding Queue</span>
+<div class="flex items-baseline justify-between mt-2">
+<span class="font-data-metric text-data-metric text-primary">18</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">This Month</span>
+</div>
+</div>
+<div class="p-space-md bg-surface-container-low rounded flex flex-col justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Scheduled Leave</span>
+<div class="flex items-baseline justify-between mt-2">
+<span class="font-data-metric text-data-metric text-primary">48</span>
+<span class="font-code-mono text-code-mono text-secondary bg-surface-container px-1.5 py-0.5 rounded">3.3% rate</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-space-md bg-surface-container-low p-space-md rounded">
+<div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-md">
+<div class="relative flex-1 max-w-2xl">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-space-lg pointer-events-none">search</span>
+<input class="w-full h-10 bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/70 text-body-md font-body-md pl-10 pr-4 rounded focus:outline-none focus:bg-surface-container transition-all" id="employeeSearchInput" placeholder="Search by employee name, ID, email, or designation..." type="text">
+</div>
+<div class="flex items-center gap-space-xs overflow-x-auto pb-1 lg:pb-0">
+<button class="quick-chip px-space-md py-1.5 rounded text-label-sm font-label-sm bg-surface-container-highest text-primary-fixed" data-filter="all" type="button">All (1,428)</button>
+<button class="quick-chip px-space-md py-1.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface-variant hover:text-on-surface" data-filter="active" type="button">Active (1,396)</button>
+<button class="quick-chip px-space-md py-1.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface-variant hover:text-on-surface" data-filter="onboarding" type="button">Onboarding (18)</button>
+<button class="quick-chip px-space-md py-1.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface-variant hover:text-on-surface" data-filter="leave" type="button">On Leave (48)</button>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-sm pt-space-xs">
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Department</label>
+<div class="relative">
+<select class="w-full h-9 bg-surface-container-lowest text-on-surface font-body-sm text-body-sm px-3 pr-8 rounded appearance-none focus:outline-none cursor-pointer">
+<option value="">All Departments</option>
+<option value="engineering">Engineering</option>
+<option value="product">Product</option>
+<option value="hr">People &amp; HR</option>
+<option value="sales">Revenue &amp; Sales</option>
+<option value="operations">Security &amp; DevOps</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-2 text-space-lg text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Designation</label>
+<div class="relative">
+<select class="w-full h-9 bg-surface-container-lowest text-on-surface font-body-sm text-body-sm px-3 pr-8 rounded appearance-none focus:outline-none cursor-pointer">
+<option value="">All Designations</option>
+<option value="lead-architect">Lead System Architect</option>
+<option value="staff-engineer">Staff Cloud Engineer</option>
+<option value="sr-designer">Senior Product Designer</option>
+<option value="hr-specialist">HR Operations Lead</option>
+<option value="vp-growth">VP Global Enterprise</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-2 text-space-lg text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Employment Status</label>
+<div class="relative">
+<select class="w-full h-9 bg-surface-container-lowest text-on-surface font-body-sm text-body-sm px-3 pr-8 rounded appearance-none focus:outline-none cursor-pointer">
+<option value="">All Statuses</option>
+<option value="active">Active</option>
+<option value="on-leave">On Leave</option>
+<option value="probation">Probation</option>
+<option value="terminated">Terminated</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-2 text-space-lg text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Employment Type</label>
+<div class="relative">
+<select class="w-full h-9 bg-surface-container-lowest text-on-surface font-body-sm text-body-sm px-3 pr-8 rounded appearance-none focus:outline-none cursor-pointer">
+<option value="">All Employment Types</option>
+<option value="full-time">Full-time Contract</option>
+<option value="contractor">External Consultant</option>
+<option value="intern">Technical Apprentice</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-2 text-space-lg text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+<div class="w-full bg-surface-container-lowest rounded overflow-hidden shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high/60 h-10">
+<th class="w-10 px-space-md py-2">
+<input class="w-4 h-4 rounded bg-surface-container-lowest accent-primary-container cursor-pointer" id="selectAllCheckbox" type="checkbox">
+</th>
+<th class="px-space-md py-2 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">ID</th>
+<th class="px-space-md py-2 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Employee</th>
+<th class="px-space-md py-2 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Department</th>
+<th class="px-space-md py-2 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Designation</th>
+<th class="px-space-md py-2 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Reporting Manager</th>
+<th class="px-space-md py-2 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Joining Date</th>
+<th class="px-space-md py-2 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-space-md py-2 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y-0" id="employeeTableBody">
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest">
+<td class="px-space-md py-space-sm">
+<input class="emp-checkbox w-4 h-4 rounded bg-surface-container-lowest accent-primary-container cursor-pointer" type="checkbox">
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-primary-fixed">#NX-1042</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-space-sm">
+<img class="w-9 h-9 rounded-full object-cover bg-surface-container" data-alt="Corporate headshot portrait of Sarah Jenkins, lead systems engineer with professional lighting against dark slate grey background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuApFpnOkZ743EpHOKbZu3hoK4PV6Q3W8kf4Xe5BwKF37p-IIIQx1uVZ-Nu5tgoGZmbezJ9FGE3hR4AEEpXyl14Utr9QpHjv6XEUYiyiVFuo2EUZ4xzhdY1XpYq44qS6m07DOkPE-GLX3TZWkshA8CXDV1R6b2YfQqKNlnc4ZmiyC2ZYk3R8FgN10eikMmNxIa5n1WRtLbzLwlvjmLz2C__OKkJW-JWlTpuEWRZejenBVjWyK6Ywrf-0">
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-primary font-medium truncate">Sarah Jenkins</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">s.jenkins@nexvra.io</span>
+</div>
+</div>
+</td>
+<td class="px-space-md py-space-sm">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface">Engineering</span>
+</td>
+<td class="px-space-md py-space-sm font-body-sm text-body-sm text-on-surface">Lead System Architect</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-label-sm text-primary font-bold">ER</div>
+<span class="font-body-sm text-body-sm text-on-surface">Elena Rostova</span>
+</div>
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-on-surface-variant">Mar 14, 2022</td>
+<td class="px-space-md py-space-sm">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-surface-container text-primary-fixed">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+                  Active
+                </span>
+</td>
+<td class="px-space-md py-space-sm text-right">
+<div class="inline-flex items-center gap-1">
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="View Dossier" type="button"><span class="material-symbols-outlined text-space-lg">visibility</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Edit Record" type="button"><span class="material-symbols-outlined text-space-lg">edit</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Options" type="button"><span class="material-symbols-outlined text-space-lg">more_vert</span></button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-container-low/40">
+<td class="px-space-md py-space-sm">
+<input class="emp-checkbox w-4 h-4 rounded bg-surface-container-lowest accent-primary-container cursor-pointer" type="checkbox">
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-primary-fixed">#NX-1043</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-space-sm">
+<img class="w-9 h-9 rounded-full object-cover bg-surface-container" data-alt="Portrait of Marcus Vance, product design director wearing minimal black clothing with sharp studio lighting on dark charcoal backdrop" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtBzbBADi3Gw4wNDzqotA3t5l9W3XbiMBzSa_Q0tiXVwjm8bgemW-eXYGzLLKAGHLdBKlXa3L0SL4iJOArLNi3PIbJ8sGJfeibHdlU4S12QP6-0kAZDG9d4EEo4OfvRtTuZB9rZ5BCzK6qiQvXzyLCqaEyJzk2tnLQvHzYUdiJRrh_mlASgv3PD_gbVUf2DANcd_3rDMwPj9NeY_RA2P52sFwcs2gY3aeNwrta9TX31_FPTP1m-0ZQ">
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-primary font-medium truncate">Marcus Vance</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">m.vance@nexvra.io</span>
+</div>
+</div>
+</td>
+<td class="px-space-md py-space-sm">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface">Product</span>
+</td>
+<td class="px-space-md py-space-sm font-body-sm text-body-sm text-on-surface">Senior Product Designer</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-label-sm text-primary font-bold">DK</div>
+<span class="font-body-sm text-body-sm text-on-surface">David Kim</span>
+</div>
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-on-surface-variant">Jun 02, 2021</td>
+<td class="px-space-md py-space-sm">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-surface-container text-primary-fixed">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+                  Active
+                </span>
+</td>
+<td class="px-space-md py-space-sm text-right">
+<div class="inline-flex items-center gap-1">
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="View Dossier" type="button"><span class="material-symbols-outlined text-space-lg">visibility</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Edit Record" type="button"><span class="material-symbols-outlined text-space-lg">edit</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Options" type="button"><span class="material-symbols-outlined text-space-lg">more_vert</span></button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest">
+<td class="px-space-md py-space-sm">
+<input class="emp-checkbox w-4 h-4 rounded bg-surface-container-lowest accent-primary-container cursor-pointer" type="checkbox">
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-primary-fixed">#NX-1044</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-space-sm">
+<img class="w-9 h-9 rounded-full object-cover bg-surface-container" data-alt="Portrait of Priya Patel, people operations lead with subtle glasses and warm natural lighting on monochrome dark office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRcJDobYzxCHYoJEtGEz3jr5c6ku-DoDcc7yIVcNliZ4lqB0g1ThcknPpdgvJv2qNkM_EEHttsIAGyXgqzR92e69ipUv1WQSSDxrpj2kssSg3H21PgYB3i17nXW3ELDRRVOKy54_DlzmJiHAEENVF80XbV4M4cSKkiinousTuz6wtvhohzrlz-_CQy9qUOh8Rv9LwZi7kMGnnDzENhVwJmC2dcQjc15XDEzhXpBPjKbvDcy2GYwIWo">
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-primary font-medium truncate">Priya Patel</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">p.patel@nexvra.io</span>
+</div>
+</div>
+</td>
+<td class="px-space-md py-space-sm">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface">People &amp; HR</span>
+</td>
+<td class="px-space-md py-space-sm font-body-sm text-body-sm text-on-surface">HR Talent Specialist</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-label-sm text-primary font-bold">ER</div>
+<span class="font-body-sm text-body-sm text-on-surface">Elena Rostova</span>
+</div>
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-on-surface-variant">Nov 18, 2023</td>
+<td class="px-space-md py-space-sm">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-surface-container text-secondary">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                  On Leave
+                </span>
+</td>
+<td class="px-space-md py-space-sm text-right">
+<div class="inline-flex items-center gap-1">
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="View Dossier" type="button"><span class="material-symbols-outlined text-space-lg">visibility</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Edit Record" type="button"><span class="material-symbols-outlined text-space-lg">edit</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Options" type="button"><span class="material-symbols-outlined text-space-lg">more_vert</span></button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-container-low/40">
+<td class="px-space-md py-space-sm">
+<input class="emp-checkbox w-4 h-4 rounded bg-surface-container-lowest accent-primary-container cursor-pointer" type="checkbox">
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-primary-fixed">#NX-1045</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-label-md text-primary font-bold">DK</div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-primary font-medium truncate">David Kim</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">d.kim@nexvra.io</span>
+</div>
+</div>
+</td>
+<td class="px-space-md py-space-sm">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface">Product</span>
+</td>
+<td class="px-space-md py-space-sm font-body-sm text-body-sm text-on-surface">Head of Product Strategy</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-label-sm text-primary font-bold">ER</div>
+<span class="font-body-sm text-body-sm text-on-surface">Elena Rostova</span>
+</div>
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-on-surface-variant">Jan 10, 2020</td>
+<td class="px-space-md py-space-sm">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-surface-container text-primary-fixed">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+                  Active
+                </span>
+</td>
+<td class="px-space-md py-space-sm text-right">
+<div class="inline-flex items-center gap-1">
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="View Dossier" type="button"><span class="material-symbols-outlined text-space-lg">visibility</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Edit Record" type="button"><span class="material-symbols-outlined text-space-lg">edit</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Options" type="button"><span class="material-symbols-outlined text-space-lg">more_vert</span></button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest">
+<td class="px-space-md py-space-sm">
+<input class="emp-checkbox w-4 h-4 rounded bg-surface-container-lowest accent-primary-container cursor-pointer" type="checkbox">
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-primary-fixed">#NX-1046</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-label-md text-primary font-bold">JR</div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-primary font-medium truncate">Jordan Reed</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">j.reed@nexvra.io</span>
+</div>
+</div>
+</td>
+<td class="px-space-md py-space-sm">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface">Revenue &amp; Sales</span>
+</td>
+<td class="px-space-md py-space-sm font-body-sm text-body-sm text-on-surface">Enterprise Account Director</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-label-sm text-primary font-bold">AN</div>
+<span class="font-body-sm text-body-sm text-on-surface">Alexander Novak</span>
+</div>
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-on-surface-variant">Feb 01, 2024</td>
+<td class="px-space-md py-space-sm">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-surface-container text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                  Probation
+                </span>
+</td>
+<td class="px-space-md py-space-sm text-right">
+<div class="inline-flex items-center gap-1">
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="View Dossier" type="button"><span class="material-symbols-outlined text-space-lg">visibility</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Edit Record" type="button"><span class="material-symbols-outlined text-space-lg">edit</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Options" type="button"><span class="material-symbols-outlined text-space-lg">more_vert</span></button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-container-low/40">
+<td class="px-space-md py-space-sm">
+<input class="emp-checkbox w-4 h-4 rounded bg-surface-container-lowest accent-primary-container cursor-pointer" type="checkbox">
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-primary-fixed">#NX-1047</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-label-md text-primary font-bold">AN</div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-primary font-medium truncate">Alexander Novak</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">a.novak@nexvra.io</span>
+</div>
+</div>
+</td>
+<td class="px-space-md py-space-sm">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface">Revenue &amp; Sales</span>
+</td>
+<td class="px-space-md py-space-sm font-body-sm text-body-sm text-on-surface">VP Global Enterprise</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-label-sm text-primary font-bold">ER</div>
+<span class="font-body-sm text-body-sm text-on-surface">Elena Rostova</span>
+</div>
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-on-surface-variant">Aug 19, 2021</td>
+<td class="px-space-md py-space-sm">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-surface-container text-primary-fixed">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+                  Active
+                </span>
+</td>
+<td class="px-space-md py-space-sm text-right">
+<div class="inline-flex items-center gap-1">
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="View Dossier" type="button"><span class="material-symbols-outlined text-space-lg">visibility</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Edit Record" type="button"><span class="material-symbols-outlined text-space-lg">edit</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Options" type="button"><span class="material-symbols-outlined text-space-lg">more_vert</span></button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest">
+<td class="px-space-md py-space-sm">
+<input class="emp-checkbox w-4 h-4 rounded bg-surface-container-lowest accent-primary-container cursor-pointer" type="checkbox">
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-primary-fixed">#NX-1048</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-label-md text-primary font-bold">TC</div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-primary font-medium truncate">Tara Chen</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">t.chen@nexvra.io</span>
+</div>
+</div>
+</td>
+<td class="px-space-md py-space-sm">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface">Engineering</span>
+</td>
+<td class="px-space-md py-space-sm font-body-sm text-body-sm text-on-surface">Staff Cloud Architect</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-label-sm text-primary font-bold">SJ</div>
+<span class="font-body-sm text-body-sm text-on-surface">Sarah Jenkins</span>
+</div>
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-on-surface-variant">Sep 04, 2022</td>
+<td class="px-space-md py-space-sm">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-surface-container text-primary-fixed">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+                  Active
+                </span>
+</td>
+<td class="px-space-md py-space-sm text-right">
+<div class="inline-flex items-center gap-1">
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="View Dossier" type="button"><span class="material-symbols-outlined text-space-lg">visibility</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Edit Record" type="button"><span class="material-symbols-outlined text-space-lg">edit</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Options" type="button"><span class="material-symbols-outlined text-space-lg">more_vert</span></button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-container-low/40">
+<td class="px-space-md py-space-sm">
+<input class="emp-checkbox w-4 h-4 rounded bg-surface-container-lowest accent-primary-container cursor-pointer" type="checkbox">
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-primary-fixed">#NX-1049</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-label-md text-primary font-bold">LL</div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-primary font-medium truncate">Lucas Lindqvist</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">l.lindqvist@nexvra.io</span>
+</div>
+</div>
+</td>
+<td class="px-space-md py-space-sm">
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container text-on-surface">Security &amp; DevOps</span>
+</td>
+<td class="px-space-md py-space-sm font-body-sm text-body-sm text-on-surface">Security Compliance Eng.</td>
+<td class="px-space-md py-space-sm">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-label-sm text-primary font-bold">SJ</div>
+<span class="font-body-sm text-body-sm text-on-surface">Sarah Jenkins</span>
+</div>
+</td>
+<td class="px-space-md py-space-sm font-code-mono text-code-mono text-on-surface-variant">May 12, 2023</td>
+<td class="px-space-md py-space-sm">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-surface-container text-primary-fixed">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+                  Active
+                </span>
+</td>
+<td class="px-space-md py-space-sm text-right">
+<div class="inline-flex items-center gap-1">
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="View Dossier" type="button"><span class="material-symbols-outlined text-space-lg">visibility</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Edit Record" type="button"><span class="material-symbols-outlined text-space-lg">edit</span></button>
+<button class="p-1.5 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container" title="Options" type="button"><span class="material-symbols-outlined text-space-lg">more_vert</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-space-md py-space-sm bg-surface-container-high/40 flex flex-col sm:flex-row items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md">
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+            Showing <span class="text-primary font-semibold">1-8</span> of <span class="text-primary font-semibold">1,428</span> employees
+          </span>
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span>Per page:</span>
+<select class="bg-surface-container text-on-surface rounded px-1.5 py-0.5 focus:outline-none">
+<option value="8">8</option>
+<option value="20">20</option>
+<option value="50">50</option>
+<option value="100">100</option>
+</select>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<button class="h-8 px-space-sm rounded bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-colors" disabled="" type="button">
+<span class="material-symbols-outlined text-space-lg">chevron_left</span>
+</button>
+<button class="h-8 w-8 rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm font-semibold flex items-center justify-center" type="button">1</button>
+<button class="h-8 w-8 rounded bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm flex items-center justify-center transition-colors" type="button">2</button>
+<button class="h-8 w-8 rounded bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm flex items-center justify-center transition-colors" type="button">3</button>
+<span class="px-1 text-on-surface-variant">...</span>
+<button class="h-8 w-8 rounded bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm flex items-center justify-center transition-colors" type="button">179</button>
+<button class="h-8 px-space-sm rounded bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high flex items-center justify-center transition-colors" type="button">
+<span class="material-symbols-outlined text-space-lg">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<script>
+    (function() {
+      const selectAll = document.getElementById('selectAllCheckbox');
+      const checkboxes = document.querySelectorAll('.emp-checkbox');
+      const searchInput = document.getElementById('employeeSearchInput');
+      const rows = document.querySelectorAll('#employeeTableBody tr');
+      const chips = document.querySelectorAll('.quick-chip');
+
+      if (selectAll) {
+        selectAll.addEventListener('change', function() {
+          checkboxes.forEach(cb => {
+            cb.checked = selectAll.checked;
+            const tr = cb.closest('tr');
+            if (selectAll.checked) {
+              tr.classList.add('bg-surface-container-high/40');
+            } else {
+              tr.classList.remove('bg-surface-container-high/40');
+            }
+          });
+        });
+      }
+
+      checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+          const tr = this.closest('tr');
+          if (this.checked) {
+            tr.classList.add('bg-surface-container-high/40');
+          } else {
+            tr.classList.remove('bg-surface-container-high/40');
+          }
+        });
+      });
+
+      if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+          const val = e.target.value.toLowerCase().trim();
+          rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(val) ? '' : 'none';
+          });
+        });
+      }
+
+      chips.forEach(chip => {
+        chip.addEventListener('click', function() {
+          chips.forEach(c => {
+            c.classList.remove('bg-surface-container-highest', 'text-primary-fixed');
+            c.classList.add('bg-surface-container', 'text-on-surface-variant');
+          });
+          this.classList.remove('bg-surface-container', 'text-on-surface-variant');
+          this.classList.add('bg-surface-container-highest', 'text-primary-fixed');
+        });
+      });
+    })();
+  </script>
+</div></main></div></body></html>

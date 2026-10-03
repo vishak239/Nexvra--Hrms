@@ -1,0 +1,497 @@
+<!DOCTYPE html><html class="dark" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-primary": "#1e3700", "outline-variant": "#404a34", "outline": "#8a957a", "on-error-container": "#ffdad6", "primary-fixed-dim": "#86dd00", "primary-fixed": "#9afc00", "surface-container-highest": "#353534", "on-secondary-fixed-variant": "#47464a", "on-surface": "#e5e2e1", "surface-container-high": "#2a2a2a", "error": "#ffb4ab", "on-tertiary": "#303033", "tertiary": "#ffffff", "primary": "#ffffff", "on-secondary-fixed": "#1b1b1e", "surface-container-low": "#1c1b1b", "inverse-on-surface": "#313030", "background": "#131313", "surface-tint": "#86dd00", "surface": "#131313", "on-primary-fixed-variant": "#2d5000", "tertiary-container": "#e4e1e6", "on-secondary-container": "#b6b4b8", "secondary-fixed": "#e4e1e5", "primary-container": "#9afc00", "surface-variant": "#353534", "surface-container-lowest": "#0e0e0e", "on-secondary": "#303033", "surface-bright": "#3a3939", "tertiary-fixed": "#e4e1e6", "error-container": "#93000a", "surface-container": "#201f1f", "on-primary-fixed": "#0f2000", "on-primary-container": "#427000", "secondary-container": "#47464a", "secondary-fixed-dim": "#c8c6c9", "on-background": "#e5e2e1", "secondary": "#c8c6c9", "on-error": "#690005", "surface-dim": "#131313", "on-tertiary-fixed": "#1b1b1e", "on-tertiary-container": "#656467", "on-surface-variant": "#bfcbae", "inverse-primary": "#3e6a00", "tertiary-fixed-dim": "#c8c5ca", "inverse-surface": "#e5e2e1", "on-tertiary-fixed-variant": "#47464a" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "space-xl": "1.5rem", "margin-md": "1.5rem", "space-xs": "0.25rem", "space-lg": "1rem", "space-md": "0.75rem", "margin-lg": "2rem", "margin": "1rem", "space-sm": "0.5rem", "gutter": "1rem", "gutter-lg": "1.5rem" }, "fontFamily": { "code-mono": [ "Inter" ], "label-lg": [ "Inter" ], "label-md": [ "Inter" ], "headline-md": [ "Space Grotesk" ], "headline-xl": [ "Space Grotesk" ], "headline-xl-mobile": [ "Space Grotesk" ], "label-sm": [ "Inter" ], "body-sm": [ "Inter" ], "headline-lg": [ "Space Grotesk" ], "display-lg": [ "Space Grotesk" ], "body-lg": [ "Inter" ], "body-md": [ "Inter" ], "headline-sm": [ "Space Grotesk" ], "data-metric": [ "Space Grotesk" ], "display-lg-mobile": [ "Space Grotesk" ] }, "fontSize": { "code-mono": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" } ], "label-lg": [ "14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" } ], "label-md": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" } ], "headline-md": [ "20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "headline-xl": [ "32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "headline-xl-mobile": [ "26px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "label-sm": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" } ], "body-sm": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" } ], "headline-lg": [ "24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "display-lg": [ "48px", { "lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "700" } ], "body-lg": [ "16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "400" } ], "body-md": [ "14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" } ], "headline-sm": [ "16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "data-metric": [ "28px", { "lineHeight": "32px", "letterSpacing": "-0.03em", "fontWeight": "700" } ], "display-lg-mobile": [ "36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" } ] } } } };</script></head><body class="bg-surface-container-lowest text-on-surface font-body-md text-body-md min-h-screen selection:bg-primary-container selection:text-on-primary-container"><aside class="fixed left-0 top-0 h-screen w-64 bg-surface-container-lowest z-50 flex flex-col justify-between border-r border-surface-container-high/40"><div class="flex flex-col flex-1 overflow-y-auto"><div class="h-16 px-space-md flex items-center justify-between border-b border-surface-container-high/40"><div class="flex items-center gap-space-sm"><img alt="Nexvra Solutions Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Xwd0avzhOo8e3YsZwYA1d-0fjmQ_EOz1Hxgq1UzpvllmyvDnJOPTwTKOPDe1U76ihkCU_nRelBhMMmI5-vtx3T44F1fyVW25dU2zNfzuihtuTBCEvyg4Dq7A4ThYDXcq9ct1BoqgULrR-2ks-gz96A9Oy1PGclT2OUdfXD_cuXPIAg13z-upWH6TpMSzChQHwocSrF4yFz9N_XbsihJAcT8f7aEYy0L5Vknxr1dsBEREvw9Zi0F1fyZro"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight font-semibold">NEXVRA</span><span class="font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase">Solutions</span></div></div><span class="font-code-mono text-code-mono px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">v2.4</span></div><nav class="flex flex-col gap-0.5 px-space-xs py-space-sm" data-active-classes="bg-surface-container-low text-primary-fixed border-l-2 border-primary-container font-medium"><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="overview" href="#"><span class="material-symbols-outlined text-space-lg">dashboard</span><span class="font-label-md text-label-md">Dashboard</span></a><div class="flex flex-col"><a class="flex items-center justify-between px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="people-employees" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-space-lg">group</span><span class="font-label-md text-label-md">People</span></div><span class="material-symbols-outlined text-space-md">expand_more</span></a><div class="flex flex-col pl-9 pr-space-xs py-0.5 space-y-0.5"><a class="px-space-sm py-1 rounded text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface font-label-sm text-label-sm transition-colors" data-path="people-employees" href="#">Employees</a><a class="px-space-sm py-1 rounded text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface font-label-sm text-label-sm transition-colors" data-path="people-departments" href="#">Departments</a><a class="px-space-sm py-1 rounded text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface font-label-sm text-label-sm transition-colors" data-path="people-designations" href="#">Designations</a></div></div><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="attendance" href="#"><span class="material-symbols-outlined text-space-lg">timer</span><span class="font-label-md text-label-md">Attendance</span></a><a aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg transition-colors bg-surface-container-low text-primary-fixed border-l-2 border-primary-container font-medium" data-path="leave-management" href="#"><span class="material-symbols-outlined text-space-lg">event_available</span><span class="font-label-md text-label-md">Leave</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="payroll" href="#"><span class="material-symbols-outlined text-space-lg">payments</span><span class="font-label-md text-label-md">Payroll</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="documents" href="#"><span class="material-symbols-outlined text-space-lg">folder_shared</span><span class="font-label-md text-label-md">Documents</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="reports" href="#"><span class="material-symbols-outlined text-space-lg">analytics</span><span class="font-label-md text-label-md">Reports</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="audit-logs" href="#"><span class="material-symbols-outlined text-space-lg">receipt_long</span><span class="font-label-md text-label-md">Audit Logs</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-space-lg">settings</span><span class="font-label-md text-label-md">Settings</span></a></nav></div><div class="p-space-sm border-t border-surface-container-high/40 bg-surface-container-lowest"><div class="flex items-center justify-between p-space-xs rounded-lg hover:bg-surface-container-low transition-colors"><div class="flex items-center gap-space-sm"><div class="relative"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfH9tXWLXdxkUTdaTNENgRxt-lro9H-mMAd1wBN1s0834vYVb7FgM2mwePz7kj7QdqwQvf0QbmFNnDGRuswXU9R8316g-aWBmowYD7Tr2hrPymfA0-ayzGSnBfJAWAxR6Uy0XULFvAE30PPL7QHw-G_EmbH7fO_sCaz5RhjRmAyeIt5TGx4SIi4y1HBdi2SJMsAbiIaNxmuSOZFfCmJmo18hQrumoEMNBZRecHcNJTPP2p6aIduijB"><span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-primary-container ring-1 ring-surface-container-lowest"></span></div><div class="flex flex-col"><span class="font-label-sm text-label-sm font-semibold text-primary truncate w-24">Elena Rostova</span><span class="font-code-mono text-code-mono text-primary-fixed">Super Admin</span></div></div><button class="text-on-surface-variant hover:text-on-surface p-1 rounded transition-colors" title="Logout / Switch Account" type="button"><span class="material-symbols-outlined text-space-lg">logout</span></button></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl border-b border-surface-container-high/40 z-40 px-space-lg flex items-center justify-between"><div class="flex items-center gap-space-sm"><img alt="Nexvra Solutions Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Xwd0avzhOo8e3YsZwYA1d-0fjmQ_EOz1Hxgq1UzpvllmyvDnJOPTwTKOPDe1U76ihkCU_nRelBhMMmI5-vtx3T44F1fyVW25dU2zNfzuihtuTBCEvyg4Dq7A4ThYDXcq9ct1BoqgULrR-2ks-gz96A9Oy1PGclT2OUdfXD_cuXPIAg13z-upWH6TpMSzChQHwocSrF4yFz9N_XbsihJAcT8f7aEYy0L5Vknxr1dsBEREvw9Zi0F1fyZro"><span class="font-headline-sm text-headline-sm text-primary tracking-tight font-semibold">NEXVRA</span><span class="text-on-surface-variant/40">/</span><span class="font-code-mono text-code-mono text-on-surface-variant uppercase">HQ Desk</span></div><div class="flex-1 max-w-lg mx-space-lg"><div class="relative flex items-center w-full"><span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-space-lg pointer-events-none">search</span><input class="w-full h-9 bg-surface-container-low border border-surface-container-high text-on-surface placeholder:text-on-surface-variant/70 text-body-sm font-body-sm pl-10 pr-4 rounded-lg focus:outline-none focus:border-primary-container transition-all" placeholder="Search employees, records, audit trails... [⌘K]" type="text"></div></div><div class="flex items-center gap-space-md"><div class="hidden xl:flex items-center gap-1.5 px-space-sm py-1 rounded bg-surface-container-low border border-surface-container-high/40"><span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span><span class="font-code-mono text-code-mono text-on-surface-variant">All systems operational</span></div><div class="flex items-center gap-1.5 bg-surface-container-low border border-surface-container-high px-space-sm py-1 rounded-lg"><span class="font-label-sm text-label-sm text-primary-fixed">Super Admin</span><span class="material-symbols-outlined text-space-md text-on-surface-variant">unfold_more</span></div><button class="relative p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" type="button"><span class="material-symbols-outlined text-space-lg">notifications</span><span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-container"></span></button><a class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-space-lg">help_outline</span></a><div class="pl-space-xs border-l border-surface-container-high/50 flex items-center"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfH9tXWLXdxkUTdaTNENgRxt-lro9H-mMAd1wBN1s0834vYVb7FgM2mwePz7kj7QdqwQvf0QbmFNnDGRuswXU9R8316g-aWBmowYD7Tr2hrPymfA0-ayzGSnBfJAWAxR6Uy0XULFvAE30PPL7QHw-G_EmbH7fO_sCaz5RhjRmAyeIt5TGx4SIi4y1HBdi2SJMsAbiIaNxmuSOZFfCmJmo18hQrumoEMNBZRecHcNJTPP2p6aIduijB"></div></div></header><main class="w-full pt-16 bg-surface-container-lowest min-h-screen"><div class="flex flex-col w-full">
+<div class="px-gutter-lg py-space-xl max-w-[1600px] w-full mx-auto flex flex-col gap-space-xl">
+<div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-lg">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-code-mono text-code-mono uppercase text-on-surface-variant tracking-wider">Workforce Logistics</span>
+<span class="text-surface-container-high">/</span>
+<span class="font-code-mono text-code-mono text-primary-fixed uppercase tracking-wider">PTO &amp; Absence Engine</span>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-primary tracking-tight font-bold">Leave Management</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+          Manage time-off requests, PTO balances, company holidays, and multi-tier approval workflows across enterprise departments.
+        </p>
+</div>
+<div class="flex flex-wrap items-center gap-space-sm">
+<button class="h-9 px-space-md rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface hover:text-primary font-label-md text-label-md flex items-center gap-2 transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">description</span>
+<span>Leave Policy Guidelines</span>
+</button>
+<button class="h-9 px-space-md rounded bg-surface-container-low hover:bg-surface-container-high text-on-surface hover:text-primary font-label-md text-label-md flex items-center gap-2 transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">calendar_month</span>
+<span>Company Holiday Calendar</span>
+</button>
+<button class="h-9 px-space-md rounded bg-primary-container hover:bg-surface-tint text-on-primary font-label-md text-label-md font-semibold flex items-center gap-2 transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px] text-on-primary">add</span>
+<span>Apply Leave</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col justify-between shadow-sm relative overflow-hidden group">
+<div class="flex items-start justify-between">
+<span class="font-code-mono text-label-sm uppercase text-on-surface-variant tracking-wider">Available Org PTO</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">beach_access</span>
+</div>
+<div class="mt-4 flex flex-col">
+<div class="flex items-baseline gap-2">
+<span class="font-data-metric text-data-metric text-primary font-bold tracking-tight">4,820</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Days Total</span>
+</div>
+<div class="mt-1 flex items-center gap-1.5 font-body-sm text-body-sm text-on-surface-variant">
+<span class="text-primary font-code-mono">18.4</span>
+<span>avg days allocated per FTE</span>
+</div>
+</div>
+<div class="mt-3 w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 71%;"></div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col justify-between shadow-sm relative overflow-hidden group">
+<div class="flex items-start justify-between">
+<span class="font-code-mono text-label-sm uppercase text-on-surface-variant tracking-wider">Used Leave YTD</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">event_busy</span>
+</div>
+<div class="mt-4 flex flex-col">
+<div class="flex items-baseline gap-2">
+<span class="font-data-metric text-data-metric text-primary font-bold tracking-tight">1,940</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Days</span>
+</div>
+<div class="mt-1 flex items-center gap-1.5 font-body-sm text-body-sm text-on-surface-variant">
+<span class="text-primary font-code-mono">28.7%</span>
+<span>utilization vs annual budget</span>
+</div>
+</div>
+<div class="mt-3 w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
+<div class="bg-secondary-fixed h-full rounded-full" style="width: 28.7%;"></div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col justify-between shadow-sm relative overflow-hidden group">
+<div class="flex items-start justify-between">
+<span class="font-code-mono text-label-sm uppercase text-on-surface-variant tracking-wider">Pending Approval</span>
+<span class="material-symbols-outlined text-primary-fixed text-[20px]">hourglass_top</span>
+</div>
+<div class="mt-4 flex flex-col">
+<div class="flex items-baseline gap-2">
+<span class="font-data-metric text-data-metric text-primary font-bold tracking-tight">16</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Requests</span>
+</div>
+<div class="mt-1 flex items-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-on-primary-fixed-variant text-primary-fixed font-code-mono text-[11px] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed animate-pulse"></span>
+              Requires Action
+            </span>
+</div>
+</div>
+<div class="mt-3 w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
+<div class="bg-primary-fixed h-full rounded-full" style="width: 85%;"></div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col justify-between shadow-sm relative overflow-hidden group">
+<div class="flex items-start justify-between">
+<span class="font-code-mono text-label-sm uppercase text-on-surface-variant tracking-wider">On Leave Today</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">badge</span>
+</div>
+<div class="mt-4 flex flex-col">
+<div class="flex items-baseline gap-2">
+<span class="font-data-metric text-data-metric text-primary font-bold tracking-tight">48</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Employees</span>
+</div>
+<div class="mt-1 flex items-center gap-1.5 font-body-sm text-body-sm text-on-surface-variant">
+<span class="text-primary font-code-mono">3.8%</span>
+<span>of total organization headcount</span>
+</div>
+</div>
+<div class="mt-3 flex items-center gap-1 text-[11px] font-code-mono text-on-surface-variant">
+<span class="text-primary-fixed">32 Annual</span>
+<span>·</span>
+<span>11 Sick</span>
+<span>·</span>
+<span>5 Other</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
+<div class="xl:col-span-8 flex flex-col gap-space-lg">
+<div class="bg-surface-container-low rounded-lg p-1.5 flex flex-wrap items-center justify-between gap-2 shadow-sm">
+<div class="flex items-center gap-1">
+<button class="px-space-md py-1.5 rounded font-label-md text-label-md font-semibold bg-surface-container-high text-primary shadow-sm flex items-center gap-2" type="button">
+<span>Pending Requests &amp; Approvals</span>
+<span class="px-1.5 py-0.2 rounded-full bg-primary-container text-on-primary font-code-mono text-[11px] font-bold">16</span>
+</button>
+<button class="px-space-md py-1.5 rounded font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors" type="button">
+<span>All Company Leave History</span>
+</button>
+<button class="px-space-md py-1.5 rounded font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors" type="button">
+<span>Leave Balances &amp; Accruals</span>
+</button>
+</div>
+<div class="flex items-center gap-2 px-1">
+<span class="font-code-mono text-code-mono text-on-surface-variant">Filter:</span>
+<select class="bg-surface-container-high text-on-surface font-label-sm text-label-sm rounded px-2 py-1 outline-none">
+<option>All Types</option>
+<option>Paid Annual Leave</option>
+<option>Sick / Medical</option>
+<option>Parental</option>
+</select>
+</div>
+</div>
+<div class="flex flex-col gap-space-sm">
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-md shadow-sm transition-all hover:bg-surface-container">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm pb-space-sm border-b border-surface-container-high/40">
+<div class="flex items-center gap-space-md">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Close up professional headshot of a male software architect in his thirties with glasses wearing a dark minimalist crewneck against a deep grey studio backdrop, sharp corporate photography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJBjOzGACo6tFKNDJ9b__gZKQDRLiesmB9vzV31PDdZo3juisW4cC1strGcmesLq5lmhM5sMLk-rPpibRkz2BMPwAlFsdby_-fGYfqM3mmmchzKUY0EZo-gpIqIm2gU4RkNbcJeBJNmkVTkS9NJS5kX61ohpNLUTf8ibU9DrVQ84gIwHzk8B18TOwLvndgjFG2rdRciXLEjpUcYSYd9-wCQK-OGYEU_ZMzhZrUua7W2mlvu5K7c1rS">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-primary font-semibold">Tariq Vance</span>
+<span class="font-code-mono text-[11px] text-on-surface-variant">EMP-8841</span>
+<span class="px-2 py-0.5 rounded font-code-mono text-[11px] bg-surface-container-high text-primary-fixed">Engineering</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Staff Platform Architect · Cloud Infrastructure</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high font-label-sm text-label-sm text-primary font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed"></span>
+                  Paid Annual Leave
+                </span>
+<span class="font-code-mono text-label-sm text-on-surface-variant">
+                  Balance: <strong class="text-primary font-semibold">14 days</strong> left
+                </span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-md items-center">
+<div class="md:col-span-8 flex flex-col gap-2">
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-1.5 text-primary">
+<span class="material-symbols-outlined text-[18px] text-primary-fixed">date_range</span>
+<span class="font-code-mono font-medium">Oct 28 – Nov 01, 2024</span>
+</div>
+<span class="text-on-surface-variant">·</span>
+<span class="font-code-mono text-primary font-semibold">5 Working Days</span>
+<span class="text-on-surface-variant">·</span>
+<span class="text-on-surface-variant">Requested 2h ago</span>
+</div>
+<div class="bg-surface-container rounded p-space-sm flex items-start gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px] mt-0.5">chat_bubble_outline</span>
+<p class="font-body-sm text-body-sm text-on-surface italic">
+                    "Scheduled family medical appointment and post-op rehabilitation care. Platform release 4.2 handoff completed with Marcus."
+                  </p>
+</div>
+<div class="flex items-center gap-2 pt-1">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container-high font-code-mono text-[11px] text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">attachment</span>
+<span>Clinic_Booking_Ref.pdf</span>
+<span class="text-on-surface-variant/60">340 KB</span>
+</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high font-code-mono text-[11px] text-primary-fixed">
+<span class="material-symbols-outlined text-[13px]">check_circle</span>
+<span>Manager Pre-Endorsed</span>
+</span>
+</div>
+</div>
+<div class="md:col-span-4 flex flex-row md:flex-col items-center md:items-end justify-end gap-2">
+<div class="flex items-center gap-2 w-full md:w-auto">
+<button class="flex-1 md:flex-initial h-8 px-space-md rounded bg-primary-container hover:bg-surface-tint text-on-primary font-label-sm text-label-sm font-semibold flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>Approve</span>
+</button>
+<button class="flex-1 md:flex-initial h-8 px-space-md rounded bg-surface-container-high hover:bg-error-container text-error font-label-sm text-label-sm font-semibold flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">close</span>
+<span>Reject</span>
+</button>
+</div>
+<button class="text-on-surface-variant hover:text-primary font-label-sm text-label-sm flex items-center gap-1 py-1 transition-colors" type="button">
+<span>View Full Thread</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-md shadow-sm transition-all hover:bg-surface-container">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm pb-space-sm border-b border-surface-container-high/40">
+<div class="flex items-center gap-space-md">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Professional studio portrait of an Asian woman in her late twenties with neat hair wearing modern tech company apparel in dark lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoFQYtXyDjRd9vdNPMeRtcvziiNK0P4AECxs9f5Js-wm-BDF_MbVP2VJweVpzdgHDPU5vV4261Aesy6i4MV8y-JgroXenf1zWfX_wu9omaGgmIkkxu2c9vkrpP3_QtTBZERem2eOfc452llGTU4OYh-Mmnxb5naatYLJ2y8GhjR7uMI94BNZokPOgmus74wZEChCa_dOEIyTY2FLqdzgq2NYklflJLmmDARK1CWHpWMYePT3p6JsP9">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-primary font-semibold">Mei-Ling Zhou</span>
+<span class="font-code-mono text-[11px] text-on-surface-variant">EMP-6712</span>
+<span class="px-2 py-0.5 rounded font-code-mono text-[11px] bg-surface-container-high text-on-surface">Product Design</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Senior Design Lead · Core Design System</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high font-label-sm text-label-sm text-primary font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                  Medical / Sick Leave
+                </span>
+<span class="font-code-mono text-label-sm text-on-surface-variant">
+                  Balance: <strong class="text-primary font-semibold">9 days</strong> left
+                </span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-md items-center">
+<div class="md:col-span-8 flex flex-col gap-2">
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-1.5 text-primary">
+<span class="material-symbols-outlined text-[18px] text-primary-fixed">date_range</span>
+<span class="font-code-mono font-medium">Oct 29 – Oct 30, 2024</span>
+</div>
+<span class="text-on-surface-variant">·</span>
+<span class="font-code-mono text-primary font-semibold">2 Working Days</span>
+<span class="text-on-surface-variant">·</span>
+<span class="text-on-surface-variant">Requested 5h ago</span>
+</div>
+<div class="bg-surface-container rounded p-space-sm flex items-start gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px] mt-0.5">chat_bubble_outline</span>
+<p class="font-body-sm text-body-sm text-on-surface italic">
+                    "Acute migraine treatment and rest protocol prescribed by physician. Design reviews handed over to Liam."
+                  </p>
+</div>
+<div class="flex items-center gap-2 pt-1">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container-high font-code-mono text-[11px] text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">medical_services</span>
+<span>Physician_Note_Encrypted.pdf</span>
+<span class="text-on-surface-variant/60">1.2 MB</span>
+</span>
+</div>
+</div>
+<div class="md:col-span-4 flex flex-row md:flex-col items-center md:items-end justify-end gap-2">
+<div class="flex items-center gap-2 w-full md:w-auto">
+<button class="flex-1 md:flex-initial h-8 px-space-md rounded bg-primary-container hover:bg-surface-tint text-on-primary font-label-sm text-label-sm font-semibold flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>Approve</span>
+</button>
+<button class="flex-1 md:flex-initial h-8 px-space-md rounded bg-surface-container-high hover:bg-error-container text-error font-label-sm text-label-sm font-semibold flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">close</span>
+<span>Reject</span>
+</button>
+</div>
+<button class="text-on-surface-variant hover:text-primary font-label-sm text-label-sm flex items-center gap-1 py-1 transition-colors" type="button">
+<span>View Full Thread</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-md shadow-sm transition-all hover:bg-surface-container">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm pb-space-sm border-b border-surface-container-high/40">
+<div class="flex items-center gap-space-md">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Headshot of a middle-aged Scandinavian man with short silver hair in a high-collared navy jacket, dramatic directional studio light, deep dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkm_VfL1zKUv3P2rXqsU28ZYv2hRyZQjsMUBY9NJ40RBjDkQef9RqSBPMsG5cdWJ9Xs09VH92ZkcSJze2nc9umtASquX1vSNQnNgtt1ZKWUmVqQCp-U88rXQqdHGEBmptt6f7WO0yG5Yy1U18m4N_ChlET592F8x96MpOa3eW_iJAxfWJ5x0Mwx27UgtAdbG4eCs0tOTbjEIDalvujtrLrrJJOn0j2A6unGVPT6Y_O_O9iI1NU-ej_">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-primary font-semibold">Henrik Lindqvist</span>
+<span class="font-code-mono text-[11px] text-on-surface-variant">EMP-3045</span>
+<span class="px-2 py-0.5 rounded font-code-mono text-[11px] bg-surface-container-high text-on-surface">Data Science</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Principal ML Engineer · Model Optimization</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high font-label-sm text-label-sm text-primary font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary-fixed"></span>
+                  Parental Leave (Primary)
+                </span>
+<span class="font-code-mono text-label-sm text-on-surface-variant">
+                  Balance: <strong class="text-primary font-semibold">45 days</strong> left
+                </span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-md items-center">
+<div class="md:col-span-8 flex flex-col gap-2">
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-1.5 text-primary">
+<span class="material-symbols-outlined text-[18px] text-primary-fixed">date_range</span>
+<span class="font-code-mono font-medium">Nov 11 – Dec 20, 2024</span>
+</div>
+<span class="text-on-surface-variant">·</span>
+<span class="font-code-mono text-primary font-semibold">30 Working Days</span>
+<span class="text-on-surface-variant">·</span>
+<span class="text-on-surface-variant">Requested yesterday</span>
+</div>
+<div class="bg-surface-container rounded p-space-sm flex items-start gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px] mt-0.5">chat_bubble_outline</span>
+<p class="font-body-sm text-body-sm text-on-surface italic">
+                    "Statutory parental leave block following newborn arrival. Async onboarding documentation logged in Notion repository."
+                  </p>
+</div>
+<div class="flex items-center gap-2 pt-1">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container-high font-code-mono text-[11px] text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">verified</span>
+<span>Birth_Certificate_HR_Vetted.pdf</span>
+<span class="text-on-surface-variant/60">2.4 MB</span>
+</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high font-code-mono text-[11px] text-primary-fixed">
+<span class="material-symbols-outlined text-[13px]">policy</span>
+<span>Standard Policy Eligible</span>
+</span>
+</div>
+</div>
+<div class="md:col-span-4 flex flex-row md:flex-col items-center md:items-end justify-end gap-2">
+<div class="flex items-center gap-2 w-full md:w-auto">
+<button class="flex-1 md:flex-initial h-8 px-space-md rounded bg-primary-container hover:bg-surface-tint text-on-primary font-label-sm text-label-sm font-semibold flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>Approve</span>
+</button>
+<button class="flex-1 md:flex-initial h-8 px-space-md rounded bg-surface-container-high hover:bg-error-container text-error font-label-sm text-label-sm font-semibold flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">close</span>
+<span>Reject</span>
+</button>
+</div>
+<button class="text-on-surface-variant hover:text-primary font-label-sm text-label-sm flex items-center gap-1 py-1 transition-colors" type="button">
+<span>View Full Thread</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between px-space-sm py-space-xs font-code-mono text-label-sm text-on-surface-variant">
+<span>Showing 3 of 16 pending approvals</span>
+<div class="flex items-center gap-2">
+<button class="px-2 py-1 rounded bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors" type="button">Previous</button>
+<span class="text-primary font-semibold">1</span>
+<span>2</span>
+<span>3</span>
+<button class="px-2 py-1 rounded bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors" type="button">Next</button>
+</div>
+</div>
+</div>
+<div class="xl:col-span-4 flex flex-col gap-space-lg">
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-md shadow-sm">
+<div class="flex items-center justify-between pb-space-xs border-b border-surface-container-high/40">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-primary-fixed">pie_chart</span>
+<h2 class="font-headline-sm text-headline-sm text-primary font-semibold">PTO Breakdown by Dept</h2>
+</div>
+<span class="font-code-mono text-label-sm text-on-surface-variant">Real-time</span>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">Engineering &amp; Infra</span>
+<span class="font-code-mono text-primary">1,620 / 2,100 d (77%)</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 77%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">Product &amp; Design</span>
+<span class="font-code-mono text-primary">840 / 1,120 d (75%)</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-primary-fixed-dim h-full rounded-full" style="width: 75%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">Sales &amp; Marketing</span>
+<span class="font-code-mono text-primary">980 / 1,400 d (70%)</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary-fixed h-full rounded-full" style="width: 70%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">Operations &amp; Legal</span>
+<span class="font-code-mono text-primary">690 / 920 d (75%)</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-outline h-full rounded-full" style="width: 75%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center font-label-sm text-label-sm">
+<span class="text-on-surface font-medium">Human Resources</span>
+<span class="font-code-mono text-primary">310 / 480 d (64%)</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-tertiary-fixed-dim h-full rounded-full" style="width: 64%;"></div>
+</div>
+</div>
+</div>
+<div class="p-space-sm rounded bg-surface-container flex items-center justify-between text-[11px] font-code-mono">
+<span class="text-on-surface-variant">Accrual Cycle: Monthly (1.67 d/mo)</span>
+<a class="text-primary-fixed hover:underline" href="#">Config Policy</a>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col gap-space-md shadow-sm">
+<div class="flex items-center justify-between pb-space-xs border-b border-surface-container-high/40">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-primary-fixed">event</span>
+<h2 class="font-headline-sm text-headline-sm text-primary font-semibold">Upcoming Holidays</h2>
+</div>
+<span class="font-code-mono text-label-sm text-on-surface-variant">Q4 2024</span>
+</div>
+<div class="flex flex-col divide-y divide-surface-container-high/30">
+<div class="py-space-sm flex items-start gap-space-md first:pt-0">
+<div class="bg-surface-container-high rounded p-2 flex flex-col items-center justify-center min-w-[50px]">
+<span class="font-code-mono text-[10px] uppercase text-primary-fixed">Nov</span>
+<span class="font-headline-md text-headline-md text-primary font-bold leading-none">28</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-primary font-semibold">Thanksgiving Day</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-code-mono text-[10px]">US &amp; HQ</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Mandatory corporate closure (Thursday)</span>
+<span class="font-code-mono text-[11px] text-primary-fixed mt-1">In 31 days</span>
+</div>
+</div>
+<div class="py-space-sm flex items-start gap-space-md">
+<div class="bg-surface-container-high rounded p-2 flex flex-col items-center justify-center min-w-[50px]">
+<span class="font-code-mono text-[10px] uppercase text-primary-fixed">Nov</span>
+<span class="font-headline-md text-headline-md text-primary font-bold leading-none">29</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-primary font-semibold">Day After Thanksgiving</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-code-mono text-[10px]">Floating</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Company-wide paid day off (Friday)</span>
+<span class="font-code-mono text-primary-fixed mt-1">In 32 days</span>
+</div>
+</div>
+<div class="py-space-sm flex items-start gap-space-md">
+<div class="bg-surface-container-high rounded p-2 flex flex-col items-center justify-center min-w-[50px]">
+<span class="font-code-mono text-[10px] uppercase text-primary-fixed">Dec</span>
+<span class="font-headline-md text-headline-md text-primary font-bold leading-none">25</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-primary font-semibold">Winter Solstice / Christmas</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-code-mono text-[10px]">Global</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Global observance · Offices locked</span>
+<span class="font-code-mono text-primary-fixed mt-1">In 58 days</span>
+</div>
+</div>
+<div class="py-space-sm flex items-start gap-space-md last:pb-0">
+<div class="bg-surface-container-high rounded p-2 flex flex-col items-center justify-center min-w-[50px]">
+<span class="font-code-mono text-[10px] uppercase text-primary-fixed">Jan</span>
+<span class="font-headline-md text-headline-md text-primary font-bold leading-none">01</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-primary font-semibold">New Year's Day 2025</span>
+<span class="px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-code-mono text-[10px]">Global</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Annual PTO quota balance reset</span>
+<span class="font-code-mono text-on-surface-variant mt-1">In 65 days</span>
+</div>
+</div>
+</div>
+<button class="w-full py-2 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-medium flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span>Download Regional Calendar (.ICS)</span>
+<span class="material-symbols-outlined text-[16px]">file_download</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div></main></div></body></html>

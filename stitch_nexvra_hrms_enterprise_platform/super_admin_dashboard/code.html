@@ -1,0 +1,526 @@
+<!DOCTYPE html><html class="dark" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-primary": "#1e3700", "outline-variant": "#404a34", "outline": "#8a957a", "on-error-container": "#ffdad6", "primary-fixed-dim": "#86dd00", "primary-fixed": "#9afc00", "surface-container-highest": "#353534", "on-secondary-fixed-variant": "#47464a", "on-surface": "#e5e2e1", "surface-container-high": "#2a2a2a", "error": "#ffb4ab", "on-tertiary": "#303033", "tertiary": "#ffffff", "primary": "#ffffff", "on-secondary-fixed": "#1b1b1e", "surface-container-low": "#1c1b1b", "inverse-on-surface": "#313030", "background": "#131313", "surface-tint": "#86dd00", "surface": "#131313", "on-primary-fixed-variant": "#2d5000", "tertiary-container": "#e4e1e6", "on-secondary-container": "#b6b4b8", "secondary-fixed": "#e4e1e5", "primary-container": "#9afc00", "surface-variant": "#353534", "surface-container-lowest": "#0e0e0e", "on-secondary": "#303033", "surface-bright": "#3a3939", "tertiary-fixed": "#e4e1e6", "error-container": "#93000a", "surface-container": "#201f1f", "on-primary-fixed": "#0f2000", "on-primary-container": "#427000", "secondary-container": "#47464a", "secondary-fixed-dim": "#c8c6c9", "on-background": "#e5e2e1", "secondary": "#c8c6c9", "on-error": "#690005", "surface-dim": "#131313", "on-tertiary-fixed": "#1b1b1e", "on-tertiary-container": "#656467", "on-surface-variant": "#bfcbae", "inverse-primary": "#3e6a00", "tertiary-fixed-dim": "#c8c5ca", "inverse-surface": "#e5e2e1", "on-tertiary-fixed-variant": "#47464a" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "space-xl": "1.5rem", "margin-md": "1.5rem", "space-xs": "0.25rem", "space-lg": "1rem", "space-md": "0.75rem", "margin-lg": "2rem", "margin": "1rem", "space-sm": "0.5rem", "gutter": "1rem", "gutter-lg": "1.5rem" }, "fontFamily": { "code-mono": [ "Inter" ], "label-lg": [ "Inter" ], "label-md": [ "Inter" ], "headline-md": [ "Space Grotesk" ], "headline-xl": [ "Space Grotesk" ], "headline-xl-mobile": [ "Space Grotesk" ], "label-sm": [ "Inter" ], "body-sm": [ "Inter" ], "headline-lg": [ "Space Grotesk" ], "display-lg": [ "Space Grotesk" ], "body-lg": [ "Inter" ], "body-md": [ "Inter" ], "headline-sm": [ "Space Grotesk" ], "data-metric": [ "Space Grotesk" ], "display-lg-mobile": [ "Space Grotesk" ] }, "fontSize": { "code-mono": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" } ], "label-lg": [ "14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" } ], "label-md": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" } ], "headline-md": [ "20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "headline-xl": [ "32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "headline-xl-mobile": [ "26px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "label-sm": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" } ], "body-sm": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "400" } ], "headline-lg": [ "24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" } ], "display-lg": [ "48px", { "lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "700" } ], "body-lg": [ "16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "400" } ], "body-md": [ "14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" } ], "headline-sm": [ "16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" } ], "data-metric": [ "28px", { "lineHeight": "32px", "letterSpacing": "-0.03em", "fontWeight": "700" } ], "display-lg-mobile": [ "36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" } ] } } } };</script></head><body class="bg-surface-container-lowest text-on-surface font-body-md text-body-md min-h-screen selection:bg-primary-container selection:text-on-primary-container"><aside class="fixed left-0 top-0 h-screen w-64 bg-surface-container-lowest z-50 flex flex-col justify-between border-r border-surface-container-high/40"><div class="flex flex-col flex-1 overflow-y-auto"><div class="h-16 px-space-md flex items-center justify-between border-b border-surface-container-high/40"><div class="flex items-center gap-space-sm"><img alt="Nexvra Solutions Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Xwd0avzhOo8e3YsZwYA1d-0fjmQ_EOz1Hxgq1UzpvllmyvDnJOPTwTKOPDe1U76ihkCU_nRelBhMMmI5-vtx3T44F1fyVW25dU2zNfzuihtuTBCEvyg4Dq7A4ThYDXcq9ct1BoqgULrR-2ks-gz96A9Oy1PGclT2OUdfXD_cuXPIAg13z-upWH6TpMSzChQHwocSrF4yFz9N_XbsihJAcT8f7aEYy0L5Vknxr1dsBEREvw9Zi0F1fyZro"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-primary tracking-tight font-semibold">NEXVRA</span><span class="font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase">Solutions</span></div></div><span class="font-code-mono text-code-mono px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">v2.4</span></div><nav class="flex flex-col gap-0.5 px-space-xs py-space-sm" data-active-classes="bg-surface-container-low text-primary-fixed border-l-2 border-primary-container font-medium"><a aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg transition-colors bg-surface-container-low text-primary-fixed border-l-2 border-primary-container font-medium" data-path="overview" href="#"><span class="material-symbols-outlined text-space-lg">dashboard</span><span class="font-label-md text-label-md">Dashboard</span></a><div class="flex flex-col"><a class="flex items-center justify-between px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="people-employees" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-space-lg">group</span><span class="font-label-md text-label-md">People</span></div><span class="material-symbols-outlined text-space-md">expand_more</span></a><div class="flex flex-col pl-9 pr-space-xs py-0.5 space-y-0.5"><a class="px-space-sm py-1 rounded text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface font-label-sm text-label-sm transition-colors" data-path="people-employees" href="#">Employees</a><a class="px-space-sm py-1 rounded text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface font-label-sm text-label-sm transition-colors" data-path="people-departments" href="#">Departments</a><a class="px-space-sm py-1 rounded text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface font-label-sm text-label-sm transition-colors" data-path="people-designations" href="#">Designations</a></div></div><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="attendance" href="#"><span class="material-symbols-outlined text-space-lg">timer</span><span class="font-label-md text-label-md">Attendance</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="leave-management" href="#"><span class="material-symbols-outlined text-space-lg">event_available</span><span class="font-label-md text-label-md">Leave</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="payroll" href="#"><span class="material-symbols-outlined text-space-lg">payments</span><span class="font-label-md text-label-md">Payroll</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="documents" href="#"><span class="material-symbols-outlined text-space-lg">folder_shared</span><span class="font-label-md text-label-md">Documents</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="reports" href="#"><span class="material-symbols-outlined text-space-lg">analytics</span><span class="font-label-md text-label-md">Reports</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="audit-logs" href="#"><span class="material-symbols-outlined text-space-lg">receipt_long</span><span class="font-label-md text-label-md">Audit Logs</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-space-lg">settings</span><span class="font-label-md text-label-md">Settings</span></a></nav></div><div class="p-space-sm border-t border-surface-container-high/40 bg-surface-container-lowest"><div class="flex items-center justify-between p-space-xs rounded-lg hover:bg-surface-container-low transition-colors"><div class="flex items-center gap-space-sm"><div class="relative"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfH9tXWLXdxkUTdaTNENgRxt-lro9H-mMAd1wBN1s0834vYVb7FgM2mwePz7kj7QdqwQvf0QbmFNnDGRuswXU9R8316g-aWBmowYD7Tr2hrPymfA0-ayzGSnBfJAWAxR6Uy0XULFvAE30PPL7QHw-G_EmbH7fO_sCaz5RhjRmAyeIt5TGx4SIi4y1HBdi2SJMsAbiIaNxmuSOZFfCmJmo18hQrumoEMNBZRecHcNJTPP2p6aIduijB"><span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-primary-container ring-1 ring-surface-container-lowest"></span></div><div class="flex flex-col"><span class="font-label-sm text-label-sm font-semibold text-primary truncate w-24">Elena Rostova</span><span class="font-code-mono text-code-mono text-primary-fixed">Super Admin</span></div></div><button class="text-on-surface-variant hover:text-on-surface p-1 rounded transition-colors" title="Logout / Switch Account" type="button"><span class="material-symbols-outlined text-space-lg">logout</span></button></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl border-b border-surface-container-high/40 z-40 px-space-lg flex items-center justify-between"><div class="flex items-center gap-space-sm"><img alt="Nexvra Solutions Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Xwd0avzhOo8e3YsZwYA1d-0fjmQ_EOz1Hxgq1UzpvllmyvDnJOPTwTKOPDe1U76ihkCU_nRelBhMMmI5-vtx3T44F1fyVW25dU2zNfzuihtuTBCEvyg4Dq7A4ThYDXcq9ct1BoqgULrR-2ks-gz96A9Oy1PGclT2OUdfXD_cuXPIAg13z-upWH6TpMSzChQHwocSrF4yFz9N_XbsihJAcT8f7aEYy0L5Vknxr1dsBEREvw9Zi0F1fyZro"><span class="font-headline-sm text-headline-sm text-primary tracking-tight font-semibold">NEXVRA</span><span class="text-on-surface-variant/40">/</span><span class="font-code-mono text-code-mono text-on-surface-variant uppercase">HQ Desk</span></div><div class="flex-1 max-w-lg mx-space-lg"><div class="relative flex items-center w-full"><span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-space-lg pointer-events-none">search</span><input class="w-full h-9 bg-surface-container-low border border-surface-container-high text-on-surface placeholder:text-on-surface-variant/70 text-body-sm font-body-sm pl-10 pr-4 rounded-lg focus:outline-none focus:border-primary-container transition-all" placeholder="Search employees, records, audit trails... [⌘K]" type="text"></div></div><div class="flex items-center gap-space-md"><div class="hidden xl:flex items-center gap-1.5 px-space-sm py-1 rounded bg-surface-container-low border border-surface-container-high/40"><span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span><span class="font-code-mono text-code-mono text-on-surface-variant">All systems operational</span></div><div class="flex items-center gap-1.5 bg-surface-container-low border border-surface-container-high px-space-sm py-1 rounded-lg"><span class="font-label-sm text-label-sm text-primary-fixed">Super Admin</span><span class="material-symbols-outlined text-space-md text-on-surface-variant">unfold_more</span></div><button class="relative p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" type="button"><span class="material-symbols-outlined text-space-lg">notifications</span><span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-container"></span></button><a class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined text-space-lg">help_outline</span></a><div class="pl-space-xs border-l border-surface-container-high/50 flex items-center"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfH9tXWLXdxkUTdaTNENgRxt-lro9H-mMAd1wBN1s0834vYVb7FgM2mwePz7kj7QdqwQvf0QbmFNnDGRuswXU9R8316g-aWBmowYD7Tr2hrPymfA0-ayzGSnBfJAWAxR6Uy0XULFvAE30PPL7QHw-G_EmbH7fO_sCaz5RhjRmAyeIt5TGx4SIi4y1HBdi2SJMsAbiIaNxmuSOZFfCmJmo18hQrumoEMNBZRecHcNJTPP2p6aIduijB"></div></div></header><main class="w-full pt-16 bg-surface-container-lowest min-h-screen"><div class="flex flex-col w-full">
+<div class="p-space-lg max-w-[1600px] w-full mx-auto space-y-space-xl">
+<!-- Executive Greeting & Action Toolbar -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="space-y-1">
+<div class="flex items-center gap-space-sm">
+<span class="font-code-mono text-code-mono px-2 py-0.5 rounded bg-surface-container-high text-primary-fixed uppercase tracking-wider font-semibold">Executive HQ</span>
+<span class="text-on-surface-variant/40">/</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant uppercase">Global Oversight</span>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-primary tracking-tight">Good morning, Elena Rostova</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Here's what's happening across your organization today · Monday, Oct 23, 2024</p>
+</div>
+<div class="flex flex-wrap items-center gap-space-sm">
+<button class="inline-flex items-center gap-2 h-9 px-space-md rounded bg-surface-container-low text-on-surface hover:bg-surface-container hover:text-primary transition-colors text-label-md font-label-md" type="button">
+<span class="material-symbols-outlined text-space-lg text-on-surface-variant">analytics</span>
+<span>Generate Report</span>
+</button>
+<button class="inline-flex items-center gap-2 h-9 px-space-md rounded bg-surface-container-low text-on-surface hover:bg-surface-container hover:text-primary transition-colors text-label-md font-label-md" type="button">
+<span class="material-symbols-outlined text-space-lg text-on-surface-variant">payments</span>
+<span>Run Payroll</span>
+</button>
+<button class="inline-flex items-center gap-1.5 h-9 px-space-lg rounded bg-primary-container text-on-primary-fixed hover:bg-primary-fixed-dim transition-all text-label-md font-label-md font-semibold" type="button">
+<span class="material-symbols-outlined text-space-lg">add</span>
+<span>Add Employee</span>
+</button>
+</div>
+</div>
+<!-- Statistics Grid (4 Cards) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+<!-- Total Employees -->
+<div class="bg-surface-container-low rounded-xl p-space-md flex flex-col justify-between relative overflow-hidden group hover:bg-surface-container transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-code-mono text-code-mono text-on-surface-variant uppercase">Total Headcount</span>
+<span class="material-symbols-outlined text-on-surface-variant text-space-lg">badge</span>
+</div>
+<div class="my-space-md flex items-baseline justify-between">
+<span class="font-display-lg text-display-lg text-primary tracking-tight">1,428</span>
+<div class="flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container text-primary-fixed font-code-mono text-code-mono">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+<span>+12 m/m</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm pt-2">
+<span>Target: 1,500 by Q4</span>
+<!-- Inline Sparkline SVG -->
+<svg class="w-24 h-5 text-primary-container" fill="none" viewBox="0 0 100 20">
+<path d="M0 16 L20 14 L40 15 L60 8 L80 10 L100 3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Active Employees -->
+<div class="bg-surface-container-low rounded-xl p-space-md flex flex-col justify-between group hover:bg-surface-container transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-code-mono text-code-mono text-on-surface-variant uppercase">Active Status</span>
+<span class="material-symbols-outlined text-on-surface-variant text-space-lg">check_circle</span>
+</div>
+<div class="my-space-md flex items-baseline justify-between">
+<span class="font-display-lg text-display-lg text-primary tracking-tight">1,396</span>
+<span class="font-code-mono text-code-mono text-primary-fixed bg-surface-container px-2 py-0.5 rounded">97.8% retention</span>
+</div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 97.8%;"></div>
+</div>
+</div>
+<!-- Present Today -->
+<div class="bg-surface-container-low rounded-xl p-space-md flex flex-col justify-between group hover:bg-surface-container transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-code-mono text-code-mono text-on-surface-variant uppercase">Present Today</span>
+<div class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></div>
+</div>
+<div class="my-space-md flex items-baseline justify-between">
+<span class="font-display-lg text-display-lg text-primary tracking-tight">1,312</span>
+<span class="font-code-mono text-code-mono text-on-primary-fixed bg-primary-container px-2 py-0.5 rounded font-medium">91.9% check-in</span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>Synced at 09:45 AM UTC</span>
+<span class="text-primary-fixed font-code-mono text-code-mono">+3.2% vs avg</span>
+</div>
+</div>
+<!-- On Leave -->
+<div class="bg-surface-container-low rounded-xl p-space-md flex flex-col justify-between group hover:bg-surface-container transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-code-mono text-code-mono text-on-surface-variant uppercase">On Leave / Away</span>
+<span class="material-symbols-outlined text-on-surface-variant text-space-lg">event_busy</span>
+</div>
+<div class="my-space-md flex items-baseline justify-between">
+<span class="font-display-lg text-display-lg text-primary tracking-tight">48</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant bg-surface-container px-2 py-0.5 rounded">3.3% of total</span>
+</div>
+<div class="flex items-center justify-between text-body-sm font-body-sm">
+<span class="text-primary-fixed font-label-sm text-label-sm">32 Approved</span>
+<span class="text-on-surface-variant">•</span>
+<span class="text-error font-label-sm text-label-sm">16 Pending Approval</span>
+</div>
+</div>
+</div>
+<!-- Main Dashboard Split Layout (60% / 40%) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+<!-- LEFT COLUMN (approx 60% -> 7 Cols) -->
+<div class="lg:col-span-7 space-y-space-lg">
+<!-- Attendance Overview Widget -->
+<div class="bg-surface-container-low rounded-xl p-space-lg space-y-space-md">
+<div class="flex items-center justify-between">
+<div class="space-y-0.5">
+<h2 class="font-headline-md text-headline-md text-primary">Attendance Distribution</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Real-time breakdown across all shifts today</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-code-mono text-code-mono text-primary-fixed bg-surface-container px-2 py-1 rounded">Shift 01 &amp; 02</span>
+</div>
+</div>
+<!-- Segmented Bar Chart -->
+<div class="space-y-2 pt-2">
+<div class="h-3 w-full bg-surface-container-high rounded flex overflow-hidden gap-0.5">
+<div class="bg-primary-container h-full transition-all" style="width: 91.9%;" title="Present: 1,312"></div>
+<div class="bg-primary-fixed-dim h-full transition-all" style="width: 2.9%;" title="Late: 42"></div>
+<div class="bg-surface-variant h-full transition-all" style="width: 3.4%;" title="On Leave: 48"></div>
+<div class="bg-error h-full transition-all" style="width: 1.8%;" title="Absent: 26"></div>
+</div>
+<!-- Distribution Legend & Metrics -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-space-sm pt-2">
+<div class="p-2.5 rounded bg-surface-container flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Present</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-primary mt-1">1,312</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant">91.9%</span>
+</div>
+<div class="p-2.5 rounded bg-surface-container flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary-fixed-dim"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Late Arrivals</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-primary mt-1">42</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant">2.9%</span>
+</div>
+<div class="p-2.5 rounded bg-surface-container flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-surface-variant"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">On Leave</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-primary mt-1">48</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant">3.4%</span>
+</div>
+<div class="p-2.5 rounded bg-surface-container flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Unplanned Absent</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-primary mt-1">26</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant">1.8%</span>
+</div>
+</div>
+</div>
+<!-- Shift Analysis Mini Table -->
+<div class="pt-2">
+<div class="p-3 rounded bg-surface-container flex items-center justify-between text-body-sm font-body-sm">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-primary">APAC &amp; EMEA Hub</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant">07:00-15:30</span>
+</div>
+<span class="text-on-surface-variant/40">|</span>
+<span class="text-on-surface-variant">Check-ins: <strong class="text-primary font-medium">784/810</strong></span>
+</div>
+<span class="font-code-mono text-code-mono text-primary-fixed">96.7% Compliant</span>
+</div>
+</div>
+</div>
+<!-- Department Overview -->
+<div class="bg-surface-container-low rounded-xl p-space-lg space-y-space-md">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="font-headline-md text-headline-md text-primary">Department Allocations</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Headcount distribution &amp; leadership roster</p>
+</div>
+<a class="font-label-sm text-label-sm text-primary-fixed hover:underline flex items-center gap-1" href="#">
+<span>View All 8 Departments</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+<th class="py-2.5 px-3 rounded-l">Department</th>
+<th class="py-2.5 px-3">Lead</th>
+<th class="py-2.5 px-3">Headcount</th>
+<th class="py-2.5 px-3">Share</th>
+<th class="py-2.5 px-3 rounded-r text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-high/40 font-body-sm text-body-sm">
+<tr class="hover:bg-surface-container/60 transition-colors">
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[16px]">terminal</span>
+</div>
+<span class="font-label-md text-label-md text-primary">Engineering</span>
+</div>
+</td>
+<td class="py-3 px-3 text-on-surface-variant">Dr. Aris Thorne</td>
+<td class="py-3 px-3 font-code-mono text-code-mono text-primary font-medium">420</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<div class="w-20 bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 29.4%;"></div>
+</div>
+<span class="font-code-mono text-code-mono text-on-surface-variant">29.4%</span>
+</div>
+</td>
+<td class="py-3 px-3 text-right">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-primary-fixed bg-surface-container font-label-sm text-label-sm">Optimal</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/60 transition-colors">
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+</div>
+<span class="font-label-md text-label-md text-primary">Revenue &amp; Sales</span>
+</div>
+</td>
+<td class="py-3 px-3 text-on-surface-variant">Clara De Winter</td>
+<td class="py-3 px-3 font-code-mono text-code-mono text-primary font-medium">340</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<div class="w-20 bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 23.8%;"></div>
+</div>
+<span class="font-code-mono text-code-mono text-on-surface-variant">23.8%</span>
+</div>
+</td>
+<td class="py-3 px-3 text-right">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-primary-fixed bg-surface-container font-label-sm text-label-sm">Hiring +6</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/60 transition-colors">
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[16px]">support_agent</span>
+</div>
+<span class="font-label-md text-label-md text-primary">Customer Success</span>
+</div>
+</td>
+<td class="py-3 px-3 text-on-surface-variant">Tariq Al-Mansoor</td>
+<td class="py-3 px-3 font-code-mono text-code-mono text-primary font-medium">293</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<div class="w-20 bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 20.5%;"></div>
+</div>
+<span class="font-code-mono text-code-mono text-on-surface-variant">20.5%</span>
+</div>
+</td>
+<td class="py-3 px-3 text-right">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-primary-fixed bg-surface-container font-label-sm text-label-sm">Optimal</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/60 transition-colors">
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[16px]">hub</span>
+</div>
+<span class="font-label-md text-label-md text-primary">Operations &amp; HR</span>
+</div>
+</td>
+<td class="py-3 px-3 text-on-surface-variant">Mikael Lindqvist</td>
+<td class="py-3 px-3 font-code-mono text-code-mono text-primary font-medium">190</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<div class="w-20 bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 13.3%;"></div>
+</div>
+<span class="font-code-mono text-code-mono text-on-surface-variant">13.3%</span>
+</div>
+</td>
+<td class="py-3 px-3 text-right">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-primary-fixed bg-surface-container font-label-sm text-label-sm">Optimal</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/60 transition-colors">
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[16px]">palette</span>
+</div>
+<span class="font-label-md text-label-md text-primary">Product &amp; Design</span>
+</div>
+</td>
+<td class="py-3 px-3 text-on-surface-variant">Sonia Chen</td>
+<td class="py-3 px-3 font-code-mono text-code-mono text-primary font-medium">185</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<div class="w-20 bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 13.0%;"></div>
+</div>
+<span class="font-code-mono text-code-mono text-on-surface-variant">13.0%</span>
+</div>
+</td>
+<td class="py-3 px-3 text-right">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-primary-fixed bg-surface-container font-label-sm text-label-sm">Hiring +2</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Recent Activity Stream -->
+<div class="bg-surface-container-low rounded-xl p-space-lg space-y-space-md">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-md text-headline-md text-primary">Live Activity Stream</h2>
+<span class="font-code-mono text-code-mono text-on-surface-variant">Realtime Feed</span>
+</div>
+<div class="relative pl-6 space-y-4">
+<!-- Vertical guide line -->
+<div class="absolute left-2.5 top-2 bottom-2 w-0.5 bg-surface-container-high"></div>
+<div class="relative flex items-start gap-3">
+<div class="w-5 h-5 rounded-full bg-primary-container text-on-primary-fixed flex items-center justify-center -ml-[23px] ring-4 ring-surface-container-low">
+<span class="material-symbols-outlined text-[12px]">military_tech</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-body-md font-body-md text-on-surface">
+<span class="text-primary font-medium">Vikram Mehta</span> was promoted to <strong class="text-primary-fixed font-medium">Staff Engineer</strong> (Engineering).
+                </p>
+<div class="flex items-center gap-2 mt-0.5 font-code-mono text-code-mono text-on-surface-variant">
+<span>Authorized by Dr. Aris Thorne</span>
+<span>•</span>
+<span>14 mins ago</span>
+</div>
+</div>
+</div>
+<div class="relative flex items-start gap-3">
+<div class="w-5 h-5 rounded-full bg-surface-container-high text-primary-fixed flex items-center justify-center -ml-[23px] ring-4 ring-surface-container-low">
+<span class="material-symbols-outlined text-[12px]">payments</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-body-md font-body-md text-on-surface">
+<strong class="text-primary font-medium">Payroll for Oct 2024</strong> run initialized across all 3 regional legal entities.
+                </p>
+<div class="flex items-center gap-2 mt-0.5 font-code-mono text-code-mono text-on-surface-variant">
+<span>Batch #PR-2024-10-88</span>
+<span>•</span>
+<span>42 mins ago</span>
+</div>
+</div>
+</div>
+<div class="relative flex items-start gap-3">
+<div class="w-5 h-5 rounded-full bg-surface-container-high text-primary-fixed flex items-center justify-center -ml-[23px] ring-4 ring-surface-container-low">
+<span class="material-symbols-outlined text-[12px]">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-body-md font-body-md text-on-surface">
+                  New compliance document <span class="text-primary font-medium">ISO-27001 InfoSec Policy v4.2</span> uploaded by Security Council.
+                </p>
+<div class="flex items-center gap-2 mt-0.5 font-code-mono text-code-mono text-on-surface-variant">
+<span>Requires acknowledgment by 1,428 staff</span>
+<span>•</span>
+<span>2 hours ago</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT COLUMN (approx 40% -> 5 Cols) -->
+<div class="lg:col-span-5 space-y-space-lg">
+<!-- Leave Requests Action Center -->
+<div class="bg-surface-container-low rounded-xl p-space-lg space-y-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-md text-headline-md text-primary">Pending Approvals</h2>
+<span class="px-2 py-0.5 rounded-full bg-error/20 text-error font-code-mono text-code-mono font-semibold">16</span>
+</div>
+<a class="font-label-sm text-label-sm text-primary-fixed hover:underline" href="#">Review All</a>
+</div>
+<div class="space-y-3" id="leave-action-list">
+<!-- Leave Item 1 -->
+<div class="p-space-md rounded-lg bg-surface-container space-y-3 transition-all hover:bg-surface-container-high/40">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<img class="w-9 h-9 rounded-full object-cover" data-alt="Portrait photo of Sarah Jenkins, senior software engineer with glasses smiling in a modern office setup with cool dark lighting accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBV8KSAsbNYVtvE7qX1Ei7-QCnpy9TTcjSRZayTQMsby7oe8Kb8VpAENpVXGhLez4FZtEX4Ij1_R4cogIRby63yuM68_k2Y-fjtIIsqBC5yHmtZ48aZkuwKdl_Ai4EBu6YQTrs8EqSnMDW_jgHPuhIiXaHAN0G-NcAww0pPYlfNtWC-ZdQNP89SZC2HPmIj23NDDiQnapANJyc3hUD2f_j6XKUBjjhW2R-sO215MqUXhQvQA9mz6rQ-">
+<div>
+<h3 class="font-label-md text-label-md text-primary font-medium">Sarah Jenkins</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Engineering · Staff Platform</p>
+</div>
+</div>
+<span class="font-code-mono text-code-mono px-2 py-0.5 rounded bg-surface-container-high text-primary-fixed">Sick Leave</span>
+</div>
+<div class="flex items-center justify-between font-body-sm text-body-sm text-on-surface-variant">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span>Oct 24 - Oct 25 (2 days)</span>
+</span>
+<span class="italic text-on-surface-variant/80">"Flu symptoms &amp; doctor advised rest"</span>
+</div>
+<div class="flex items-center gap-2 pt-1">
+<button class="flex-1 h-8 rounded bg-primary-container text-on-primary-fixed hover:bg-primary-fixed-dim font-label-sm text-label-sm font-semibold transition-colors flex items-center justify-center gap-1" onclick="this.closest('.p-space-md').remove()" type="button">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>Approve</span>
+</button>
+<button class="px-3 h-8 rounded bg-surface-container-high text-on-surface-variant hover:text-error hover:bg-surface-container-highest font-label-sm text-label-sm transition-colors flex items-center justify-center" onclick="this.closest('.p-space-md').remove()" type="button">
+<span>Decline</span>
+</button>
+</div>
+</div>
+<!-- Leave Item 2 -->
+<div class="p-space-md rounded-lg bg-surface-container space-y-3 transition-all hover:bg-surface-container-high/40">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<img class="w-9 h-9 rounded-full object-cover" data-alt="Portrait photo of Marcus Vance, sales executive in sleek dark professional attire with ambient enterprise lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfpvjEpKUVpfisL7XA6OHkg3aqWd3e6NPbiWXOUFtj3whkV_DdZJBzcdd5JkOp5WdouaPYqNhcv3lIJbFFWzJDyuWAqkeAJd_XGajlmAAuyrrsHzx9Z3xzLfbAEHjEc4Fm8t5Ktqi7333FAPhzXac0AHOLH7kQYUL1UT4o7QfwJ-7iSPXcAH-EmLXmikbYzHHOkCqkCaGqMSzPZr07gE9i1KjY-gc-4yBu3qeFHfio-RPSbwfifvca">
+<div>
+<h3 class="font-label-md text-label-md text-primary font-medium">Marcus Vance</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Revenue · Account Exec</p>
+</div>
+</div>
+<span class="font-code-mono text-code-mono px-2 py-0.5 rounded bg-surface-container-high text-on-surface">Annual Leave</span>
+</div>
+<div class="flex items-center justify-between font-body-sm text-body-sm text-on-surface-variant">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span>Nov 04 - Nov 08 (5 days)</span>
+</span>
+<span class="italic text-on-surface-variant/80">"Family travel planned"</span>
+</div>
+<div class="flex items-center gap-2 pt-1">
+<button class="flex-1 h-8 rounded bg-primary-container text-on-primary-fixed hover:bg-primary-fixed-dim font-label-sm text-label-sm font-semibold transition-colors flex items-center justify-center gap-1" onclick="this.closest('.p-space-md').remove()" type="button">
+<span class="material-symbols-outlined text-[16px]">check</span>
+<span>Approve</span>
+</button>
+<button class="px-3 h-8 rounded bg-surface-container-high text-on-surface-variant hover:text-error hover:bg-surface-container-highest font-label-sm text-label-sm transition-colors flex items-center justify-center" onclick="this.closest('.p-space-md').remove()" type="button">
+<span>Decline</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Employee Hires -->
+<div class="bg-surface-container-low rounded-xl p-space-lg space-y-space-md">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-md text-headline-md text-primary">New Hires Onboarding</h2>
+<span class="font-code-mono text-code-mono text-primary-fixed bg-surface-container px-2 py-0.5 rounded">This Month (+12)</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-2.5 rounded bg-surface-container">
+<div class="flex items-center gap-3">
+<img class="w-9 h-9 rounded-full object-cover" data-alt="Portrait photo of Devlin Ross, cloud infrastructure engineer with headset in futuristic workstation with dark moody background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBekZbfxRUiMErhEkPelCgsaNxNUXsqKJLcJp5jGI9gfSglHWAAhsTCAN8tmZZRy5RYjNDIIvJBnPu5XrP6ZaGEHTKAbyhm06RxKq13-9exmcYcnHWbjsopqAi1rq_cHxCOsHJ6Eol7lU0fXbvYMNCXWEM8cCRRpEO5X080kqPYWsHYhy4ZuGM-MZv-23EvDAguuVCdaBVP6vorvaVpu02fkNgddaC9HBf8lTKuK_9djONlv4iueUmP">
+<div>
+<h4 class="font-label-md text-label-md text-primary font-medium">Devlin Ross</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Cloud Infrastructure Architect</p>
+</div>
+</div>
+<div class="text-right">
+<span class="font-code-mono text-code-mono text-on-surface">Joined Oct 21</span>
+<span class="block font-label-sm text-label-sm text-primary-fixed">Day 3 · Active</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded bg-surface-container">
+<div class="flex items-center gap-3">
+<img class="w-9 h-9 rounded-full object-cover" data-alt="Portrait photo of Ananya Iyer, product designer smiling confidently against minimalist dark studio backdrop." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfjzXhhI199OdGznNb4OJ2nkdAGCSqZZuobv6ZnzbFpm7jZOnOW6vJycnZaBMky8t0sxSXh2zgLBdmTzBQSLGzp-ep2GakmJ7xdQ0IJEoaaQceRpPEkeSHTNGtAXdlMpAS_NSmbY31imTO7NrtCQg1Gpk-BKToBSB641JVcDQf91qA9BZ-iunZ3bHqbFIhR0aBsC7w70T3oZRqouGufPnIELYFus0uYaQfkHs8h4D-1Ry04BMHVRhU">
+<div>
+<h4 class="font-label-md text-label-md text-primary font-medium">Ananya Iyer</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Senior Design Systems Lead</p>
+</div>
+</div>
+<div class="text-right">
+<span class="font-code-mono text-code-mono text-on-surface">Joined Oct 18</span>
+<span class="block font-label-sm text-label-sm text-primary-fixed">Day 6 · Active</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded bg-surface-container">
+<div class="flex items-center gap-3">
+<img class="w-9 h-9 rounded-full object-cover" data-alt="Portrait photo of Liam Sterling, strategic sales director in tailored dark modern business attire." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDC8ugCOfTr2kMHmP-9UhFDo1hJ_qlQonT5Wu4dWlthODqgJMU3coqo7i4jPMav8c6y8lASzmqoS65NQTGTWON2WYikCXY4Tx8gyijUco81Fu7uP_qiXTVrOHAQzeR5Cevi5wVTax4nx3MSI-nAiczi031-8snUt-IHqgpI37ju8xXnyGHhrIb-QRaTVruPAto1rSMha_i0T-FuakmnSRA3AkS6Itmi5MCaoNMLqRjfXYEpCPayQ-Ti">
+<div>
+<h4 class="font-label-md text-label-md text-primary font-medium">Liam Sterling</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Enterprise Growth Specialist</p>
+</div>
+</div>
+<div class="text-right">
+<span class="font-code-mono text-code-mono text-on-surface">Joined Oct 16</span>
+<span class="block font-label-sm text-label-sm text-primary-fixed">Week 1 Complete</span>
+</div>
+</div>
+</div>
+</div>
+<!-- System Health & Security Security Status -->
+<div class="bg-surface-container-low rounded-xl p-space-lg space-y-space-md">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-md text-headline-md text-primary">System Integrity &amp; Identity</h2>
+<span class="w-2.5 h-2.5 rounded-full bg-primary-container"></span>
+</div>
+<div class="space-y-2.5">
+<div class="flex items-center justify-between p-2 rounded bg-surface-container font-body-sm text-body-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[18px]">verified_user</span>
+<span class="text-on-surface">Okta SSO Directory Sync</span>
+</div>
+<span class="font-code-mono text-code-mono text-primary-fixed">Synced 4 mins ago</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded bg-surface-container font-body-sm text-body-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[18px]">shield</span>
+<span class="text-on-surface">Security Audit Exceptions</span>
+</div>
+<span class="font-code-mono text-code-mono text-on-surface-variant">0 Active Alerts</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded bg-surface-container font-body-sm text-body-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[18px]">database</span>
+<span class="text-on-surface">Automated Backup Vault</span>
+</div>
+<span class="font-code-mono text-code-mono text-on-surface-variant">100% Integrity</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></main></div></body></html>
