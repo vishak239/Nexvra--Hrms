@@ -37,10 +37,11 @@ User ──< Notification            AuditLog (actor → User, SET_NULL)        
 | Model | Key fields | Constraints |
 |---|---|---|
 | `Company` | `name`, `legal_name`, `email`, `phone`, `website`, `address` | `CHECK id = 1` (singleton) |
-| `CompanySettings` | see api.md "settings fields" | `CHECK id = 1`; `half_day_min_hours < full_day_min_hours` when both set |
+| `CompanySettings` | see api.md "settings fields" (incl. `break_allowance_minutes`, 1–480 or empty) | `CHECK id = 1`; `half_day_min_hours < full_day_min_hours` when both set |
 | `Department` | `name`, `code`, `description`, `head` FK Employee (SET_NULL), `is_active` | `name`, `code` unique |
 | `Designation` | `name`, `description`, `is_active` | `name` unique |
 | `Holiday` | `date`, `name`, `is_optional` | unique (`date`, `name`); index on `date` |
+| `Policy` | `title`, `category`, `body`, `effective_date`, `is_published`, `created_by`/`updated_by` FK User (SET_NULL) | unique `lower(title)`; index (`is_published`, `category`) |
 
 ### employees
 | Model | Key fields | Constraints |
@@ -106,6 +107,8 @@ Payslip totals and item names are deliberate snapshots, so a finalized payslip n
 |---|---|---|
 | `Notification` | `recipient`, `type`, `title`, `message`, `entity_type`, `entity_id`, `is_read`, `read_at` | index (`recipient`, `is_read`, `-created_at`) |
 | `AuditLog` | `actor` (SET_NULL), `actor_email` (snapshot), `action`, `entity_type`, `entity_id`, `changes` (JSON), `metadata` (JSON), `ip_address`, `user_agent`, `created_at` | indexes on `created_at`, (`entity_type`, `entity_id`), `action`, `actor` |
+
+Migrations added on 2026-10-03: `organization.0003_break_allowance_and_policies` (new nullable column + `Policy` table; no data changes) and `accounts.0005_sync_rbac_policies` (adds the `policies.manage` permission to HR Admin and Super Admin).
 
 ## Working with migrations
 

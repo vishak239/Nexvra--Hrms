@@ -47,7 +47,7 @@ Base path: `/api/`. JSON in and out (multipart for uploads). All URLs end with `
 | GET / PATCH | `company/` | — / `company.manage` | Company profile (singleton) |
 | GET / PATCH | `settings/` | — / `settings.manage` | HR policy settings. Every field is nullable/optional: empty = rule not applied. See requirements-analysis.md §3. |
 
-`settings` fields: `timezone`, `currency`, `working_days` (list of 0=Mon…6=Sun), `work_start_time`, `work_end_time`, `late_grace_minutes`, `half_day_min_hours`, `full_day_min_hours` (both or neither), `self_attendance_enabled`, `leave_year_start_month`, `employee_document_upload_enabled`, `deactivate_user_on_exit`, `max_upload_size_mb`.
+`settings` fields: `timezone`, `currency`, `working_days` (list of 0=Mon…6=Sun), `work_start_time`, `work_end_time`, `late_grace_minutes`, `break_allowance_minutes` (1–480; daily break allowance, e.g. 60), `half_day_min_hours`, `full_day_min_hours` (both or neither), `self_attendance_enabled`, `leave_year_start_month`, `employee_document_upload_enabled`, `deactivate_user_on_exit`, `max_upload_size_mb`.
 
 ## Organisation
 
@@ -57,6 +57,10 @@ Base path: `/api/`. JSON in and out (multipart for uploads). All URLs end with `
 | POST/PATCH/DELETE | `departments/{id}/` | `departments.manage` | Deleting a department in use → 409 (deactivate instead) |
 | POST/PATCH/DELETE | `designations/{id}/` | `designations.manage` | Same |
 | POST/PATCH/DELETE | `holidays/{id}/` | `holidays.manage` | `{date, name, is_optional}`; unique per date+name |
+| GET | `policies/`, `policies/{id}/` | — | Company policies. Filters: `q` (title/text), `category`, `status=published|draft` (managers only). Non-managers get published policies only; a draft is 404 for them. Paginated. |
+| POST/PATCH/DELETE | `policies/{id}/` | `policies.manage` | `{title (unique, case-insensitive), category, body (≤ 20 000 chars), effective_date?, is_published}`. Audited (`POLICY_CREATED/UPDATED/DELETED`) without copying the policy text. |
+
+Policy categories: `WORKING_HOURS`, `ATTENDANCE`, `BREAKS`, `LEAVE`, `HOLIDAYS`, `CONDUCT`, `COMMUNICATION`, `OTHER`.
 
 ## Employees — `/api/employees/`
 
@@ -75,7 +79,7 @@ Base path: `/api/`. JSON in and out (multipart for uploads). All URLs end with `
 | Method | Path | Permission | Notes |
 |---|---|---|---|
 | GET | `` | — (scoped own/team/all) | Filters: `employee`, `status`, `is_late`, `date`, `date_from`, `date_to` |
-| GET | `today/` | `attendance.self` | Work session: `{date, server_time, self_attendance_enabled, record, breaks[], active_break, overtime[], active_overtime, blocking_tasks, checkout_exempt}` |
+| GET | `today/` | `attendance.self` | Work session: `{date, server_time, self_attendance_enabled, break_allowance_minutes, record, breaks[], active_break, overtime[], active_overtime, blocking_tasks, checkout_exempt}` |
 | POST | `check-in/`, `check-out/` | `attendance.self` | 409 on a duplicate check-in / invalid check-out. 403 if self attendance is disabled. Check-out returns **409 `checkout_blocked_by_tasks`** while a blocking HR task is unanswered (Super Admin exempt); an open break ends at check-out. |
 | GET | `breaks/` | — (scoped own/team/all) | Break history. Filters: `employee`, `status`, `source`, `date_from`, `date_to` |
 | POST | `breaks/start/`, `breaks/end/` | `attendance.self` | Body `{client_event_id?: uuid}` (makes retries idempotent) → `{duplicate, state}` (state = `today/` payload). 409: not checked in / already checked out / already on a break / no break to end / overlap. |
@@ -86,7 +90,7 @@ Base path: `/api/`. JSON in and out (multipart for uploads). All URLs end with `
 | GET | `daily/?date=&department=` | `attendance.view_team` / `view_all` | Per-employee status: `PRESENT`, `HALF_DAY`, `ABSENT`, `ON_LEAVE`, `HOLIDAY`, `WEEKLY_OFF`, `NOT_MARKED` |
 | POST/PATCH/DELETE | `` / `{id}/` | `attendance.manage` | HR corrections: `{employee, date, check_in?, check_out?, status?, remarks?}`. Status is computed if omitted. Can't correct your own records. Audited. |
 
-Records have `status` ∈ `PRESENT | HALF_DAY | ABSENT`, `is_late`, `worked_minutes` (actual working time = session − breaks), `session_minutes` (gross), `break_minutes`, `total_break_seconds` and `source` (`SELF | ADMIN`). Late and half-day are computed only from configured settings. Details: [work-sessions-tasks-messaging.md](work-sessions-tasks-messaging.md).
+Records have `status` ∈ `PRESENT | HALF_DAY | ABSENT`, `is_late`, `worked_minutes` (actual working time = session − breaks), `session_minutes` (gross), `break_minutes`, `total_break_seconds`, `break_over_allowance_minutes` (break time beyond the daily allowance; `null` when no allowance is set) and `source` (`SELF | ADMIN`). Late and half-day are computed only from configured settings. Details: [work-sessions-tasks-messaging.md](work-sessions-tasks-messaging.md).
 
 ## Leave — `/api/leaves/`
 

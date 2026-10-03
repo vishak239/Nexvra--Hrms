@@ -14,7 +14,13 @@ Browser ──► Next.js (frontend, :3000) ──rewrite /api/* ──► Djang
 
 ## 1. Frontend architecture
 
-**Status: implemented (2026-10-01).** No Stitch screen export was supplied, so the owner asked for the UI to be built directly: a restrained enterprise design on the Nexvra brand (black sidebar carrying the official logo, white content area, lime as the only accent). Every style token is in `tailwind.config.ts` and the shared components, so a future Stitch design can be applied centrally.
+**Status: implemented; re-skinned to the official Stitch design (2026-10-03).** The design source of truth is `stitch_nexvra_hrms_enterprise_platform/` ("Obsidian Kinetic"). How it is applied:
+
+- **Tokens:** the Stitch Tailwind config (colours such as `surface-container-*`, `primary-container` = lime, `on-surface-variant`; radius; spacing; the `headline-*` / `label-*` / `data-metric` type scale) is copied verbatim into `tailwind.config.ts`. The only addition is `warning*` (amber), taken from DESIGN.md.
+- **Fonts:** Space Grotesk (headings, metrics) and Inter (body, tabular numbers), self-hosted via `@fontsource-variable/*`, so no external font requests.
+- **Icons:** Material Symbols Outlined (the Stitch icon set), generated into `src/components/ui/icons.tsx` by `scripts/build-icons.mjs` (inline SVG, offline).
+- **Components:** Button, Field, Card/PageHeader/Badge/StatCard, Table/Pagination, Modal/Tabs/Toasts and the AppShell reproduce the Stitch treatments; pages use only these and the tokens. `scripts/stitch-codemod.py --check` reports any leftover legacy colour class.
+- **Print:** a print stylesheet turns every surface into black-on-white (the payslip letterhead keeps its own colours).
 
 Structure:
 
@@ -22,7 +28,7 @@ Structure:
 src/app/(auth)/          login, forgot-password, reset-password (split layout with the logo panel)
 src/app/(app)/           authenticated screens inside AppShell (sidebar + top bar)
   dashboard, profile, change-password, employees[/new|/[id]|/[id]/edit], attendance, leave,
-  holidays, tasks, messages, payslips[/[id]], documents, notifications, payroll[/runs/[id]],
+  holidays, policies, tasks, messages, payslips[/[id]], documents, notifications, payroll[/runs/[id]],
   reports, settings, admin/users, admin/audit
 src/components/ui/       Button, Field controls, Card/Badge/StatCard, Table/Pagination, Modal (portal),
                          ConfirmDialog, Tabs, Toasts, Loading/Empty/Error/NoAccess states
@@ -69,7 +75,7 @@ apps/<app>/
 |---|---|
 | `core` | `TimeStampedModel`, `HasPermission` permission class, scoping helpers, pagination, exception handler, file validators |
 | `accounts` | Custom `User` (email login), `Role`, `Permission`, auth endpoints, users & roles APIs, role seed migration |
-| `organization` | `Company`, `CompanySettings`, `Department`, `Designation`, `Holiday` |
+| `organization` | `Company`, `CompanySettings` (incl. daily break allowance), `Department`, `Designation`, `Holiday`, `Policy` (HR-written company policies) |
 | `employees` | `Employee` + role-aware serializers, photo endpoint |
 | `attendance` | `AttendanceRecord`, check-in/out, status computation; `BreakSession`, `OvertimeSession`, `SyncEvent` and the offline sync service (`sessions.py`) |
 | `leaves` | `LeaveType`, `LeaveBalance`, `LeaveRequest`, day counting, approvals, approval lock, `LeaveBalanceTransaction` ledger (deduct once on approval) |
@@ -122,6 +128,7 @@ Principles:
 | Reports | `reports.view_team`, `reports.view_all` |
 | Tasks | `tasks.view_team`, `tasks.view_all`, `tasks.manage` |
 | Messages | `messages.use` |
+| Policies | `policies.manage` (reading published policies needs no permission) |
 
 **Default role matrix** (editable by SUPER_ADMIN, except that SUPER_ADMIN always keeps everything):
 
@@ -129,7 +136,7 @@ Principles:
 |---|---|
 | EMPLOYEE (10) | `attendance.self`, `leave.apply`, `payroll.view_own`, `documents.view_own`, `messages.use` |
 | MANAGER (20) | EMPLOYEE + `employees.view_team`, `attendance.view_team`, `leave.view_team`, `leave.approve_team`, `reports.view_team`, `tasks.view_team` |
-| HR_ADMIN (50) | MANAGER + `employees.view_all`, `employees.manage`, `attendance.view_all`, `attendance.manage`, `leave.view_all`, `leave.approve_all`, `leave.manage_types`, `leave.manage_balances`, `holidays.manage`, `departments.manage`, `designations.manage`, `payroll.view_all`, `payroll.manage`, `documents.view_all`, `documents.manage`, `reports.view_all`, `settings.manage`, `tasks.view_all`, `tasks.manage` |
+| HR_ADMIN (50) | MANAGER + `employees.view_all`, `employees.manage`, `attendance.view_all`, `attendance.manage`, `leave.view_all`, `leave.approve_all`, `leave.manage_types`, `leave.manage_balances`, `holidays.manage`, `departments.manage`, `designations.manage`, `payroll.view_all`, `payroll.manage`, `documents.view_all`, `documents.manage`, `reports.view_all`, `settings.manage`, `tasks.view_all`, `tasks.manage`, `policies.manage` |
 | SUPER_ADMIN (100) | Everything, including `company.manage`, `users.*`, `roles.*`, `audit.view` |
 
 **Enforcement layers:**

@@ -42,6 +42,14 @@ Rules enforced by the server:
 - Ending a break when none is active returns 409.
 - Checking out while on a break ends the break at the check-out time.
 
+### Daily break allowance
+
+If the company policy gives, for example, a 1-hour break, HR enters `60` in **Settings → Working time & attendance → Daily break allowance**. Empty means no limit.
+
+- The work-session card shows "45m left of 60 min allowance" or "15m over the 60 min allowance".
+- Attendance tables and Activity monitoring flag days that went over ("+15m over allowance").
+- Breaks are never blocked, and all break time is still excluded from working time. What should happen beyond the allowance is not specified by HR.
+
 ## 2. Overtime
 
 Flow: **Normal work → Normal check-out → Start Overtime → "Overtime running" with a live timer → End Overtime.**
@@ -206,7 +214,16 @@ The dashboard also shows:
 - **For HR and Super Admin:** "on break now" and "overtime running" counts, and open, overdue and awaiting-response tasks.
 - **For each employee:** their open tasks and unread messages.
 
-## 9. Configuration in code
+## 9. Company policies
+
+**Policies** (in the main menu for everyone) shows:
+
+- the rules the system enforces, read live from Settings: working days and hours, late grace, daily break allowance, half/full-day hours, leave year and self check-in. "Not set" means the rule isn't applied;
+- the policy documents HR writes, such as conduct or communication (company chat) rules. They're searchable and filterable by category.
+
+HR Admin and Super Admin (`policies.manage`) create, edit, publish and delete policies. Drafts are visible only to them, and the API returns 404 to anyone else. No policy text is seeded, because none was supplied.
+
+## 10. Configuration in code
 
 | What | Where |
 |---|---|

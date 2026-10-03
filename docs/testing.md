@@ -98,20 +98,22 @@ The flow tests create uniquely named `e2e-*` / `ui-*@example.test` employees and
 | Frontend | `lib/worksession.test.ts`, `lib/offline.test.ts` | break/overtime timers, actual working time, offline overlay, queue persistence, idempotent enqueue, sync, retry back-off |
 | | `components/attendance/WorkSessionCard.test.tsx` | break timer, overtime timer, checkout popup, server-side block, offline queue + reconnect sync, offline snapshot, session recovery |
 | | `components/tasks/AssignTaskModal.test.tsx`, `components/connection/ConnectionIndicator.test.tsx`, `components/leave/LeaveLock.test.tsx`, `app/(app)/messages/messages.test.tsx`, `app/(app)/notifications/notifications.test.tsx` | lookup by ID / username, offline indicator + sync status, leave lock + balance display, messaging + file upload, task notification |
+| Backend | `apps/organization/tests/test_policies.py` | policy visibility per role (drafts hidden, 404 by id), search + category filter, only `policies.manage` can change, validation, case-insensitive unique titles, audit without policy text, break-allowance validation and the over-allowance figure |
+| Frontend | `app/(app)/policies/policies.test.tsx`, `components/attendance/WorkSessionCard.test.tsx` | employee view (rules from Settings, no editing), HR publishing with server validation errors, break allowance hint |
 | E2E | `api/new-features.spec.ts` | API-level rules for every role (no UI) |
-| | `ui/work-session.spec.ts`, `ui/overtime-leave.spec.ts`, `ui/messaging-offline.spec.ts`, `ui/roles-new-features.spec.ts`, `ui/page-health.spec.ts` | the full browser flows, role visibility, every page × 4 roles without console/5xx errors, phone-width layout |
+| | `ui/work-session.spec.ts`, `ui/overtime-leave.spec.ts`, `ui/messaging-offline.spec.ts`, `ui/roles-new-features.spec.ts`, `ui/policies.spec.ts`, `ui/page-health.spec.ts` | the full browser flows, role visibility, every page × 4 roles without console/5xx errors, phone-width layout |
 
 New E2E flows create their own uniquely named employees through the HR API, so they can run any number of times per day.
 
-## Latest results (2026-10-02)
+## Latest results (2026-10-03, after the Stitch re-skin and policies)
 
 | Suite | Result |
 |---|---|
-| Backend pytest (PostgreSQL 16) | 219 passed |
-| Frontend Vitest (unit + component, jsdom) | 58 passed; `tsc` clean; `next build` OK (25 routes) |
-| Playwright e2e (isolated e2e DB, :8001/:3002) | 45 passed (18 api + 27 ui) |
+| Backend pytest (PostgreSQL 16) | 240 passed |
+| Frontend Vitest (unit + component, jsdom) | 62 passed; `tsc` clean (with `noUnusedLocals`/`noUnusedParameters`); `next build` OK (26 routes, no warnings) |
+| Playwright e2e (isolated e2e DB, :8001/:3002) | 51 passed (18 api + 33 ui) |
 | `makemigrations --check` | no missing migrations |
 | Backend-down check | login page shows "Can't reach the Nexvra HRMS server"; one log line, no stack traces |
 | Browser tour: every screen for all 4 roles (automated: `ui/page-health.spec.ts`) | no console errors, no 5xx responses; no horizontal scroll at 390 px |
 | `ruff check` | clean |
-| `manage.py check --deploy` (production settings) | no issues |
+| `manage.py check --deploy` (production settings) | only `security.W021`: HSTS preload is deliberately opt-in (`SECURE_HSTS_PRELOAD=True`), because it is hard to undo |

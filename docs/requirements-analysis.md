@@ -141,6 +141,15 @@ Columns: **Req**, **Source**, **DB impact**, **UI impact**, **API impact**, **Pe
 | Private messaging | `Conversation`, `Message` | Messages page, unread badge | `/api/messages/...` | `messages.use` | 1:1, participant-only (404 for everyone else, including admins); paginated | Message retention period: NOT SPECIFIED — messages are kept |
 | File sharing | `MessageAttachment` (message, uploader, original name, type, size, private storage name) | Attach in composer, download link | `.../attachments/{id}/download/` | Participants only | Allowlist + magic bytes + size limit from Settings; private storage | — |
 
+### 2.12 Company policies and break allowance (2026-10-03)
+
+| Req | DB | UI | API | Permission | Business rule | Open question |
+|---|---|---|---|---|---|---|
+| Policy documents | `Policy` (title, category, body, effective date, published) | Policies page (search, category filter, drafts for HR) | `/api/policies/` | Read: everyone (published only); manage: `policies.manage` | No policy text is seeded: Nexvra supplied none. HR writes them (e.g. conduct, communication / company chat rules). | Policy texts: NOT SPECIFIED — HR to enter |
+| Daily break allowance | `CompanySettings.break_allowance_minutes` | Settings field; shown on the work-session card, Policies page, attendance tables | `/api/settings/`, `today/`, record field `break_over_allowance_minutes` | `settings.manage` | A 1-hour break policy = 60. Empty = no limit. Exceeding it is flagged, never blocked; all break time stays excluded from working time. | Whether breaks are paid, and what happens when the allowance is exceeded: NOT SPECIFIED |
+
+Numeric rules live only in Settings; the Policies page reads them from there, so a value is never typed twice.
+
 ## 3. Policy settings (all NOT SPECIFIED — CONFIGURABLE)
 
 Stored in `CompanySettings`. An empty value means the dependent rule is **not applied**.

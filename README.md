@@ -9,8 +9,9 @@ Internal Human Resource Management System for **Nexvra Solutions**. A standard H
 | Tasks | HR assigns tasks by Employee ID **or** @username; employees respond and complete; unanswered tasks block checkout (Super Admin exempt) |
 | Messaging | Private 1:1 conversations with secure file sharing (PDF, Office, CSV, images) |
 | Leave | Approved leave is locked; the balance is deducted exactly once, on approval, with an audited ledger |
-| Frontend (Next.js + TypeScript + Tailwind) | Implemented: 25 role-aware screens covering sign-in, dashboard, employees, attendance, leave, holidays, tasks, messages, payroll, payslips, documents, reports (with activity monitoring), notifications, settings, users & roles, and the audit log. Responsive with a mobile menu. |
-| UI design | No Stitch screen export was supplied, so the UI is a restrained enterprise design built on the Nexvra brand (black sidebar, lime accent). Tokens live in `frontend/tailwind.config.ts`, so a Stitch design can be applied later. |
+| Policies | HR writes company policies (drafts, publish, search, categories); everyone reads the published ones next to the rules the system enforces (working hours, grace time, daily break allowance, …) |
+| Frontend (Next.js + TypeScript + Tailwind) | Implemented: 26 role-aware screens covering sign-in, dashboard, employees, attendance, leave, holidays, policies, tasks, messages, payroll, payslips, documents, reports (with activity monitoring), notifications, settings, users & roles, and the audit log. Responsive with a mobile menu. |
+| UI design | The official Stitch design (`stitch_nexvra_hrms_enterprise_platform/`, "Obsidian Kinetic": dark surfaces, electric-lime accent, Space Grotesk + Inter, Material Symbols). Its tokens are copied verbatim into `frontend/tailwind.config.ts`, and every screen uses the shared components in `frontend/src/components/ui/`. |
 | Official logo | `brand/nexvra-logo.svg`, as confirmed by the owner, used unmodified |
 | HR policies | None supplied. Every policy is **configurable** and starts empty (see `docs/requirements-analysis.md`) |
 
@@ -32,7 +33,8 @@ Details: [docs/architecture.md](docs/architecture.md).
 backend/     Django project (config/ + apps/<module>/{models,serializers,services,views,tests})
 frontend/    Next.js app: src/app/(auth) sign-in pages, src/app/(app) screens, src/components/ui shared components
 brand/       Official brand assets (single source of truth)
-design/      Stitch export goes in design/stitch/
+stitch_nexvra_hrms_enterprise_platform/   Official Stitch UI export (design source of truth: screens, code.html, DESIGN.md)
+design/      Older design references
 docs/        Project documentation
 tests/e2e/   Playwright end-to-end tests
 ```
@@ -110,9 +112,9 @@ All configuration comes from environment variables. [`.env.example`](.env.exampl
 ## Tests
 
 ```bash
-cd backend && .venv/Scripts/python -m pytest       # 219 tests on PostgreSQL
-cd frontend && npm test && npm run typecheck        # 58 unit + component tests
-cd tests/e2e && E2E_PASSWORD="<demo-pw>" npx playwright test   # 45 tests (API + browser UI); see docs/testing.md
+cd backend && .venv/Scripts/python -m pytest       # 240 tests on PostgreSQL
+cd frontend && npm test && npm run typecheck        # 62 unit + component tests
+cd tests/e2e && E2E_PASSWORD="<demo-pw>" npx playwright test   # 51 tests (API + browser UI); see docs/testing.md
 ```
 
 See [docs/testing.md](docs/testing.md).
@@ -134,7 +136,7 @@ See [docs/testing.md](docs/testing.md).
 | [requirements-analysis.md](docs/requirements-analysis.md) | Requirements by module; NOT SPECIFIED — CONFIGURABLE items; open questions for HR |
 | [hrms-v1-scope.md](docs/hrms-v1-scope.md) | Must / should / later / excluded |
 | [architecture.md](docs/architecture.md) | Frontend, backend, auth, RBAC, files, audit, security |
-| [work-sessions-tasks-messaging.md](docs/work-sessions-tasks-messaging.md) | Breaks, overtime, tasks + checkout rule, leave lock & balance ledger, messaging & files, offline mode, monitoring |
+| [work-sessions-tasks-messaging.md](docs/work-sessions-tasks-messaging.md) | Breaks (+ daily allowance), overtime, tasks + checkout rule, leave lock & balance ledger, messaging & files, offline mode, monitoring, company policies |
 | [database.md](docs/database.md) | Tables, constraints, migrations |
 | [api.md](docs/api.md) | Every endpoint with its permission |
 | [setup.md](docs/setup.md) | Installation and first-time configuration |
