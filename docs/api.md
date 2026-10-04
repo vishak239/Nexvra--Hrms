@@ -23,7 +23,7 @@ Base path: `/api/`. JSON in and out (multipart for uploads). All URLs end with `
 | GET | `csrf/` | public | Sets the `csrftoken` cookie |
 | POST | `login/` | public, CSRF, throttled | `{email, password}` → current user (same as `me`). Generic error on failure. |
 | POST | `logout/` | — | 204 |
-| GET | `me/` | — | `{id, email, username, full_name, role{code,name,level}, permissions[], must_change_password, employee{id, employee_code, ...}|null}` |
+| GET | `me/` | — | `{id, email, username, full_name, role{code,name,level}, permissions[], employee{id, employee_code, ...}|null}` |
 | GET | `session/` | public | Always 200: `{authenticated, user}` where `user` has the same shape as `me` (or null). Used by the SPA on load. |
 | POST | `change-password/` | — | `{current_password, new_password}` |
 | POST | `password-reset/` | public, throttled | `{email}`. Always 200 (no enumeration). Emails a link to `FRONTEND_URL/reset-password?uid=&token=` |

@@ -109,19 +109,22 @@ test.describe.serial("employee lifecycle through the UI", () => {
     await expect(page).toHaveURL(/\/employees\/new$/);
   });
 
-  test("new employee must change password, then checks in", async ({ page }) => {
+  test("new employee lands on the dashboard with the initial password, checks in, then changes password voluntarily", async ({ page }) => {
     await uiLogin(page, email, initialPassword);
-    await expect(page).toHaveURL(/\/change-password$/);
-    await expect(page.getByText("please set a new password")).toBeVisible();
-    await page.getByLabel(/^Current password/).fill(initialPassword);
-    await page.getByLabel(/^New password/).fill(newPassword);
-    await page.getByLabel(/^Confirm new password/).fill(newPassword);
-    await page.getByRole("button", { name: "Update password" }).click();
-
     await expect(page).toHaveURL(/\/dashboard$/);
     await cardActions(page).getByRole("button", { name: "Check in", exact: true }).click();
     await expect(page.getByText("Checked in.")).toBeVisible();
     await expect(cardActions(page).getByRole("button", { name: "Check out", exact: true })).toBeVisible();
+
+    await page.goto("/profile");
+    await page.getByRole("link", { name: "Change password" }).first().click();
+    await expect(page).toHaveURL(/\/change-password$/);
+    await page.getByLabel(/^Current password/).fill(initialPassword);
+    await page.getByLabel(/^New password/).fill(newPassword);
+    await page.getByLabel(/^Confirm new password/).fill(newPassword);
+    await page.getByRole("button", { name: "Update password" }).click();
+    await expect(page.getByText("Password changed.")).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard$/);
   });
 
   test("employee applies for leave and the manager approves it", async ({ page, browser }) => {

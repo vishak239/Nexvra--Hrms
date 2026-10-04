@@ -102,8 +102,7 @@ class ChangePasswordView(APIView):
         ser.is_valid(raise_exception=True)
         user = request.user
         user.set_password(ser.validated_data["new_password"])
-        user.must_change_password = False
-        user.save(update_fields=["password", "must_change_password", "updated_at"])
+        user.save(update_fields=["password", "updated_at"])
         update_session_auth_hash(request, user)
         audit.record(request, "PASSWORD_CHANGED", obj=user)
         return Response({"detail": "Password changed."})
@@ -145,8 +144,7 @@ class PasswordResetConfirmView(APIView):
             raise invalid
         validate_password(ser.validated_data["new_password"], user)
         user.set_password(ser.validated_data["new_password"])
-        user.must_change_password = False
-        user.save(update_fields=["password", "must_change_password", "updated_at"])
+        user.save(update_fields=["password", "updated_at"])
         audit.record(request, "PASSWORD_RESET", obj=user, actor=user)
         return Response({"detail": "Password has been reset. You can now log in."})
 
@@ -224,10 +222,7 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         services.assert_can_assign_role(self.request.user, serializer.validated_data["role"])
         password = serializer.validated_data.pop("password", "")
         user = User.objects.create_user(password=password or None, **serializer.validated_data)
-        if password:
-            user.must_change_password = True
-            user.save(update_fields=["must_change_password"])
-        else:
+        if not password:
             services.send_password_setup_email(user, reset=False)
         serializer.instance = user
         audit.record(self.request, "USER_CREATED", obj=user, metadata={"role": user.role.code})
@@ -244,8 +239,7 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         user = serializer.save()
         if password:
             user.set_password(password)
-            user.must_change_password = True
-            user.save(update_fields=["password", "must_change_password"])
+            user.save(update_fields=["password", "updated_at"])
         changes = audit.diff(before, audit.snapshot(user, fields))
         if password:
             changes["password"] = "set"  # nosec B105 - audit marker, not a password

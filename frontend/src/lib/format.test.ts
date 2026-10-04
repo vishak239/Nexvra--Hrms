@@ -39,7 +39,6 @@ function me(permissions: string[], employee = true): Me {
     full_name: "X",
     role: { id: 1, code: "EMPLOYEE", name: "Employee", level: 10 },
     permissions,
-    must_change_password: false,
     employee: employee ? { id: 1, employee_code: "E1", department: null, designation: null, has_photo: false } : null,
   };
 }

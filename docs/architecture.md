@@ -107,7 +107,7 @@ Principles:
 - Inactive users can't log in, and their existing sessions stop resolving (`ModelBackend.get_user` checks `is_active`).
 - Throttling: `login` and `password_reset` scopes (rates configurable through env).
 - Password reset: Django `PasswordResetTokenGenerator` (signed, single-use, expires after `PASSWORD_RESET_TIMEOUT`). The request endpoint always returns 200 so emails can't be enumerated.
-- New employees: HR may set an initial password (the user must change it at first login) or leave it empty. In that case the account gets an unusable password and a set-password email.
+- New employees: HR may set an initial password, which the employee uses to sign in straight to the dashboard (there is no forced change at first login), or leave it empty. In that case the account gets an unusable password and a set-password email. Employees can change their password at any time from Profile or the account menu (Change password); Forgot password (emailed reset link) and Super Admin password resets stay available. Passwords are always stored hashed.
 
 ## 5. Authorization (RBAC + object scope)
 

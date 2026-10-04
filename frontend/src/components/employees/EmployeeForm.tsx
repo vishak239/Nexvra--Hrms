@@ -147,7 +147,7 @@ export function EmployeeForm({ employee }: { employee?: Employee }) {
               value={form.initial_password}
               onChange={(e) => set("initial_password", e.target.value)}
               error={f.initial_password}
-              hint="Optional. Leave empty to email a set-password link instead. The employee must change it at first sign-in."
+              hint="Optional. Leave empty to email a set-password link instead. The employee can change it later under Change password."
               className="sm:col-span-2"
             />
           )}

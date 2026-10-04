@@ -54,7 +54,7 @@ test.describe.serial("employee lifecycle", () => {
   test("new employee logs in and checks in", async () => {
     newcomer = await login(email, password);
     const me = await json(await newcomer.get("/api/auth/me/"), 200);
-    expect(me.must_change_password).toBe(true);
+    expect(me).not.toHaveProperty("must_change_password");
     const record = await json(await newcomer.post("/api/attendance/check-in/"), 201);
     expect(record.employee.id).toBe(employeeId);
     await json(await newcomer.post("/api/attendance/check-in/"), 409);

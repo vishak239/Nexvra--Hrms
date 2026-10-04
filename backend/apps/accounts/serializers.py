@@ -56,7 +56,6 @@ class MeSerializer(serializers.ModelSerializer):
             "full_name",
             "role",
             "permissions",
-            "must_change_password",
             "employee",
         ]
 
@@ -155,13 +154,12 @@ class UserSerializer(serializers.ModelSerializer):
             "full_name",
             "role",
             "is_active",
-            "must_change_password",
             "password",
             "employee_id",
             "date_joined",
             "last_login",
         ]
-        read_only_fields = ["must_change_password", "date_joined", "last_login"]
+        read_only_fields = ["date_joined", "last_login"]
 
     def get_employee_id(self, user):
         emp = getattr(user, "employee", None)

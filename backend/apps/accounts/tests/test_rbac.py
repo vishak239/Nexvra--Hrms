@@ -141,7 +141,19 @@ def test_super_admin_can_create_hr_user(org, client_for):
     assert res.status_code == 201, res.data
     user = User.objects.get(email="new.hr@example.test")
     assert user.role.code == "HR_ADMIN"
-    assert user.must_change_password
+    assert user.check_password("S3cure-pass-word")
+    assert "must_change_password" not in res.data
+
+
+def test_super_admin_password_reset_lets_user_log_in_directly(org, client_for, anon):
+    alice = org["alice"].user
+    res = client_for(org["super_admin"]).patch(
+        f"/api/users/{alice.id}/", {"password": "Res3t-by-admin!"}, format="json"
+    )
+    assert res.status_code == 200, res.data
+    login = anon.post("/api/auth/login/", {"email": alice.email, "password": "Res3t-by-admin!"}, format="json")
+    assert login.status_code == 200
+    assert anon.get("/api/auth/me/").status_code == 200
 
 
 def test_duplicate_email_rejected_case_insensitively(org, client_for):

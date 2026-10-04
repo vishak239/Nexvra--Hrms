@@ -13,7 +13,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = [
         (None, {"fields": ["email", "password"]}),
         ("Profile", {"fields": ["first_name", "last_name", "role"]}),
-        ("Status", {"fields": ["is_active", "is_staff", "is_superuser", "must_change_password"]}),
+        ("Status", {"fields": ["is_active", "is_staff", "is_superuser"]}),
     ]
     add_fieldsets = [(None, {"fields": ["email", "first_name", "last_name", "role", "password1", "password2"]})]
     filter_horizontal = []

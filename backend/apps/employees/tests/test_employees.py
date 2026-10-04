@@ -42,14 +42,20 @@ def test_hr_creates_employee_with_login_account(org, client_for, django_capture_
     assert AuditLog.objects.filter(action="EMPLOYEE_CREATED", entity_id=str(emp.id)).exists()
 
 
-def test_hr_can_set_initial_password_which_must_be_changed(org, client_for):
+def test_employee_logs_in_with_initial_password_without_forced_change(org, client_for, anon):
     res = client_for(org["hr"]).post(
         "/api/employees/", new_employee_payload(initial_password="Init1al-pass!"), format="json"
     )
     assert res.status_code == 201
     user = Employee.objects.get(employee_code="NX-100").user
     assert user.check_password("Init1al-pass!")
-    assert user.must_change_password
+    assert "Init1al-pass!" not in user.password  # stored hashed, never in clear text
+
+    login = anon.post("/api/auth/login/", {"email": "dana@example.test", "password": "Init1al-pass!"}, format="json")
+    assert login.status_code == 200
+    assert "must_change_password" not in login.data
+    assert anon.get("/api/auth/me/").status_code == 200
+    assert anon.get("/api/users/").status_code == 403  # role permissions are unchanged
 
 
 def test_employee_code_and_email_are_unique(org, client_for):

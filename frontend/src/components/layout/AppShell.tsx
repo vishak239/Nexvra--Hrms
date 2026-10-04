@@ -219,8 +219,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (loading || error) return;
     if (!me) {
       router.replace(`/login${pathname && pathname !== "/dashboard" ? `?next=${encodeURIComponent(pathname)}` : ""}`);
-    } else if (me.must_change_password && pathname !== "/change-password") {
-      router.replace("/change-password");
     }
   }, [me, loading, error, pathname, router]);
 

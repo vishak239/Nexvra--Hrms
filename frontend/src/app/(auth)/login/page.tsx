@@ -29,7 +29,7 @@ function LoginForm() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const user = await run(() => login(email, password));
-    if (user) router.replace(user.must_change_password ? "/change-password" : next);
+    if (user) router.replace(next);
   }
 
   return (

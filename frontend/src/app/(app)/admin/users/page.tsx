@@ -120,7 +120,6 @@ function UsersTab() {
                   </Td>
                   <Td>
                     {u.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="red">Disabled</Badge>}
-                    {u.must_change_password && <span className="ml-2 text-xs text-on-surface-variant">must change password</span>}
                   </Td>
                   <Td>{u.employee_id ? <Link href={`/employees/${u.employee_id}`} className="text-primary-fixed underline-offset-4 hover:underline">View</Link> : "—"}</Td>
                   <Td>{fmtDateTime(u.last_login)}</Td>
@@ -175,7 +174,7 @@ function UsersTab() {
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             error={f.password}
-            hint={editing === "new" ? "Optional. Empty = email a set-password link. The user must change it at first sign-in." : "Optional. Leave empty to keep the current password."}
+            hint={editing === "new" ? "Optional. Empty = email a set-password link. The user can change it later under Change password." : "Optional. Leave empty to keep the current password."}
           />
           {editing !== "new" && (
             <CheckboxField label="Account active" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} disabled={self} />

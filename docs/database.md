@@ -31,7 +31,7 @@ User ──< Notification            AuditLog (actor → User, SET_NULL)        
 |---|---|---|
 | `Permission` | `codename`, `description` | `codename` unique |
 | `Role` | `code`, `name`, `level`, `is_system`, `permissions` (M2M) | `code`, `name` unique |
-| `User` | `email` (login), `username` (public @handle, lower-case, generated from the email when not given), `first_name`, `last_name`, `role` FK (PROTECT), `is_active`, `is_staff`, `must_change_password`, `password` (PBKDF2 hash), `last_login`, `date_joined` | `email` unique + `UniqueConstraint(Lower(email))`; emails are stored lower-case; `username` unique |
+| `User` | `email` (login), `username` (public @handle, lower-case, generated from the email when not given), `first_name`, `last_name`, `role` FK (PROTECT), `is_active`, `is_staff`, `password` (PBKDF2 hash), `last_login`, `date_joined` | `email` unique + `UniqueConstraint(Lower(email))`; emails are stored lower-case; `username` unique |
 
 ### organization
 | Model | Key fields | Constraints |

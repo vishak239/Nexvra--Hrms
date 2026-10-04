@@ -11,7 +11,6 @@ export interface Me {
   full_name: string;
   role: { id: number; code: RoleCode; name: string; level: number };
   permissions: string[];
-  must_change_password: boolean;
   employee: {
     id: number;
     employee_code: string;
@@ -567,7 +566,6 @@ export interface UserAccount {
   full_name: string;
   role: RoleCode;
   is_active: boolean;
-  must_change_password: boolean;
   employee_id: number | null;
   date_joined: string;
   last_login: string | null;

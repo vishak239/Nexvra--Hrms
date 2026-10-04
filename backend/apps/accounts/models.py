@@ -87,7 +87,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="users")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False, help_text="Can log into the Django admin (dev only).")
-    must_change_password = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 

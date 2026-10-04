@@ -53,7 +53,7 @@ Two projects:
   - unauthenticated redirect to login; wrong-password error; role-aware navigation
   - employee opening admin pages sees "no access" (and the API returns 403); manager sees only their team
   - HR creates an employee through the form; a duplicate employee ID shows a field error
-  - the new employee is forced to change password, then checks in
+  - the new employee signs in with the initial password straight to the dashboard, checks in, then changes password voluntarily
   - the employee applies for leave, the manager approves it in the Approvals tab, and the employee sees "Approved" and a notification
   - after payroll is finalized, the employee opens their own payslip
   - HR uploads a document through the UI and the employee downloads the identical file (exercises multipart upload and streamed download through the proxy)

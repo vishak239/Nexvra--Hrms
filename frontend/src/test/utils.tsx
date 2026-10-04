@@ -13,7 +13,6 @@ export const ME: Me = {
   full_name: "Demo Employee",
   role: { id: 4, code: "EMPLOYEE", name: "Employee", level: 10 },
   permissions: ["attendance.self", "leave.apply", "payroll.view_own", "documents.view_own", "messages.use"],
-  must_change_password: false,
   employee: { id: 4, employee_code: "DEMO-004", department: null, designation: null, has_photo: false },
 };
 

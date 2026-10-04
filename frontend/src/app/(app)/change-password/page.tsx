@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/Button";
 import { Card, PageHeader } from "@/components/ui/Display";
 import { TextField } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Overlay";
-import { Alert, FormError } from "@/components/ui/States";
+import { FormError } from "@/components/ui/States";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useAction } from "@/lib/hooks";
 
 export default function ChangePasswordPage() {
-  const { me, refresh } = useAuth();
+  const { refresh } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [current, setCurrent] = useState("");
@@ -37,11 +37,6 @@ export default function ChangePasswordPage() {
   return (
     <div className="mx-auto max-w-lg">
       <PageHeader title="Change password" />
-      {me?.must_change_password && (
-        <div className="mb-4">
-          <Alert tone="warning">For your security, please set a new password before continuing.</Alert>
-        </div>
-      )}
       <Card className="p-6">
         <form onSubmit={onSubmit} className="space-y-5" noValidate>
           <FormError error={error} />

@@ -33,7 +33,7 @@ def create_employee(request, data):
     account_services.assert_can_assign_role(actor, role)
     password = data.pop("initial_password", "") or None
     user_fields = {f: data.pop(f) for f in ("email", "username", "first_name", "last_name", "is_active") if f in data}
-    user = User.objects.create_user(password=password, role=role, must_change_password=bool(password), **user_fields)
+    user = User.objects.create_user(password=password, role=role, **user_fields)
     employee = Employee.objects.create(user=user, **data)
     if not password:
         account_services.send_password_setup_email(user, reset=False)
