@@ -100,20 +100,27 @@ The flow tests create uniquely named `e2e-*` / `ui-*@example.test` employees and
 | | `components/tasks/AssignTaskModal.test.tsx`, `components/connection/ConnectionIndicator.test.tsx`, `components/leave/LeaveLock.test.tsx`, `app/(app)/messages/messages.test.tsx`, `app/(app)/notifications/notifications.test.tsx` | lookup by ID / username, offline indicator + sync status, leave lock + balance display, messaging + file upload, task notification |
 | Backend | `apps/organization/tests/test_policies.py` | policy visibility per role (drafts hidden, 404 by id), search + category filter, only `policies.manage` can change, validation, case-insensitive unique titles, audit without policy text, break-allowance validation and the over-allowance figure |
 | Frontend | `app/(app)/policies/policies.test.tsx`, `components/attendance/WorkSessionCard.test.tsx` | employee view (rules from Settings, no editing), HR publishing with server validation errors, break allowance hint |
+| Backend | `apps/attendance/tests/test_attendance_rules.py` | geofence (5 / 19 / 19.99 m allowed, boundary rule, 21 / 100 m refused, forged flags, missing / imprecise / impossible coordinates, no workplace = rule off, coordinates never returned), geofence exit (jitter ignored, single audited check-out, permission denied recorded not treated as leaving, not during breaks), WFH (pending / rejected / expired / another person's approval refused, approved WFH check-in without location, decision rules, scope, notifications + email), break allowance (15+20+25=60 then refused, running break closed at the limit, late end capped, refresh, logout, end after auto-close, auto check-out during a break), inactivity (activity resets, 29:59 vs 30:00, single check-out across heartbeat / refresh / scheduled job, lost connection, no backdating, manual action after overdue inactivity), overtime (each declaration rule, own open tasks only, request → approve → start → end with audit trail, rejection, 30-minute auto-stop and no silent restart, approval-off mode, expiry, offline start needs approval), SMTP failure logged without secrets and the action still succeeds |
+| | `apps/core/tests/test_backups_and_settings.py` | backup retention, zip verification, unsafe archive paths, damaged / incomplete sets refused, failed backup reported and cleaned up, a real pg_dump backup verified and restored; production / staging settings guards |
+| Frontend | `components/attendance/WorkSessionCard.test.tsx` (shared provider), `lib/activity.test.ts`, `components/layout/ThemeToggle.test.tsx` | header + card actions per state, break used / remaining and "Break unavailable", overtime declaration validation and payload, approved overtime start, geofenced check-in (outside disabled with distance, inside sends raw coordinates only, permission blocked), WFH check-in without location, automatic check-out notice, activity tracker privacy and jitter rules, geofence display rule, theme persistence and no-flash boot script |
+| E2E | `ui/attendance-rules.spec.ts` | geofence with simulated GPS (outside disabled, forged API call refused, inside check-in, automatic check-out on leaving), WFH request → HR approval → WFH check-in, break allowance in real time, activity reports cannot fake inactivity, HR / Super Admin-only decisions, theme persistence, phone-width attendance menu |
 | E2E | `api/new-features.spec.ts` | API-level rules for every role (no UI) |
-| | `ui/work-session.spec.ts`, `ui/overtime-leave.spec.ts`, `ui/messaging-offline.spec.ts`, `ui/roles-new-features.spec.ts`, `ui/policies.spec.ts`, `ui/page-health.spec.ts` | the full browser flows, role visibility, every page × 4 roles without console/5xx errors, phone-width layout |
+| | `ui/work-session.spec.ts`, `ui/overtime-leave.spec.ts`, `ui/messaging-offline.spec.ts`, `ui/roles-new-features.spec.ts`, `ui/policies.spec.ts`, `ui/page-health.spec.ts` (flows use the card's action row, since the same actions are also in the header) | the full browser flows, role visibility, every page × 4 roles without console/5xx errors, phone-width layout |
 
 New E2E flows create their own uniquely named employees through the HR API, so they can run any number of times per day.
 
-## Latest results (2026-10-03, after the Stitch re-skin and policies)
+## Latest results (2026-10-04, release 3: attendance rules + production hardening)
 
 | Suite | Result |
 |---|---|
-| Backend pytest (PostgreSQL 16) | 240 passed |
-| Frontend Vitest (unit + component, jsdom) | 62 passed; `tsc` clean (with `noUnusedLocals`/`noUnusedParameters`); `next build` OK (26 routes, no warnings) |
-| Playwright e2e (isolated e2e DB, :8001/:3002) | 51 passed (18 api + 33 ui) |
+| Backend pytest (PostgreSQL 16) | 293 passed |
+| Frontend Vitest (unit + component, jsdom) | 83 passed; `tsc` clean (with `noUnusedLocals`/`noUnusedParameters`); `next build` OK (26 routes, no warnings) |
+| Playwright e2e (isolated e2e DB, :8001/:3002) | 58 tests (18 api + 40 ui). Full run: 52 passed, 6 failed; all 6 passed on re-run after fixing test-only issues (a toast regex that matched a hidden `<option>`, an old hint text) and raising timeouts for a heavily loaded machine (logins took up to 20 s). No product code changed between the runs. |
 | `makemigrations --check` | no missing migrations |
 | Backend-down check | login page shows "Can't reach the Nexvra HRMS server"; one log line, no stack traces |
 | Browser tour: every screen for all 4 roles (automated: `ui/page-health.spec.ts`) | no console errors, no 5xx responses; no horizontal scroll at 390 px |
 | `ruff check` | clean |
+| `bandit -r apps config` | 0 issues (reviewed low-severity findings are annotated `# nosec` with the reason) |
+| `pip-audit -r requirements.txt` | no known vulnerabilities (after upgrading Django REST framework to 3.17.2) |
+| `npm audit` | 0 vulnerabilities (PostCSS inside Next.js pinned to the project version via `overrides`) |
 | `manage.py check --deploy` (production settings) | only `security.W021`: HSTS preload is deliberately opt-in (`SECURE_HSTS_PRELOAD=True`), because it is hard to undo |

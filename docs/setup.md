@@ -92,12 +92,34 @@ Nothing company-specific is pre-filled. A Super Admin or HR Admin should:
 - Starting by hand? Start the **backend first**, then the frontend. If the frontend runs without the backend, the login page shows "Can't reach the Nexvra HRMS server" and the frontend window prints one `[nexvra-hrms] Backend not reachable` line. Start the backend and refresh.
 - The app is at http://localhost:3000. http://127.0.0.1:8000 is the API only (its root redirects to the app; `/api/health/` reports status).
 
+## Background jobs on this PC (Windows)
+
+Two jobs keep the attendance rules and backups running even when nobody has the app open. Register them once:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File deploy\windows\register-scheduled-tasks.ps1          # -Remove to undo
+```
+
+- **Nexvra HRMS - attendance rules:** every 2 minutes. Applies inactivity check-out, the break allowance and overtime auto-stop for sessions whose browser was closed.
+- **Nexvra HRMS - backup:** daily at 02:30. Writes a verified backup to `backups\` (see [backup.md](backup.md)).
+
+Output goes to `logs\scheduled-tasks.log`; backups also write `backups\backup.log`.
+
+## Email (SMTP)
+
+In development, emails are printed to the backend console. To send real email, set `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend` and the `EMAIL_*` values in `backend/.env` (see `.env.example`), then run:
+
+```bash
+.venv/Scripts/python manage.py send_test_email --to you@example.com
+```
+
 ## Production notes
 
 - `DJANGO_DEBUG=False` requires `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`. Secure cookies, HSTS and the SSL redirect are then enabled automatically.
 - Serve Django with gunicorn (Linux) behind a TLS reverse proxy, and Next.js with `npm run build && npm start`.
 - Set `PRIVATE_MEDIA_ROOT` to a directory that the web server does **not** serve, and back it up along with PostgreSQL.
 - Use a shared cache (`CACHE_URL=redis://...`, which needs the `redis` package) when running several worker processes, so login throttling is global.
+- Follow [deployment.md](deployment.md) for the server, domain, HTTPS, services and the production checklist.
 - Configure SMTP (`EMAIL_*`) for password-reset and new-account emails.
 - Run `python manage.py check --deploy` and `python manage.py migrate` on each release.
 - Message attachments are stored under `PRIVATE_MEDIA_ROOT/message_files/`; include them in backups and never serve that directory publicly.

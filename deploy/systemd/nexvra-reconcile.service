@@ -1,0 +1,10 @@
+[Unit]
+Description=Nexvra HRMS attendance rules (inactivity check-out, break allowance, overtime auto-stop)
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=nexvra
+WorkingDirectory=/opt/nexvra-hrms/backend
+EnvironmentFile=/etc/nexvra-hrms/backend.env
+ExecStart=/opt/nexvra-hrms/backend/.venv/bin/python manage.py reconcile_attendance

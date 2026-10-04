@@ -150,6 +150,20 @@ Columns: **Req**, **Source**, **DB impact**, **UI impact**, **API impact**, **Pe
 
 Numeric rules live only in Settings; the Policies page reads them from there, so a value is never typed twice.
 
+### 2.13 Owner attendance rules (2026-10-03)
+
+The owner specified these policies; they are the defaults in Settings (HR can change them):
+
+| Rule | Value | Enforcement |
+|---|---|---|
+| Office check-in geofence | 20 m from the configured workplace (accuracy ±100 m or better) | Server Haversine check at check-in; automatic check-out when a precise reading shows the employee clearly left (not during breaks, not WFH). Not applied until HR sets the workplace coordinates. |
+| Inactivity | 30 minutes without activity | Automatic check-out (`INACTIVITY_TIMEOUT`) and overtime auto-stop; server reconciliation every 2 minutes |
+| Break | 60 minutes total per working day | Start refused when used; a running break is closed at the limit |
+| Work from home | HR / Super Admin approval per date | WFH check-in only with an approved request for today |
+| Overtime | Declaration (tasks or other reason + confirmation) + HR / Super Admin approval | Start only with today's approval; each session (and restart) needs its own request |
+
+Still **NOT SPECIFIED**: overtime pay, what happens when the break allowance is exceeded beyond closing the break, multiple workplaces, and how much WFH is allowed per month.
+
 ## 3. Policy settings (all NOT SPECIFIED — CONFIGURABLE)
 
 Stored in `CompanySettings`. An empty value means the dependent rule is **not applied**.

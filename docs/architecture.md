@@ -77,7 +77,7 @@ apps/<app>/
 | `accounts` | Custom `User` (email login), `Role`, `Permission`, auth endpoints, users & roles APIs, role seed migration |
 | `organization` | `Company`, `CompanySettings` (incl. daily break allowance), `Department`, `Designation`, `Holiday`, `Policy` (HR-written company policies) |
 | `employees` | `Employee` + role-aware serializers, photo endpoint |
-| `attendance` | `AttendanceRecord`, check-in/out, status computation; `BreakSession`, `OvertimeSession`, `SyncEvent` and the offline sync service (`sessions.py`) |
+| `attendance` | `AttendanceRecord`, check-in/out with geofence + WFH mode (`services.py`, `geo.py`); `BreakSession` with the daily allowance, `OvertimeSession` workflow, `SyncEvent` offline sync (`sessions.py`); `WorkFromHomeRequest` (`wfh.py`); activity heartbeat + reconciliation (`activity.py`, `manage.py reconcile_attendance`) |
 | `leaves` | `LeaveType`, `LeaveBalance`, `LeaveRequest`, day counting, approvals, approval lock, `LeaveBalanceTransaction` ledger (deduct once on approval) |
 | `payroll` | `PayComponent`, `SalaryStructure(+Item)`, `PayrollRun`, `Payslip(+Item)` |
 | `documents` | `EmployeeDocument`, private storage, streaming download |
@@ -127,6 +127,7 @@ Principles:
 | Documents | `documents.view_own`, `documents.view_all`, `documents.manage` |
 | Reports | `reports.view_team`, `reports.view_all` |
 | Tasks | `tasks.view_team`, `tasks.view_all`, `tasks.manage` |
+| Attendance approvals | `wfh.approve`, `overtime.approve` |
 | Messages | `messages.use` |
 | Policies | `policies.manage` (reading published policies needs no permission) |
 
@@ -136,7 +137,7 @@ Principles:
 |---|---|
 | EMPLOYEE (10) | `attendance.self`, `leave.apply`, `payroll.view_own`, `documents.view_own`, `messages.use` |
 | MANAGER (20) | EMPLOYEE + `employees.view_team`, `attendance.view_team`, `leave.view_team`, `leave.approve_team`, `reports.view_team`, `tasks.view_team` |
-| HR_ADMIN (50) | MANAGER + `employees.view_all`, `employees.manage`, `attendance.view_all`, `attendance.manage`, `leave.view_all`, `leave.approve_all`, `leave.manage_types`, `leave.manage_balances`, `holidays.manage`, `departments.manage`, `designations.manage`, `payroll.view_all`, `payroll.manage`, `documents.view_all`, `documents.manage`, `reports.view_all`, `settings.manage`, `tasks.view_all`, `tasks.manage`, `policies.manage` |
+| HR_ADMIN (50) | MANAGER + `employees.view_all`, `employees.manage`, `attendance.view_all`, `attendance.manage`, `leave.view_all`, `leave.approve_all`, `leave.manage_types`, `leave.manage_balances`, `holidays.manage`, `departments.manage`, `designations.manage`, `payroll.view_all`, `payroll.manage`, `documents.view_all`, `documents.manage`, `reports.view_all`, `settings.manage`, `tasks.view_all`, `tasks.manage`, `policies.manage`, `wfh.approve`, `overtime.approve` |
 | SUPER_ADMIN (100) | Everything, including `company.manage`, `users.*`, `roles.*`, `audit.view` |
 
 **Enforcement layers:**
@@ -229,6 +230,11 @@ All configuration comes from environment variables (`backend/.env`, `frontend/.e
 | Double leave deduction (double click, retry, concurrency) | Row locks + one-to-one ledger row per request + non-negative check constraint, all in one transaction |
 | Replayed or duplicated offline events | Unique `(user, client_event_id)`; server re-validates time bounds and state |
 | Bypassing the checkout task rule | Enforced in the check-out service, not the UI |
+| Forged location / "inside" flags | The server recomputes the Haversine distance from raw coordinates; client verdicts are ignored. Browser location can still be spoofed with developer tools, which is documented as a limit |
+| Claiming work from home | `mode=WORK_FROM_HOME` requires an APPROVED request for today, looked up by the server |
+| Overtime / break manipulation | Times, status, approval and inactivity state are server-set only; allowance and inactivity enforced by server reconciliation |
+| Spyware risk in activity monitoring | Only "seconds since last interaction" (and office location) are sent; no keystrokes, text, screenshots or page content |
+| Unsafe production settings | `DJANGO_ENV=staging/production` refuses debug, weak/default secret keys and wildcard hosts; `check --deploy` adds Nexvra checks (email backend, backup location, https FRONTEND_URL) |
 | Private file exposure | No public media route; authorised streaming only |
 | Secrets in git | `.env` gitignored; `.env.example` holds placeholders only; startup check for the secret key |
 | Login throttling bypass across workers | `CACHE_URL` shared cache (Redis) in multi-worker deployments |

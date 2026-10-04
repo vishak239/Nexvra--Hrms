@@ -1,0 +1,13 @@
+[Unit]
+Description=Nexvra HRMS verified backup (database + private files)
+After=postgresql.service
+# Systemd marks the unit failed on a non-zero exit; wire OnFailure= to your alerting if you have one.
+
+[Service]
+Type=oneshot
+User=nexvra
+WorkingDirectory=/opt/nexvra-hrms/backend
+EnvironmentFile=/etc/nexvra-hrms/backend.env
+ExecStart=/opt/nexvra-hrms/backend/.venv/bin/python manage.py backup_hrms
+Nice=10
+IOSchedulingClass=idle

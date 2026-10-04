@@ -20,6 +20,12 @@ htmlcov/
 
 # --- Django runtime data ---
 backend/private_media/
+backend/private_media.before-restore-*/
+# Backups contain personal data and credentials-derived content: never commit them.
+backups/
+logs/
+*.dump
+*.sql.gz
 backend/staticfiles/
 *.sqlite3
 

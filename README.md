@@ -5,10 +5,12 @@ Internal Human Resource Management System for **Nexvra Solutions**. A standard H
 | Area | Status |
 |---|---|
 | Backend API (Django + DRF + PostgreSQL) | Implemented and tested: auth, RBAC, company/settings, departments, designations, holidays, employees, attendance, leave, payroll, documents, notifications, audit log, reports, dashboard |
-| Work sessions | Breaks with a live timer (excluded from working time), separate overtime sessions, offline mode with an idempotent sync queue, session recovery after the browser is closed |
+| Work sessions | Office check-in only within **20 m** of the workplace (server-verified geofence; automatic check-out on leaving); **work from home** with HR approval; **60-minute daily break allowance**; **30-minute inactivity** auto check-out (privacy-safe: timestamps only); overtime with a task/reason declaration, **HR approval** and inactivity auto-stop; offline mode with an idempotent sync queue; session recovery. Actions are in the top-right header. |
 | Tasks | HR assigns tasks by Employee ID **or** @username; employees respond and complete; unanswered tasks block checkout (Super Admin exempt) |
 | Messaging | Private 1:1 conversations with secure file sharing (PDF, Office, CSV, images) |
 | Leave | Approved leave is locked; the balance is deducted exactly once, on approval, with an audited ledger |
+| Look and feel | Stitch design system in **light and dark** themes (remembered per browser, follows the device by default) |
+| Operations | Environment-separated settings (development / staging / production guards), SMTP with diagnostics, verified database + file backups with restore, nginx/HTTPS + systemd deployment files |
 | Policies | HR writes company policies (drafts, publish, search, categories); everyone reads the published ones next to the rules the system enforces (working hours, grace time, daily break allowance, …) |
 | Frontend (Next.js + TypeScript + Tailwind) | Implemented: 26 role-aware screens covering sign-in, dashboard, employees, attendance, leave, holidays, policies, tasks, messages, payroll, payslips, documents, reports (with activity monitoring), notifications, settings, users & roles, and the audit log. Responsive with a mobile menu. |
 | UI design | The official Stitch design (`stitch_nexvra_hrms_enterprise_platform/`, "Obsidian Kinetic": dark surfaces, electric-lime accent, Space Grotesk + Inter, Material Symbols). Its tokens are copied verbatim into `frontend/tailwind.config.ts`, and every screen uses the shared components in `frontend/src/components/ui/`. |
@@ -112,9 +114,9 @@ All configuration comes from environment variables. [`.env.example`](.env.exampl
 ## Tests
 
 ```bash
-cd backend && .venv/Scripts/python -m pytest       # 240 tests on PostgreSQL
-cd frontend && npm test && npm run typecheck        # 62 unit + component tests
-cd tests/e2e && E2E_PASSWORD="<demo-pw>" npx playwright test   # 51 tests (API + browser UI); see docs/testing.md
+cd backend && .venv/Scripts/python -m pytest       # 293 tests on PostgreSQL
+cd frontend && npm test && npm run typecheck        # 83 unit + component tests
+cd tests/e2e && E2E_PASSWORD="<demo-pw>" npx playwright test   # 58 tests (API + browser UI); see docs/testing.md
 ```
 
 See [docs/testing.md](docs/testing.md).
@@ -140,4 +142,6 @@ See [docs/testing.md](docs/testing.md).
 | [database.md](docs/database.md) | Tables, constraints, migrations |
 | [api.md](docs/api.md) | Every endpoint with its permission |
 | [setup.md](docs/setup.md) | Installation and first-time configuration |
+| [deployment.md](docs/deployment.md) | Production server, domain, HTTPS, environment, services, SMTP, logs, checklist |
+| [backup.md](docs/backup.md) | Automatic verified backups, retention, off-site copies, restore |
 | [testing.md](docs/testing.md) | Test suites and how to run them |

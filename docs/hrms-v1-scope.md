@@ -2,7 +2,7 @@
 
 V1 is a **normal HRMS**. It has no AI and no surveillance. Policies are configurable, not invented (see `requirements-analysis.md`).
 
-The second release (2026-10-02) added work sessions, tasks and messaging. They are listed under **ADDED IN RELEASE 2** below.
+The second release (2026-10-02) added work sessions, tasks and messaging; the third (2026-10-03) added attendance rules and production hardening. See **ADDED IN RELEASE 2** and **ADDED IN RELEASE 3** below.
 
 ## MUST HAVE — V1
 
@@ -63,6 +63,15 @@ The second release (2026-10-02) added work sessions, tasks and messaging. They a
 - Playwright critical flows (once the UI exists)
 - Docs: README, setup, architecture, database, API, testing
 
+## ADDED IN RELEASE 3 (implemented 2026-10-03, owner requirements)
+- Office check-in geofence (20 m, server-verified) with automatic check-out on leaving the area
+- 30-minute inactivity check-out and overtime auto-stop (privacy-safe activity heartbeat + server reconciliation)
+- Work-from-home requests with HR / Super Admin approval and WFH check-in
+- Overtime declaration (tasks or other reason, confirmation) with HR approval
+- 60-minute total daily break allowance, enforced by the server
+- Top-right attendance actions; light and dark themes; reduced type scale
+- SMTP diagnostics and email for HR decisions; development / staging / production settings; deployment files (nginx, HTTPS, systemd); verified backups with restore
+
 ## ADDED IN RELEASE 2 (implemented 2026-10-02)
 - Break tracking with a live timer; breaks excluded from working time
 - Separate overtime sessions after check-out (recording only; no approval or pay)
@@ -88,7 +97,7 @@ Details: [work-sessions-tasks-messaging.md](work-sessions-tasks-messaging.md).
 - Multi-level / configurable leave approval chains
 - Leave accrual, carry-forward, encashment
 - Statutory payroll (PF/ESI/TDS/PT), proration, loss-of-pay, arrears, bank file exports, Form 16
-- Shift scheduling, overtime approval and pay, geo-fenced or device-based attendance
+- Shift scheduling, overtime pay, multiple workplaces / per-employee locations, device-based attendance
 - Real-time messaging (WebSocket), group conversations
 - Employee self-service document upload + HR verification workflow (the setting exists, off by default)
 - Company directory / org chart

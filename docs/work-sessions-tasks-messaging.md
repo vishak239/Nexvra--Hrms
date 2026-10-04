@@ -1,4 +1,4 @@
-# Work sessions, overtime, tasks, messaging and offline mode
+# Work sessions, attendance rules, overtime, WFH, tasks, messaging and offline mode
 
 This guide covers the features added in the second release of Nexvra HRMS: what each one does, the rules the server enforces, and the known limits. The API reference is in [api.md](api.md) and the tables are in [database.md](database.md).
 
@@ -42,36 +42,137 @@ Rules enforced by the server:
 - Ending a break when none is active returns 409.
 - Checking out while on a break ends the break at the check-out time.
 
-### Daily break allowance
+### Daily break allowance (owner policy: 60 minutes)
 
-If the company policy gives, for example, a 1-hour break, HR enters `60` in **Settings → Working time & attendance → Daily break allowance**. Empty means no limit.
+The allowance is the **total** break time per working day: `CompanySettings.break_allowance_minutes`, default 60. For example, 15 + 20 + 25 minutes = 60.
 
-- The work-session card shows "45m left of 60 min allowance" or "15m over the 60 min allowance".
-- Attendance tables and Activity monitoring flag days that went over ("+15m over allowance").
-- Breaks are never blocked, and all break time is still excluded from working time. What should happen beyond the allowance is not specified by HR.
+- **Start break** is refused (409 `break_allowance_used`) once the day's breaks add up to the allowance. The header and the card then show "Break unavailable for the day".
+- A break that is still running when the allowance runs out is **closed by the server at that exact moment** (`end_reason=ALLOWANCE_EXHAUSTED`). The day's total therefore never exceeds the allowance, even if the browser was closed.
+  - Pressing "End break" afterwards simply succeeds.
+  - Ending a break after the allowance ran out is capped at the allowance.
+- The work-session payload carries `break_used_seconds` and `break_remaining_seconds`, computed by the server. The card shows "Break used: XX min · Break remaining: YY min".
+- Only real break sessions count. Opening a screen never does.
+- A refresh, logout, lost connection or check-out never loses or double-counts break time. The break lives on the server, and an open break ends at check-out.
+- HR can change the value or empty it (no limit) in **Settings → Working time & attendance**.
 
-## 2. Overtime
+## 2. Overtime (declaration and approval)
 
-Flow: **Normal work → Normal check-out → Start Overtime → "Overtime running" with a live timer → End Overtime.**
+```
+Check-out ─► "Overtime" ─► declaration (tasks / other reason + description + confirmation)
+   ─► REQUESTED ─HR/SA approve─► APPROVED ─"Start overtime"─► ACTIVE ─"Stop overtime"─► COMPLETED
+                ─HR/SA reject──► REJECTED                     └─30 min without activity─► AUTO_STOPPED
+   REQUESTED / APPROVED ─employee cancels─► CANCELLED;  an unused approval expires with its day
+```
 
-What is stored for each session (`OvertimeSession`):
+The **declaration** is required for every overtime session. The server re-checks every rule (`OvertimeRequestSerializer`):
 
-- employee, date, start and end, duration;
-- status, trigger (`AFTER_CHECKOUT`) and source;
-- created and updated timestamps.
+- one or more of the employee's own **pending tasks** (`PENDING` / `IN_PROGRESS`) **or** "Other reason" with an explanation of 15+ characters;
+- "What will you work on during overtime?", 10+ characters;
+- the confirmation "I confirm that the above work is the reason for my overtime." The submit button stays disabled until all of this is valid.
 
-Overtime never changes the normal attendance record or its worked time.
+**Approval** is controlled by `CompanySettings.overtime_requires_approval`, which is on by default. HR Admin and Super Admin hold `overtime.approve`; nobody can decide their own request.
 
-Rules enforced by the server:
+- HR is notified of each request (`OVERTIME_REQUESTED`).
+- The employee is notified and emailed of the decision.
+- An approval is valid for its own date only.
+- With approval switched off, a valid declaration starts the session directly.
 
-- Overtime can only start after the day's normal check-out, and not earlier than the check-out time.
-- Only one overtime session can be active per employee (unique index), and sessions can't overlap.
-- Ending overtime when none is running returns 409.
-- The employee's manager is notified when overtime starts and when it is completed.
+**Activity.** While overtime runs, the same activity heartbeat applies. After 30 continuous minutes without activity, the server stops the session:
 
-Who sees the records: HR and Super Admin see all overtime. Managers see their direct reports' overtime (attendance scope). Employees see only their own.
+- `status=AUTO_STOPPED`, `end_reason=OVERTIME_INACTIVITY_TIMEOUT`;
+- end = last activity + 30 min;
+- the event is audited and the employee is notified.
 
-Overtime **approval and pay** are not part of this release. They are company policies that haven't been specified.
+The session never restarts silently. To continue, the employee submits a **new** declaration and approval, and every session has its own record.
+
+**Anti-manipulation.** Start and end times, status, approval and inactivity state are set only by the server. Extra fields in the request (e.g. `status`, `started_at`) are ignored.
+
+Overtime is still separate from normal worked time. Managers are notified when it starts and when it is completed. HR and Super Admin see all overtime; managers see their team's; employees see their own. Overtime **pay** is not part of the system.
+
+## 2a. Office check-in geofence (owner policy: 20 metres)
+
+HR sets the workplace once in **Settings → HR policies → Workplace & monitoring**: latitude, longitude, radius (default 20 m) and required GPS accuracy (default ±100 m). "Use my current location" fills in the coordinates while standing in the office. Until coordinates are set, the rule is not applied, and Settings says so.
+
+**Check-in.** The browser asks for location permission, shows the distance and enables **Check in** only inside the radius. Outside, it shows "You are outside the workplace check-in area." with the approximate distance. The **server** decides:
+
+- it recomputes the Haversine distance from the raw coordinates (`apps/attendance/geo.py`) and ignores any client-supplied distance or "inside" flag;
+- missing coordinates → `400 location_required`;
+- accuracy worse than the limit → `400 location_too_imprecise`;
+- outside → `403 outside_geofence`. The boundary counts as inside.
+
+**Stored data.** Check-in latitude, longitude, accuracy and distance, plus check-out coordinates and distance. The API exposes **distances only**, never coordinates, so no employee's precise location is shown to others.
+
+**Automatic check-out on leaving.** While an office session is open, the app watches the location on any page and sends it with the activity heartbeat. The server checks the employee out (`checkout_reason=GEO_FENCE_EXIT`) only when a precise reading shows they have **clearly** left: distance minus accuracy is greater than the radius, so GPS jitter at the boundary never triggers it.
+
+- It is not applied during a break, so lunch outside is fine, or for work-from-home sessions.
+- The check-out is idempotent and audited, and the employee is notified.
+- If location permission is revoked or unavailable, the server records a **monitoring problem** (`location_issue`, audited once per change) and does **not** claim the employee left.
+
+## 2b. Activity and the 30-minute inactivity rule
+
+While a session or overtime is open, the browser reports activity every 2 minutes (`POST /api/attendance/heartbeat/`), and immediately when the limit is reached. The report contains **only** the number of seconds since the last meaningful interaction, plus the location in office mode.
+
+- **Counted:** clicks/taps, key presses (the key itself is never read), scrolling, deliberate pointer movement (small jitter is ignored) and returning to the tab.
+- **Optional:** with the browser's Idle Detection permission (Chrome / Edge, "Also count activity in other apps"), activity anywhere on the device counts, still only as active/idle.
+- **Never collected:** keystrokes, typed text, passwords, screenshots, microphone, page contents or browsing history.
+
+The **server** keeps `last_activity_at`, which only moves forward and never precedes check-in. When `last_activity_at + 30 min` has passed with no break running, the session is checked out (`checkout_reason=INACTIVITY_TIMEOUT`, check-out time = last activity + 30 min). Example: last activity 10:00, still inactive at 10:29, checked out at 10:30.
+
+- **During a break**, the clock pauses until the break allowance runs out.
+- **Idempotent:** a session is checked out at most once, and repeated reports or reconciliations change nothing.
+- **Audited:** reason, last activity and check-out time.
+- **Not blocked by task checkout protection:** that rule applies to the employee's own check-out only.
+- **Where it runs:**
+  - on every heartbeat;
+  - on every load of the work session;
+  - before every manual check-out or break action;
+  - on schedule for everyone: `manage.py reconcile_attendance` every 2 minutes (systemd timer / Windows Task Scheduler).
+
+**Honest limits** (browsers cannot do more):
+
+- Nothing runs in the browser while it is closed, and background tabs are throttled.
+- Missing reports are therefore treated as **no activity**, which is never assumed to be work.
+- An employee who keeps working offline for more than 30 minutes, or only in other applications without Idle Detection, will be checked out.
+- A determined user can fake browser location or activity with developer tools. The data is evidence, not proof.
+
+## 2c. Work from home
+
+**Employee.**
+
+- Opens **Work from home** in the header or on the card.
+- Chooses a date (today or up to 90 days ahead), a reason (5+ characters) and optional remarks.
+- One open request per date.
+- Can cancel a pending request, or an approved one before using it.
+
+**HR / Super Admin** (`wfh.approve`) use **Attendance → Work from home**:
+
+- see the requests, with the employee, date, reason and remarks;
+- approve or reject with an optional note;
+- cannot decide their own request.
+
+Notifications: request → approvers; decision → employee, in-app and by email. Every step is audited (`WFH_REQUESTED/APPROVED/REJECTED/CANCELLED`), including approver and time.
+
+With an **approved request for today**, the employee gets **WFH check in**. The server verifies:
+
+- the employee's identity;
+- an APPROVED request with today's date (an approval for another day has expired);
+- the attendance state.
+
+The record gets `mode=WORK_FROM_HOME` and a link to the request. The geofence does not apply, no location is collected, and the inactivity rule still applies. Sending `mode=WORK_FROM_HOME` without an approval returns `403 wfh_not_approved`.
+
+## 2d. One attendance state machine
+
+The header and the card show the same server state and only the actions that are possible:
+
+| State | Actions |
+|---|---|
+| Not checked in | Check in (office, inside the area) · WFH check in (approved WFH) · Work from home (request) |
+| Working (office or WFH) | Break (until the allowance is used) · Check out · Work from home (request a date) |
+| On break | End break |
+| Checked out | Overtime (declaration) → "Overtime pending" → Start overtime (once approved) · Work from home |
+| Overtime running | Stop overtime |
+
+On wide screens the actions sit in the top-right header. Below 1280 px they collapse into an **Attendance** menu. The server rejects every invalid transition, whatever the browser sends.
 
 ## 3. Tasks
 
@@ -227,6 +328,9 @@ HR Admin and Super Admin (`policies.manage`) create, edit, publish and delete po
 
 | What | Where |
 |---|---|
+| Geofence, inactivity, break allowance, overtime approval | **Settings** (database), not code |
+| Heartbeat interval | `backend/apps/attendance/views.py` (`HEARTBEAT_SECONDS`) |
+| Geofence / exit maths | `backend/apps/attendance/geo.py` |
 | Which tasks block checkout; exempt roles | `backend/apps/tasks/rules.py` (`BLOCKING_STATUSES`, `EXEMPT_ROLE_CODES`) |
 | Offline event age and clock skew limits; batch size | `backend/apps/attendance/sessions.py` (`OFFLINE_MAX_AGE`, `OFFLINE_MAX_CLOCK_SKEW`, `MAX_EVENTS_PER_SYNC`) |
 | Attachment types | `backend/apps/core/files.py` (`MESSAGE_EXTENSIONS`) |
