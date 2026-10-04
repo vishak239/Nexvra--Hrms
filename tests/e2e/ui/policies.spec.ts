@@ -92,7 +92,7 @@ test("the daily break allowance set by HR is shown to employees", async ({ page 
     await expect(tile.getByText("60 min")).toBeVisible();
 
     await page.goto("/attendance");
-    await expect(page.getByTestId("total-break-hint")).toContainText("of 60 min allowance");
+    await expect(page.getByTestId("total-break-hint")).toContainText(/remaining of 60 min$/);
   } finally {
     await json(await hr.patch("/api/settings/", { break_allowance_minutes: original }), 200);
     await hr.dispose();

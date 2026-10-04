@@ -21,6 +21,19 @@ test("breaks and overtime: invalid transitions refused, retries idempotent", asy
   await json(await me.post("/api/attendance/breaks/end/"), 200);
   expect((await me.post("/api/attendance/overtime/start/")).status()).toBe(409); // before checkout
   await json(await me.post("/api/attendance/check-out/"), 200);
+  expect((await me.post("/api/attendance/overtime/start/")).status()).toBe(409); // needs an approved request
+  const declared = await json(
+    await me.post("/api/attendance/overtime/request/", {
+      use_other_reason: true,
+      other_reason: "Production release support for payroll",
+      work_description: "Deploy and monitor the payroll release.",
+      declaration_confirmed: true,
+    }),
+    201,
+  );
+  const approver = await hrSession();
+  await json(await approver.post(`/api/attendance/overtime/${declared.state.open_overtime_request.id}/approve/`), 200);
+  await approver.dispose();
   await json(await me.post("/api/attendance/overtime/start/"), 200);
   expect((await me.post("/api/attendance/overtime/start/")).status()).toBe(409); // already running
   const done = await json(await me.post("/api/attendance/overtime/end/"), 200);

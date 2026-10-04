@@ -5,6 +5,8 @@ import { uiLoginToDashboard } from "./helpers";
 const PAGES = [
   "/dashboard",
   "/attendance",
+  "/attendance?tab=wfh",
+  "/attendance?tab=overtime",
   "/leave",
   "/tasks",
   "/messages",

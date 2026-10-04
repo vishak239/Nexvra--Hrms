@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { DEMO } from "../support/api";
 import { expectToast, freshEmployee, hrSession, type FreshPerson } from "../support/people";
-import { nav, uiLoginToDashboard } from "./helpers";
+import { nav, uiLoginToDashboard, cardActions } from "./helpers";
 
 test.describe.serial("employee work session with an HR task", () => {
   let person: FreshPerson;
@@ -34,14 +34,14 @@ test.describe.serial("employee work session with an HR task", () => {
     await expect(page.getByText(`@${person.username}, HR assigned you a new task`)).toBeVisible();
 
     await page.goto("/attendance");
-    await page.getByRole("button", { name: "Check in" }).click();
+    await cardActions(page).getByRole("button", { name: "Check in", exact: true }).click();
     await expectToast(page, "Checked in.");
-    await page.getByRole("button", { name: "Start break" }).click();
+    await cardActions(page).getByRole("button", { name: "Break", exact: true }).click();
     await expect(page.getByTestId("session-phase")).toHaveAttribute("data-phase", "ON_BREAK");
     const timer = page.getByRole("timer", { name: "Break timer" });
     const first = await timer.textContent();
     await expect.poll(async () => timer.textContent(), { timeout: 5000 }).not.toBe(first); // it ticks
-    await page.getByRole("button", { name: "Back to work" }).click();
+    await cardActions(page).getByRole("button", { name: "End break", exact: true }).click();
     await expect(page.getByTestId("session-phase")).toHaveAttribute("data-phase", "WORKING");
     await page.getByRole("button", { name: /Break history \(1\)/ }).click();
     await expect(page.getByRole("list", { name: "Break history" }).getByRole("listitem")).toHaveCount(1);
@@ -55,7 +55,7 @@ test.describe.serial("employee work session with an HR task", () => {
 
     // checkout is blocked until the task is answered
     await nav(page).getByRole("link", { name: "Attendance" }).click();
-    await page.getByRole("button", { name: "Check out" }).click();
+    await cardActions(page).getByRole("button", { name: "Check out", exact: true }).click();
     const guard = page.getByRole("dialog", { name: /Respond to your tasks/ });
     await expect(guard).toContainText(`@${person.username} — ${taskTitle}`);
     await expect(guard.getByRole("button", { name: "Checkout" })).toBeDisabled();

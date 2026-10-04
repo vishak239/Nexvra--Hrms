@@ -1,27 +1,52 @@
 import { expect, test } from "@playwright/test";
 import { DEMO, json } from "../support/api";
 import { browserPost, expectToast, freshEmployee, hrSession } from "../support/people";
-import { uiLoginToDashboard } from "./helpers";
+import { uiLoginToDashboard, cardActions } from "./helpers";
 
-test("overtime starts after normal checkout and runs with a live timer", async ({ page }) => {
+test("overtime: declaration, HR approval, start with a live timer, stop", async ({ page, browser }) => {
   const hr = await hrSession();
   const person = await freshEmployee(hr);
-  await hr.dispose();
 
   await uiLoginToDashboard(page, person.email, person.password);
   await page.goto("/attendance");
-  await page.getByRole("button", { name: "Check in" }).click();
+  await cardActions(page).getByRole("button", { name: "Check in", exact: true }).click();
   await expectToast(page, "Checked in.");
-  await expect(page.getByRole("button", { name: "Start Overtime" })).toHaveCount(0); // not before checkout
-  await page.getByRole("button", { name: "Check out" }).click();
+  await expect(cardActions(page).getByRole("button", { name: "Overtime" })).toHaveCount(0); // not before checkout
+  await cardActions(page).getByRole("button", { name: "Check out", exact: true }).click();
   await expectToast(page, "Checked out.");
 
-  await page.getByRole("button", { name: "Start Overtime" }).click();
-  await expect(page.getByText("Overtime running")).toBeVisible();
+  await cardActions(page).getByRole("button", { name: "Overtime", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Request overtime" });
+  const send = dialog.getByRole("button", { name: "Send request" }).or(page.getByRole("button", { name: "Send request" }));
+  await dialog.getByLabel("Other reason").check();
+  await dialog.getByLabel("Explain the other reason").fill("Production release support for payroll.");
+  await dialog.getByLabel("What will you work on during overtime?").fill("Deploy and monitor the payroll release.");
+  await expect(send).toBeDisabled(); // the declaration must be confirmed
+  await dialog.getByLabel("I confirm that the above work is the reason for my overtime.").check();
+  await send.click();
+  await expectToast(page, "Overtime requested — HR will review it.");
+  await expect(cardActions(page).getByRole("button", { name: "Overtime pending" })).toBeDisabled();
+
+  // HR approves in the Attendance > Overtime tab
+  const hrContext = await browser.newContext();
+  const hrPage = await hrContext.newPage();
+  await uiLoginToDashboard(hrPage, DEMO.hr);
+  await hrPage.goto("/attendance?tab=overtime");
+  const row = hrPage.getByRole("row", { name: new RegExp(person.fullName) });
+  await expect(row.getByText("Deploy and monitor the payroll release.")).toBeVisible();
+  await row.getByRole("button", { name: "Approve" }).click();
+  await hrPage.getByRole("dialog").getByRole("button", { name: "Approve" }).click();
+  await expectToast(hrPage, "Approved — the employee has been notified.");
+  await hrContext.close();
+  await hr.dispose();
+
+  await page.reload();
+  await cardActions(page).getByRole("button", { name: "Start overtime", exact: true }).click();
+  await expectToast(page, "Overtime started.");
   const timer = page.getByRole("timer", { name: "Overtime timer" });
   const first = await timer.textContent();
   await expect.poll(async () => timer.textContent(), { timeout: 5000 }).not.toBe(first);
-  await page.getByRole("button", { name: "End Overtime" }).click();
+  await cardActions(page).getByRole("button", { name: "Stop overtime", exact: true }).click();
   await expectToast(page, "Overtime ended.");
   await expect(page.getByTestId("session-phase")).toHaveAttribute("data-phase", "CHECKED_OUT");
   await expect(page.getByText("My overtime")).toBeVisible();

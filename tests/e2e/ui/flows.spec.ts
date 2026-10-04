@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { DEMO, json, login } from "../support/api";
-import { nav, uiLogin, uiLoginToDashboard } from "./helpers";
+import { nav, uiLogin, uiLoginToDashboard, cardActions } from "./helpers";
 
 test("unauthenticated visitors are sent to login", async ({ page }) => {
   await page.goto("/employees");
@@ -119,9 +119,9 @@ test.describe.serial("employee lifecycle through the UI", () => {
     await page.getByRole("button", { name: "Update password" }).click();
 
     await expect(page).toHaveURL(/\/dashboard$/);
-    await page.getByRole("button", { name: "Check in" }).click();
+    await cardActions(page).getByRole("button", { name: "Check in", exact: true }).click();
     await expect(page.getByText("Checked in.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Check out" })).toBeVisible();
+    await expect(cardActions(page).getByRole("button", { name: "Check out", exact: true })).toBeVisible();
   });
 
   test("employee applies for leave and the manager approves it", async ({ page, browser }) => {

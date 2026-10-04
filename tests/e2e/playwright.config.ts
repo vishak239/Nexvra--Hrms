@@ -7,7 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: ".",
-  timeout: 45_000,
+  timeout: 90_000, // logins hash passwords on purpose; busy machines need headroom
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,

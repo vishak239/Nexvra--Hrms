@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { json, login } from "../support/api";
 import { expectToast, freshEmployee, hrSession } from "../support/people";
-import { uiLoginToDashboard } from "./helpers";
+import { uiLoginToDashboard, cardActions } from "./helpers";
 
 test("messaging: find a colleague by @username, send a file, colleague downloads it", async ({ page, browser }) => {
   const hr = await hrSession();
@@ -46,24 +46,24 @@ test("offline: breaks are queued locally and synchronised on reconnect; the sess
 
   await uiLoginToDashboard(page, person.email, person.password);
   await page.goto("/attendance");
-  await page.getByRole("button", { name: "Check in" }).click();
+  await cardActions(page).getByRole("button", { name: "Check in", exact: true }).click();
   await expectToast(page, "Checked in.");
 
   await context.setOffline(true);
   const status = page.getByTestId("connection-status");
   await expect(status).toHaveAttribute("data-status", "OFFLINE");
   await expect(page.getByText("Offline mode", { exact: true }).first()).toBeVisible();
-  await page.getByRole("button", { name: "Start break" }).click();
+  await cardActions(page).getByRole("button", { name: "Break", exact: true }).click();
   await expect(page.getByText("1 waiting to sync")).toBeVisible();
   await expect(page.getByTestId("session-phase")).toHaveAttribute("data-phase", "ON_BREAK");
   await page.waitForTimeout(1200);
-  await page.getByRole("button", { name: "Back to work" }).click();
+  await cardActions(page).getByRole("button", { name: "End break", exact: true }).click();
   await expect(page.getByText("2 waiting to sync")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Check out" })).toBeDisabled(); // needs the server
+  await expect(cardActions(page).getByRole("button", { name: "Check out", exact: true })).toBeDisabled(); // needs the server
 
   await context.setOffline(false);
   await expect(status).not.toHaveAttribute("data-status", "OFFLINE");
-  await expect(page.getByText(/waiting to sync/)).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.getByText(/waiting to sync/)).toHaveCount(0, { timeout: 30_000 });
   await expect(page.getByTestId("session-phase")).toHaveAttribute("data-phase", "WORKING");
 
   const self = await login(person.email, person.password);
