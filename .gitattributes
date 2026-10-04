@@ -1,2 +1,7 @@
 *.bat text eol=crlf
 *.sh text eol=lf
+# Files used on Linux servers must keep LF line endings, even when checked out on Windows.
+deploy/systemd/* text eol=lf
+deploy/nginx/* text eol=lf
+deploy/env/* text eol=lf
+deploy/gunicorn.conf.py text eol=lf
