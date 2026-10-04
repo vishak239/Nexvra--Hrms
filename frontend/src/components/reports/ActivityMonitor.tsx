@@ -96,14 +96,23 @@ export function ActivityMonitor() {
   if (view === "attendance") {
     table = (
       <Rows
-        head={["Employee", "Date", "Check-in", "Check-out", "Session", "Breaks", "Actual working", "Status"]}
+        head={["Employee", "Date", "Mode", "Check-in", "Check-out", "Session", "Breaks", "Actual working", "Status"]}
         rows={rows as AttendanceRecord[]}
         render={(r) => (
           <tr key={r.id}>
             <Td><Person e={r.employee} /></Td>
             <Td>{fmtDate(r.date)}</Td>
-            <Td>{fmtTime(r.check_in)}</Td>
-            <Td>{fmtTime(r.check_out)}</Td>
+            <Td>{r.mode === "WORK_FROM_HOME" ? <Badge tone="blue">WFH</Badge> : <Badge>Office</Badge>}</Td>
+            <Td>
+              {fmtTime(r.check_in)}
+              {r.check_in_distance_m != null && <span className="ml-1 text-body-sm text-on-surface-variant">({r.check_in_distance_m} m)</span>}
+            </Td>
+            <Td>
+              {fmtTime(r.check_out)}
+              {(r.checkout_reason === "GEO_FENCE_EXIT" || r.checkout_reason === "INACTIVITY_TIMEOUT") && (
+                <span className="ml-1.5"><Badge tone="amber">{r.checkout_reason === "GEO_FENCE_EXIT" ? "Auto: left area" : "Auto: inactive"}</Badge></span>
+              )}
+            </Td>
             <Td>{fmtMinutes(r.session_minutes)}</Td>
             <Td><BreakTotal record={r} empty={fmtMinutes(0)} /></Td>
             <Td className="font-medium text-primary">{fmtMinutes(r.worked_minutes)}</Td>
@@ -130,7 +139,7 @@ export function ActivityMonitor() {
       />
     );
   } else if (view === "overtime") {
-    table = <OvertimeTable rows={rows as OvertimeSession[]} showEmployee />;
+    table = <OvertimeTable rows={rows as OvertimeSession[]} showEmployee showDeclaration />;
   } else if (view === "tasks") {
     table = (
       <Rows

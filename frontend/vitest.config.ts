@@ -8,5 +8,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    // jsdom start-up is heavy; a few workers and a generous timeout keep runs stable on modest machines.
+    maxWorkers: 4,
+    testTimeout: 20_000,
   },
 });

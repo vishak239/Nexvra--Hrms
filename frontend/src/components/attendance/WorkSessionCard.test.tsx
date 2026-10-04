@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { AnchorHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConnectionProvider } from "@/lib/connection";
-import type { Task, WorkSessionState } from "@/lib/types";
+import { MIN, TASK, iso, overtimeSession, record, session } from "@/test/fixtures";
 import { ME, Providers, mockFetch } from "@/test/utils";
+import { AttendanceActions } from "./AttendanceActions";
 import { WorkSessionCard } from "./WorkSessionCard";
+import { WorkSessionProvider } from "./WorkSessionProvider";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
@@ -15,63 +17,48 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const iso = (msAgo: number) => new Date(Date.now() - msAgo).toISOString();
-const MIN = 60_000;
-const EMP = { id: 4, employee_code: "DEMO-004", full_name: "Demo Employee" };
-
-function session(kind: "none" | "working" | "break" | "checked_out" | "overtime", extra: Partial<WorkSessionState> = {}): WorkSessionState {
-  const record =
-    kind === "none"
-      ? null
-      : {
-          id: 1, employee: EMP, date: "2026-10-02", check_in: iso(240 * MIN),
-          check_out: kind === "checked_out" || kind === "overtime" ? iso(30 * MIN) : null,
-          status: "PRESENT" as const, is_late: false, worked_minutes: null, session_minutes: null,
-          break_minutes: 0, total_break_seconds: 0, break_over_allowance_minutes: null, source: "SELF" as const, remarks: "", updated_at: iso(0),
-        };
-  return {
-    date: "2026-10-02",
-    server_time: new Date().toISOString(),
-    self_attendance_enabled: true,
-    break_allowance_minutes: null,
-    record,
-    breaks: [],
-    active_break:
-      kind === "break"
-        ? { id: 5, employee: EMP, attendance: 1, date: "2026-10-02", started_at: iso(15 * MIN), ended_at: null,
-            duration_seconds: null, status: "ACTIVE", source: "ONLINE", created_at: iso(15 * MIN) }
-        : null,
-    overtime: [],
-    active_overtime:
-      kind === "overtime"
-        ? { id: 8, employee: EMP, attendance: 1, date: "2026-10-02", started_at: iso(20 * MIN), ended_at: null,
-            duration_seconds: null, status: "ACTIVE", trigger: "AFTER_CHECKOUT", source: "ONLINE",
-            created_at: iso(20 * MIN), updated_at: iso(20 * MIN) }
-        : null,
-    blocking_tasks: 0,
-    checkout_exempt: false,
-    ...extra,
-  };
-}
-
-const TASK: Task = {
-  id: 31, title: "Update employee database", description: "Fix phone numbers", priority: "HIGH", due_date: null,
-  status: "PENDING", display_status: "PENDING", is_overdue: false, requires_response: true,
-  assigned_to: { ...EMP, username: "vishak" }, assigned_by: { id: 2, full_name: "Demo HR", username: "demo.hr" },
-  acknowledged_at: null, response: "", responded_at: null, completed_at: null, cancelled_at: null, cancel_reason: "",
-  created_at: iso(0), updated_at: iso(0), is_blocking: true, is_assignee: true, can_manage: false,
-};
+const WORKPLACE = { configured: true, latitude: 12.9716, longitude: 77.5946, radius_m: 20, max_accuracy_m: 100 };
+/** A point `m` metres north of the workplace. */
+const north = (m: number) => ({ latitude: 12.9716 + (m / 6_371_008.8) * (180 / Math.PI), longitude: 77.5946 });
 
 function setOnline(value: boolean) {
   Object.defineProperty(window.navigator, "onLine", { value, configurable: true });
 }
 
-function renderCard(withConnection = false) {
-  const card = <WorkSessionCard />;
-  return render(<Providers>{withConnection ? <ConnectionProvider userId={ME.id}>{card}</ConnectionProvider> : card}</Providers>);
+function mockGeolocation(coords: { latitude: number; longitude: number; accuracy: number } | "denied") {
+  const respond = (ok: PositionCallback, fail?: PositionErrorCallback | null) => {
+    if (coords === "denied") fail?.({ code: 1, PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3, message: "denied" } as GeolocationPositionError);
+    else ok({ coords: { ...coords, altitude: null, altitudeAccuracy: null, heading: null, speed: null }, timestamp: Date.now() } as GeolocationPosition);
+  };
+  Object.defineProperty(window.navigator, "geolocation", {
+    configurable: true,
+    value: {
+      watchPosition: vi.fn((ok: PositionCallback, fail?: PositionErrorCallback | null) => {
+        setTimeout(() => respond(ok, fail), 0);
+        return 1;
+      }),
+      clearWatch: vi.fn(),
+      getCurrentPosition: vi.fn((ok: PositionCallback, fail?: PositionErrorCallback | null) => setTimeout(() => respond(ok, fail), 0)),
+    },
+  });
+}
+
+function renderCard() {
+  return render(
+    <Providers>
+      <ConnectionProvider userId={ME.id}>
+        <WorkSessionProvider>
+          <AttendanceActions />
+          <WorkSessionCard />
+        </WorkSessionProvider>
+      </ConnectionProvider>
+    </Providers>,
+  );
 }
 
 const body = (init?: RequestInit) => (init?.body ? JSON.parse(String(init.body)) : undefined);
+const card = () => within(screen.getByTestId("session-actions"));
+const cardAsync = async () => within(await screen.findByTestId("session-actions"));
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -85,36 +72,6 @@ afterEach(() => {
 });
 
 describe("WorkSessionCard", () => {
-  it("shows the daily break allowance from settings and flags break time over it", async () => {
-    const base = session("working");
-    let breakMinutes = 75;
-    mockFetch((url) => {
-      if (url === "/api/attendance/today/")
-        return {
-          body: {
-            ...base,
-            break_allowance_minutes: 60,
-            record: { ...base.record!, total_break_seconds: breakMinutes * 60, break_minutes: breakMinutes },
-          },
-        };
-    });
-    const { unmount } = renderCard();
-    expect((await screen.findByTestId("total-break")).textContent).toBe("1h 15m");
-    expect(screen.getByTestId("total-break-hint").textContent).toBe("0h 15m over the 60 min allowance");
-    unmount();
-
-    breakMinutes = 20;
-    renderCard();
-    expect((await screen.findByTestId("total-break-hint")).textContent).toBe("0h 40m left of 60 min allowance");
-  });
-
-  it("shows no allowance hint when no break limit is configured", async () => {
-    mockFetch((url) => (url === "/api/attendance/today/" ? { body: session("working") } : undefined));
-    renderCard();
-    await screen.findByTestId("total-break");
-    expect(screen.queryByTestId("total-break-hint")).toBeNull();
-  });
-
   it("shows a live break timer and ends the break with an idempotency key", async () => {
     const { calls } = mockFetch((url) => {
       if (url === "/api/attendance/today/") return { body: session("break") };
@@ -123,25 +80,96 @@ describe("WorkSessionCard", () => {
     renderCard();
     const timer = await screen.findByRole("timer", { name: "Break timer" });
     expect(timer.textContent).toMatch(/^00:1[45]:\d\d$/);
-    expect(screen.getByText("On break")).toBeTruthy();
+    expect(screen.getAllByText("On break").length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to work" }));
+    fireEvent.click(card().getByRole("button", { name: "End break" }));
     await screen.findByText("Welcome back — break ended.");
     const call = calls.find((c) => c.url === "/api/attendance/breaks/end/");
     expect(body(call?.init).client_event_id).toMatch(/^[0-9a-f-]{36}$/);
-    expect(await screen.findByRole("button", { name: "Start break" })).toBeTruthy();
+    expect(await (await cardAsync()).findByRole("button", { name: "Break" })).toBeTruthy();
   });
 
-  it("starts overtime after checkout and shows the overtime timer", async () => {
+  it("shows break used and remaining, and disables Break when the allowance is used", async () => {
+    mockFetch((url) =>
+      url === "/api/attendance/today/"
+        ? { body: session("working", { record: record({ total_break_seconds: 3600, break_minutes: 60 }), break_used_seconds: 3600, break_remaining_seconds: 0 }) }
+        : undefined,
+    );
+    renderCard();
+    expect((await screen.findByTestId("break-allowance")).textContent).toBe("Break used: 60 min · Break remaining: 0 min");
+    expect(screen.getByTestId("total-break-hint").textContent).toBe("Break unavailable for the day");
+    expect((card().getByRole("button", { name: "Break" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("opens the overtime declaration after checkout and only submits a complete one", async () => {
+    let requested = false;
+    const { calls } = mockFetch((url, init) => {
+      if (url === "/api/attendance/today/") return { body: session("checked_out") };
+      if (url.startsWith("/api/tasks/")) return { body: { count: 1, next: null, previous: null, results: [TASK] } };
+      if (url === "/api/attendance/overtime/request/") {
+        requested = true;
+        return {
+          status: 201,
+          body: { state: session("checked_out", { open_overtime_request: overtimeSession({ status: "REQUESTED", started_at: null, decided_by_name: null }) }) },
+        };
+      }
+      return init ? undefined : undefined;
+    });
+    renderCard();
+    fireEvent.click(await (await cardAsync()).findByRole("button", { name: "Overtime" }));
+    const dialog = await screen.findByRole("dialog", { name: "Request overtime" });
+    const submit = within(dialog).queryByRole("button", { name: "Send request" }) ?? screen.getByRole("button", { name: "Send request" });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(await within(dialog).findByRole("checkbox", { name: /Update employee database/ }));
+    fireEvent.change(within(dialog).getByLabelText(/^What will you work on/), { target: { value: "Complete the API integration." } });
+    expect((submit as HTMLButtonElement).disabled).toBe(true); // confirmation still missing
+    fireEvent.click(within(dialog).getByLabelText(/I confirm that the above work/));
+    expect((submit as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(submit);
+
+    await waitFor(() => expect(requested).toBe(true));
+    const sent = body(calls.find((c) => c.url === "/api/attendance/overtime/request/")?.init);
+    expect(sent).toEqual({
+      task_ids: [31],
+      use_other_reason: false,
+      other_reason: "",
+      work_description: "Complete the API integration.",
+      declaration_confirmed: true,
+    });
+    expect(await screen.findByTestId("overtime-request-status")).toBeTruthy();
+    expect(card().getByRole("button", { name: "Overtime pending" })).toBeTruthy();
+  });
+
+  it("requires a detailed explanation for an other reason", async () => {
     mockFetch((url) => {
       if (url === "/api/attendance/today/") return { body: session("checked_out") };
+      if (url.startsWith("/api/tasks/")) return { body: { count: 0, next: null, previous: null, results: [] } };
+    });
+    renderCard();
+    fireEvent.click(await (await cardAsync()).findByRole("button", { name: "Overtime" }));
+    const dialog = await screen.findByRole("dialog", { name: "Request overtime" });
+    expect(await within(dialog).findByText(/You have no pending tasks/)).toBeTruthy();
+    fireEvent.click(within(dialog).getByLabelText(/^Other reason/));
+    fireEvent.change(within(dialog).getByLabelText(/^Explain the other reason/), { target: { value: "short" } });
+    fireEvent.change(within(dialog).getByLabelText(/^What will you work on/), { target: { value: "Monthly payroll checks." } });
+    fireEvent.click(within(dialog).getByLabelText(/I confirm that the above work/));
+    expect(within(dialog).getByText("At least 15 characters.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Send request" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("starts an approved overtime and shows the overtime timer", async () => {
+    mockFetch((url) => {
+      if (url === "/api/attendance/today/")
+        return { body: session("checked_out", { open_overtime_request: overtimeSession({ status: "APPROVED", started_at: null }) }) };
       if (url === "/api/attendance/overtime/start/") return { body: { duplicate: false, state: session("overtime") } };
     });
     renderCard();
-    fireEvent.click(await screen.findByRole("button", { name: "Start Overtime" }));
-    expect(await screen.findByText("Overtime running")).toBeTruthy();
+    expect(await screen.findByText(/Overtime approved by Demo HR/)).toBeTruthy();
+    fireEvent.click(card().getByRole("button", { name: "Start overtime" }));
+    expect((await screen.findAllByText("Overtime running")).length).toBeGreaterThan(0);
     expect(screen.getByRole("timer", { name: "Overtime timer" }).textContent).toMatch(/^00:(19|20):\d\d$/);
-    expect(screen.getByRole("button", { name: "End Overtime" })).toBeTruthy();
+    expect(card().getByRole("button", { name: "Stop overtime" })).toBeTruthy();
   });
 
   it("requires a task response before checkout (popup), then checks out", async () => {
@@ -156,7 +184,7 @@ describe("WorkSessionCard", () => {
       if (url === "/api/attendance/check-out/") return { body: {} };
     });
     renderCard();
-    fireEvent.click(await screen.findByRole("button", { name: "Check out" }));
+    fireEvent.click(await (await cardAsync()).findByRole("button", { name: "Check out" }));
     expect(await screen.findByText("@vishak — Update employee database")).toBeTruthy();
     const checkout = screen.getByRole("button", { name: "Checkout" }) as HTMLButtonElement;
     expect(checkout.disabled).toBe(true);
@@ -178,7 +206,7 @@ describe("WorkSessionCard", () => {
       if (url === "/api/tasks/blocking/") return { body: { count: 1, results: [TASK] } };
     });
     renderCard();
-    fireEvent.click(await screen.findByRole("button", { name: "Check out" }));
+    fireEvent.click(await (await cardAsync()).findByRole("button", { name: "Check out" }));
     expect(await screen.findByRole("dialog", { name: /Respond to your tasks/ })).toBeTruthy();
   });
 
@@ -193,10 +221,10 @@ describe("WorkSessionCard", () => {
         return { body: { results: synced.map((e) => ({ id: e.id, type: e.type, status: "APPLIED", duplicate: false, error: "" })), state: session("break") } };
       }
     });
-    renderCard(true);
-    fireEvent.click(await screen.findByRole("button", { name: "Start break" }));
+    renderCard();
+    fireEvent.click(await (await cardAsync()).findByRole("button", { name: "Break" }));
     expect(await screen.findByText("1 waiting to sync")).toBeTruthy();
-    expect(screen.getByText("On break")).toBeTruthy();
+    expect(screen.getAllByText("On break").length).toBeGreaterThan(0);
     expect(calls.some((c) => c.url === "/api/attendance/breaks/start/")).toBe(false);
     const stored = JSON.parse(window.localStorage.getItem(`nexvra.offline-queue.v1.${ME.id}`) ?? "[]");
     expect(stored).toHaveLength(1);
@@ -212,18 +240,15 @@ describe("WorkSessionCard", () => {
   });
 
   it("shows the last known session while the server is unreachable", async () => {
-    window.localStorage.setItem(
-      `nexvra.work-session.v1.${ME.id}`,
-      JSON.stringify({ state: session("working"), savedAt: iso(5 * MIN) }),
-    );
+    window.localStorage.setItem(`nexvra.work-session.v1.${ME.id}`, JSON.stringify({ state: session("working"), savedAt: iso(5 * MIN) }));
     mockFetch((url) => {
       if (url === "/api/attendance/today/")
         return { status: 503, body: { error: { code: "backend_unavailable", message: "Can't reach the server.", fields: {} } } };
       if (url === "/api/health/") return { status: 503, body: {} };
     });
-    renderCard(true);
+    renderCard();
     expect(await screen.findByText(/Offline — showing your last known session/)).toBeTruthy();
-    expect(screen.getByText("Working")).toBeTruthy();
+    expect(screen.getAllByText("Working").length).toBeGreaterThan(0);
   });
 
   it("detects an active session after the browser was reopened", async () => {
@@ -236,10 +261,82 @@ describe("WorkSessionCard", () => {
     expect(window.sessionStorage.getItem(`nexvra.session-seen.${ME.id}`)).toBe("1");
   });
 
-  it("offers check-in when not checked in", async () => {
-    mockFetch((url) => (url === "/api/attendance/today/" ? { body: session("none") } : undefined));
+  it("explains an automatic check-out", async () => {
+    mockFetch((url) =>
+      url === "/api/attendance/today/"
+        ? { body: session("checked_out", { record: record({ check_out: iso(10 * MIN), checkout_reason: "INACTIVITY_TIMEOUT" }) }) }
+        : undefined,
+    );
     renderCard();
-    expect(await screen.findByRole("button", { name: "Check in" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Start break" })).toBeNull();
+    expect((await screen.findByTestId("auto-checkout")).textContent).toMatch(/after 30 minutes without activity/);
+  });
+});
+
+describe("geofenced office check-in", () => {
+  it("keeps Check in disabled outside the area and shows the distance", async () => {
+    mockGeolocation({ ...north(85), accuracy: 10 });
+    const { calls } = mockFetch((url) =>
+      url === "/api/attendance/today/" ? { body: session("none", { workplace: WORKPLACE }) } : undefined,
+    );
+    renderCard();
+    expect((await screen.findByText(/You are outside the workplace check-in area/)).closest("[role=status]")?.textContent).toMatch(/about 85 m away/);
+    await waitFor(() => expect((card().getByRole("button", { name: "Check in" }) as HTMLButtonElement).disabled).toBe(true));
+    expect(calls.some((c) => c.url === "/api/attendance/check-in/")).toBe(false);
+  });
+
+  it("enables Check in inside the area and sends raw coordinates for the server to verify", async () => {
+    mockGeolocation({ ...north(8), accuracy: 6 });
+    const { calls } = mockFetch((url) => {
+      if (url === "/api/attendance/today/") return { body: session("none", { workplace: WORKPLACE }) };
+      if (url === "/api/attendance/check-in/") return { status: 201, body: {} };
+    });
+    renderCard();
+    await waitFor(() => expect(screen.getByTestId("geofence-status").dataset.verdict).toBe("inside"));
+    fireEvent.click(card().getByRole("button", { name: "Check in" }));
+    await screen.findByText("Checked in.");
+    const sent = body(calls.find((c) => c.url === "/api/attendance/check-in/")?.init);
+    expect(sent.mode).toBe("OFFICE");
+    expect(sent.latitude).toBeCloseTo(north(8).latitude, 6);
+    expect(sent.accuracy).toBe(6);
+    expect(Object.keys(sent).sort()).toEqual(["accuracy", "latitude", "longitude", "mode"]); // no client verdict
+  });
+
+  it("reports blocked location permission instead of guessing", async () => {
+    mockGeolocation("denied");
+    mockFetch((url) => (url === "/api/attendance/today/" ? { body: session("none", { workplace: WORKPLACE }) } : undefined));
+    renderCard();
+    expect(await screen.findByText(/Location permission is blocked/)).toBeTruthy();
+  });
+
+  it("offers WFH check-in without location when work from home is approved", async () => {
+    const { calls } = mockFetch((url) => {
+      if (url === "/api/attendance/today/")
+        return {
+          body: session("none", {
+            workplace: WORKPLACE,
+            wfh_today: { id: 3, employee: { id: 4, employee_code: "DEMO-004", full_name: "Demo Employee" }, date: "2026-10-02", reason: "Plumber", remarks: "", status: "APPROVED", decided_by_name: "Demo HR", decided_at: iso(0), decision_note: "", cancelled_at: null, created_at: iso(0) },
+          }),
+        };
+      if (url === "/api/attendance/check-in/") return { status: 201, body: {} };
+    });
+    renderCard();
+    fireEvent.click(await (await cardAsync()).findByRole("button", { name: "WFH check in" }));
+    await screen.findByText("Checked in — working from home.");
+    expect(body(calls.find((c) => c.url === "/api/attendance/check-in/")?.init)).toEqual({ mode: "WORK_FROM_HOME" });
+  });
+});
+
+describe("top-right attendance actions", () => {
+  it.each([
+    ["none", ["Check in", "Work from home"]],
+    ["working", ["Break", "Check out", "Work from home"]],
+    ["break", ["End break"]],
+    ["checked_out", ["Overtime", "Work from home"]],
+    ["overtime", ["Stop overtime"]],
+  ] as const)("shows only the possible actions when %s", async (kind, labels) => {
+    mockFetch((url) => (url === "/api/attendance/today/" ? { body: session(kind) } : undefined));
+    renderCard();
+    const group = await screen.findByRole("group", { name: "Attendance actions" });
+    await waitFor(() => expect(within(group).getAllByRole("button").map((b) => b.textContent?.trim())).toEqual(labels));
   });
 });

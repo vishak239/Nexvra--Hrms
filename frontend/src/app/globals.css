@@ -1,5 +1,6 @@
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/space-grotesk";
+@import "./theme.css";
 
 @tailwind base;
 @tailwind components;
@@ -9,7 +10,6 @@
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
-    color-scheme: dark;
   }
   body {
     @apply bg-surface-container-lowest font-sans text-body-md text-on-surface;
@@ -38,10 +38,10 @@
   textarea {
     @apply bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/60;
   }
-  /* Native date/time pickers use dark chrome. */
-  input[type="date"]::-webkit-calendar-picker-indicator,
-  input[type="time"]::-webkit-calendar-picker-indicator,
-  input[type="month"]::-webkit-calendar-picker-indicator {
+  /* Native date/time picker icons follow the theme. */
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="month"]::-webkit-calendar-picker-indicator {
     filter: invert(0.8);
   }
   option {

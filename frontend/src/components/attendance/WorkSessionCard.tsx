@@ -1,22 +1,14 @@
 "use client";
 
-import { Clock, Coffee, History, LogIn, LogOut, Moon, Play, RotateCcw, Square, Timer } from "@/components/ui/icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, StatusBadge } from "@/components/ui/Display";
-import { useToast } from "@/components/ui/Overlay";
+import { History, LocateFixed, LocationOff, MapPin, Monitor, RotateCcw, Timer } from "@/components/ui/icons";
 import { Alert, ErrorState, Loading } from "@/components/ui/States";
-import { ApiError, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useConnection } from "@/lib/connection";
 import { fmtDate, fmtDateTime, fmtTime } from "@/lib/format";
-import { toApiError } from "@/lib/hooks";
-import { UNREACHABLE_CODES, newEventId } from "@/lib/offline";
-import type { SyncEventType, WorkSessionState } from "@/lib/types";
 import {
-  clockOffset,
   currentBreakSeconds,
-  deriveSession,
   fmtClock,
   fmtDuration,
   hasActiveSession,
@@ -25,7 +17,8 @@ import {
   workedSeconds,
   type Phase,
 } from "@/lib/worksession";
-import { CheckoutGuard } from "./CheckoutGuard";
+import { attendanceActions } from "./AttendanceActions";
+import { useServerNow, useWorkSession, type WorkSessionValue } from "./WorkSessionProvider";
 
 const PHASE_LABEL: Record<Phase, string> = {
   DISABLED: "Self check-in off",
@@ -42,13 +35,6 @@ const PHASE_TONE: Record<Phase, "neutral" | "green" | "amber" | "blue" | "dark">
   ON_BREAK: "amber",
   CHECKED_OUT: "neutral",
   OVERTIME: "blue",
-};
-
-const ACTIONS: Record<SyncEventType, { path: string; done: string }> = {
-  BREAK_START: { path: "/api/attendance/breaks/start/", done: "Break started." },
-  BREAK_END: { path: "/api/attendance/breaks/end/", done: "Welcome back — break ended." },
-  OVERTIME_START: { path: "/api/attendance/overtime/start/", done: "Overtime started." },
-  OVERTIME_END: { path: "/api/attendance/overtime/end/", done: "Overtime ended." },
 };
 
 function Stat({
@@ -79,13 +65,14 @@ function Stat({
   );
 }
 
-/** Daily break allowance from Settings (e.g. 60 min); null when no limit is configured. */
-function allowanceHint(allowanceMinutes: number | null | undefined, breakSeconds: number) {
+const minutes = (seconds: number) => `${Math.floor(Math.max(0, seconds) / 60)} min`;
+
+/** Break used / remaining for the day (server allowance; a running break is capped at it). */
+function breakAllowance(allowanceMinutes: number | null, usedSeconds: number) {
   if (!allowanceMinutes) return null;
-  const left = allowanceMinutes * 60 - breakSeconds;
-  return left >= 0
-    ? { text: `${fmtDuration(left)} left of ${allowanceMinutes} min allowance`, tone: "muted" as const }
-    : { text: `${fmtDuration(-left)} over the ${allowanceMinutes} min allowance`, tone: "warning" as const };
+  const allowance = allowanceMinutes * 60;
+  const used = Math.min(usedSeconds, allowance);
+  return { used, remaining: allowance - used, allowance };
 }
 
 const SEEN_KEY = (userId: number) => `nexvra.session-seen.${userId}`;
@@ -106,186 +93,121 @@ function markSessionSeen(userId: number) {
   }
 }
 
+function LocationPanel({ ws }: { ws: WorkSessionValue }) {
+  const { verdict, status } = ws.location;
+  const radius = ws.state?.workplace.radius_m ?? 20;
+  if (verdict.kind === "not-required") return null;
+  if (verdict.kind === "inside") {
+    return (
+      <p className="flex items-center gap-2 text-body-md text-primary-fixed" data-testid="geofence-status" data-verdict="inside">
+        <MapPin className="h-4 w-4" /> You are at the workplace (about {Math.round(verdict.distance)} m away). Check-in is available.
+      </p>
+    );
+  }
+  if (verdict.kind === "outside") {
+    return (
+      <Alert tone="warning">
+        <span data-testid="geofence-status" data-verdict="outside">
+          <strong>You are outside the workplace check-in area.</strong> You are about {Math.round(verdict.distance)} m away;
+          check-in is allowed within {radius} m.
+        </span>
+      </Alert>
+    );
+  }
+  if (verdict.kind === "imprecise") {
+    return (
+      <Alert tone="warning">
+        <span data-testid="geofence-status" data-verdict="imprecise">
+          Your location is not precise enough yet (±{Math.round(verdict.accuracy)} m). Turn on GPS / Wi-Fi or move near a window.
+        </span>
+      </Alert>
+    );
+  }
+  const text: Record<string, string> = {
+    idle: "Your location is needed to check in at the workplace.",
+    locating: "Finding your location…",
+    denied: "Location permission is blocked. Allow location for this site to check in at the workplace.",
+    unavailable: "Your location could not be determined. Check that location services are on.",
+    timeout: "Finding your location is taking long. Try again.",
+    unsupported: "This browser cannot share its location, so office check-in is not possible here.",
+    ok: "Finding your location…",
+  };
+  const problem = ["denied", "unavailable", "timeout", "unsupported"].includes(status);
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-body-md text-on-surface-variant" data-testid="geofence-status" data-verdict="unknown">
+      {problem ? <LocationOff className="h-4 w-4 text-warning" /> : <LocateFixed className="h-4 w-4" />}
+      <span>{text[status] ?? text.idle}</span>
+      {status !== "locating" && status !== "unsupported" && (
+        <Button size="sm" variant="secondary" onClick={ws.requestLocation}>
+          {problem ? "Try again" : "Share location"}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 /**
- * Today's work session: check-in/out, breaks with a live timer, overtime with a live timer,
- * offline queueing and session recovery. Server state is authoritative; this component only
- * displays it (plus clearly-marked queued offline actions).
+ * Today's work session (check-in/out, breaks, overtime, WFH) rendered from the shared work
+ * session. The same actions are available in the header; both use the server state.
  */
 export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
   const { me } = useAuth();
-  const conn = useConnection();
-  const toast = useToast();
-  const [state, setState] = useState<WorkSessionState | null>(null);
-  const [offset, setOffset] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<ApiError | null>(null);
-  const [actionError, setActionError] = useState<ApiError | null>(null);
-  const [staleSince, setStaleSince] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [now, setNow] = useState(() => Date.now());
-  const [guardOpen, setGuardOpen] = useState(false);
+  const ws = useWorkSession();
   const [showHistory, setShowHistory] = useState(false);
   const [recovery, setRecovery] = useState(false);
   const recoveryChecked = useRef(false);
-  const { queue, online, reportUnreachable, syncVersion } = conn;
+  const lastVersion = useRef<number | null>(null);
+  const serverNow = useServerNow(ws?.offset ?? 0);
+  const state = ws?.state ?? null;
+  const view = ws?.view;
+  const phase = view?.phase;
 
-  const apply = useCallback(
-    (next: WorkSessionState, receivedAt = Date.now()) => {
-      setState(next);
-      setOffset(clockOffset(next.server_time, receivedAt));
-      setStaleSince(null);
-      queue?.saveSnapshot(next);
-    },
-    [queue],
-  );
-
-  const load = useCallback(async () => {
-    try {
-      const next = await api<WorkSessionState>("/api/attendance/today/");
-      apply(next);
-      setLoadError(null);
-    } catch (e) {
-      const err = toApiError(e);
-      const snapshot = queue?.loadSnapshot();
-      if (UNREACHABLE_CODES.has(err.code)) reportUnreachable();
-      if (UNREACHABLE_CODES.has(err.code) && snapshot) {
-        setState(snapshot.state);
-        setStaleSince(snapshot.savedAt);
-        setLoadError(null);
-      } else {
-        setLoadError(err);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [apply, queue, reportUnreachable]);
-
-  // Initial load, after every successful synchronisation, and whenever we come back online.
+  // Pages listening for changes (history tables) refresh after every state change.
   useEffect(() => {
-    void load();
-  }, [load, syncVersion, online]);
+    if (!ws) return;
+    if (lastVersion.current !== null && lastVersion.current !== ws.version) onChange?.();
+    lastVersion.current = ws.version;
+  }, [ws, ws?.version, onChange]);
 
-  // Returning to a minimised / background tab: refresh from the server.
+  // Opening the attendance card is the moment to look up the location for office check-in.
+  const requestLocation = ws?.requestLocation;
   useEffect(() => {
-    const onVisible = () => document.visibilityState === "visible" && void load();
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [load]);
-
-  // Timers are derived from timestamps; this tick only re-renders.
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const view = useMemo(() => deriveSession(state, conn.pending), [state, conn.pending]);
-  const serverNow = now + offset;
+    if (phase === "NOT_CHECKED_IN" && state?.workplace.configured) requestLocation?.();
+  }, [phase, state?.workplace.configured, requestLocation]);
 
   // "Active work session detected" once per browser session (e.g. after the browser was closed).
   useEffect(() => {
-    if (!me || !state || recoveryChecked.current) return;
+    if (!me || !state || !view || recoveryChecked.current) return;
     recoveryChecked.current = true;
-    if (!sessionSeen(me.id) && (hasActiveSession(view) || conn.pending.length > 0)) setRecovery(true);
+    if (!sessionSeen(me.id) && hasActiveSession(view)) setRecovery(true);
     else markSessionSeen(me.id);
-  }, [me, state, view, conn.pending.length]);
+  }, [me, state, view]);
 
-  async function sessionAction(type: SyncEventType) {
-    const id = newEventId();
-    const occurredAt = new Date(Date.now() + offset).toISOString();
-    setActionError(null);
-    if (!online || conn.pending.length > 0) {
-      // Offline, or earlier offline actions still syncing: queue it so events stay in order.
-      conn.enqueue(type, occurredAt, id);
-      if (online) void conn.syncNow();
-      else toast("Saved on this device — it will sync when you're back online.");
-      return;
-    }
-    setBusy(type);
-    try {
-      const res = await api<{ duplicate: boolean; state: WorkSessionState }>(ACTIONS[type].path, {
-        body: { client_event_id: id },
-      });
-      apply(res.state);
-      toast(ACTIONS[type].done);
-      onChange?.();
-    } catch (e) {
-      const err = toApiError(e);
-      if (UNREACHABLE_CODES.has(err.code)) {
-        // Same id: if the request did reach the server, the later sync is a harmless duplicate.
-        reportUnreachable();
-        conn.enqueue(type, occurredAt, id);
-        toast("Connection lost — saved on this device and will sync automatically.");
-      } else {
-        setActionError(err);
-      }
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function checkIn() {
-    setActionError(null);
-    setBusy("check-in");
-    try {
-      await api("/api/attendance/check-in/", { method: "POST" });
-      toast("Checked in.");
-      await load();
-      onChange?.();
-    } catch (e) {
-      setActionError(toApiError(e));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function checkOut() {
-    setActionError(null);
-    setBusy("check-out");
-    try {
-      await api("/api/attendance/check-out/", { method: "POST" });
-      setGuardOpen(false);
-      toast("Checked out.");
-      await load();
-      onChange?.();
-    } catch (e) {
-      const err = toApiError(e);
-      if (err.code === "checkout_blocked_by_tasks") setGuardOpen(true);
-      else {
-        setGuardOpen(false);
-        setActionError(err);
-      }
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  function requestCheckOut() {
-    if (state && state.blocking_tasks > 0 && !state.checkout_exempt) setGuardOpen(true);
-    else void checkOut();
-  }
-
-  if (loading && !state) {
+  if (!ws?.enabled) return null;
+  if (ws.loading && !state) {
     return (
       <Card>
         <Loading label="Loading your work session…" />
       </Card>
     );
   }
-  if (loadError && !state) {
+  if (ws.loadError && !state) {
     return (
       <Card>
-        <ErrorState error={loadError} onRetry={() => void load()} />
+        <ErrorState error={ws.loadError} onRetry={() => void ws.load()} />
       </Card>
     );
   }
-  if (!state) return null;
+  if (!state || !view || !phase) return null;
 
-  const phase = view.phase;
   const record = state.record;
   const breakNow = currentBreakSeconds(view, serverNow);
-  const breakSeconds = totalBreakSeconds(view, serverNow);
-  const breakAllowance = allowanceHint(state.break_allowance_minutes, breakSeconds);
-  const needsConnection = !online;
+  const allowance = breakAllowance(state.break_allowance_minutes, totalBreakSeconds(view, serverNow));
+  const actions = attendanceActions(ws);
+  const lastOvertime = state.overtime[state.overtime.length - 1];
+  const openOt = state.open_overtime_request;
+  const autoCheckout =
+    record?.checkout_reason === "GEO_FENCE_EXIT" || record?.checkout_reason === "INACTIVITY_TIMEOUT" ? record : null;
 
   let headline = { label: "Worked today", seconds: workedSeconds(view, serverNow), testId: "work-timer" };
   if (phase === "ON_BREAK") headline = { label: "Break timer", seconds: breakNow, testId: "break-timer" };
@@ -299,13 +221,14 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
         actions={
           <div className="flex items-center gap-2">
             {view.pendingEvents > 0 && <Badge tone="amber">{view.pendingEvents} waiting to sync</Badge>}
+            {record?.check_in && <Badge tone={record.mode === "WORK_FROM_HOME" ? "blue" : "neutral"}>{record.mode === "WORK_FROM_HOME" ? "Work from home" : "Office"}</Badge>}
             <span data-testid="session-phase" data-phase={phase}>
               <Badge tone={PHASE_TONE[phase]}>{PHASE_LABEL[phase]}</Badge>
             </span>
           </div>
         }
       />
-      <div className="space-y-5 p-5">
+      <div className="space-y-5 p-space-lg">
         {recovery && me && (
           <Alert tone="info">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -313,8 +236,8 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
                 <strong>Active work session detected.</strong>{" "}
                 {view.checkIn && `Checked in at ${fmtTime(view.checkIn)}`}
                 {phase === "ON_BREAK" && view.breakStart && ` · on break since ${fmtTime(view.breakStart)}`}
-                {phase === "OVERTIME" && view.overtimeStart && ` · overtime running since ${fmtTime(view.overtimeStart)}`}
-                {conn.pending.length > 0 && ` · ${conn.pending.length} offline action(s) waiting to sync`}. Your timers continue from the server's records.
+                {phase === "OVERTIME" && view.overtimeStart && ` · overtime running since ${fmtTime(view.overtimeStart)}`}. Your
+                timers continue from the server&apos;s records.
               </span>
               <Button
                 size="sm"
@@ -323,7 +246,7 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
                 onClick={() => {
                   markSessionSeen(me.id);
                   setRecovery(false);
-                  void load();
+                  void ws.load();
                 }}
               >
                 Resume session
@@ -331,10 +254,32 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
             </div>
           </Alert>
         )}
-        {staleSince && (
-          <Alert tone="warning">Offline — showing your last known session from {fmtDateTime(staleSince)}. It refreshes automatically when the connection returns.</Alert>
+        {ws.staleSince && (
+          <Alert tone="warning">Offline — showing your last known session from {fmtDateTime(ws.staleSince)}. It refreshes automatically when the connection returns.</Alert>
         )}
-        {actionError && <Alert>{actionError.message}</Alert>}
+        {ws.actionError && <Alert>{ws.actionError.message}</Alert>}
+        {autoCheckout?.check_out && (
+          <Alert tone="warning">
+            <span data-testid="auto-checkout">
+              You were checked out automatically at {fmtTime(autoCheckout.check_out)}
+              {autoCheckout.checkout_reason === "GEO_FENCE_EXIT"
+                ? ` because you left the workplace area${autoCheckout.check_out_distance_m != null ? ` (about ${autoCheckout.check_out_distance_m} m away)` : ""}.`
+                : ` after ${state.inactivity_timeout_minutes ?? 30} minutes without activity.`}
+            </span>
+          </Alert>
+        )}
+
+        {phase === "NOT_CHECKED_IN" && (
+          <>
+            {state.wfh_today?.status === "APPROVED" && (
+              <Alert tone="success">Work from home is approved for today. Use “WFH check in” to start; no location is needed.</Alert>
+            )}
+            {state.wfh_today?.status === "PENDING" && (
+              <Alert tone="info">Your work-from-home request for today is waiting for HR. You can still check in at the office.</Alert>
+            )}
+            <LocationPanel ws={ws} />
+          </>
+        )}
 
         {phase !== "NOT_CHECKED_IN" && phase !== "DISABLED" && (
           <div
@@ -353,69 +298,92 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
           <Stat label="Check-in" value={fmtTime(view.checkIn)} />
           <Stat label="Check-out" value={fmtTime(view.checkOut)} />
           <Stat
-            label="Total break"
-            value={fmtDuration(breakSeconds)}
+            label="Break used"
+            value={fmtDuration(totalBreakSeconds(view, serverNow))}
             testId="total-break"
-            hint={breakAllowance?.text}
-            hintTone={breakAllowance?.tone}
+            hint={allowance ? (allowance.remaining > 0 ? `${minutes(allowance.remaining)} remaining of ${minutes(allowance.allowance)}` : "Break unavailable for the day") : undefined}
+            hintTone={allowance && allowance.remaining === 0 ? "warning" : "muted"}
           />
           <Stat label="Actual working" value={fmtDuration(workedSeconds(view, serverNow))} testId="actual-working" />
           <Stat label="Overtime" value={fmtDuration(overtimeSeconds(view, serverNow))} testId="overtime-total" />
         </div>
+        {allowance && phase !== "NOT_CHECKED_IN" && (
+          <p className="text-body-md text-on-surface" data-testid="break-allowance">
+            Break used: <strong>{minutes(allowance.used)}</strong> · Break remaining:{" "}
+            <strong className={allowance.remaining === 0 ? "text-warning" : ""}>{minutes(allowance.remaining)}</strong>
+          </p>
+        )}
 
         {record && (
           <div className="flex flex-wrap gap-2">
             <StatusBadge status={record.status} />
             {record.is_late && <Badge tone="amber">Late</Badge>}
+            {record.check_in_distance_m != null && <Badge>{record.check_in_distance_m} m from workplace at check-in</Badge>}
           </div>
         )}
 
         {phase === "DISABLED" ? (
           <Alert tone="info">Self check-in is turned off in company settings. HR records attendance.</Alert>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {phase === "NOT_CHECKED_IN" && (
-              <Button icon={<LogIn className="h-4 w-4" />} loading={busy === "check-in"} disabled={needsConnection} onClick={() => void checkIn()}>
-                Check in
+          <div className="flex flex-wrap gap-2" data-testid="session-actions">
+            {actions.map((a) => (
+              <Button
+                key={a.key}
+                variant={a.primary ? "primary" : "secondary"}
+                icon={a.icon}
+                loading={a.busy}
+                disabled={a.disabled}
+                title={a.title}
+                onClick={a.onClick}
+              >
+                {a.label}
               </Button>
-            )}
-            {phase === "WORKING" && (
-              <>
-                <Button variant="secondary" icon={<Coffee className="h-4 w-4" />} loading={busy === "BREAK_START"} onClick={() => void sessionAction("BREAK_START")}>
-                  Start break
-                </Button>
-                <Button variant="dark" icon={<LogOut className="h-4 w-4" />} loading={busy === "check-out"} disabled={needsConnection || view.pendingEvents > 0} onClick={requestCheckOut}>
-                  Check out
-                </Button>
-              </>
-            )}
-            {phase === "ON_BREAK" && (
-              <Button icon={<Play className="h-4 w-4" />} loading={busy === "BREAK_END"} onClick={() => void sessionAction("BREAK_END")}>
-                Back to work
+            ))}
+          </div>
+        )}
+
+        {openOt && (
+          <Alert tone={openOt.status === "APPROVED" ? "success" : "info"}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span data-testid="overtime-request-status">
+                {openOt.status === "REQUESTED"
+                  ? "Your overtime request is waiting for HR approval."
+                  : `Overtime approved${openOt.decided_by_name ? ` by ${openOt.decided_by_name}` : ""} — you can start it now.`}
+              </span>
+              <Button size="sm" variant="secondary" loading={ws.busy === "overtime-cancel"} onClick={() => void ws.cancelOvertime(openOt.id)}>
+                Cancel request
               </Button>
-            )}
-            {phase === "CHECKED_OUT" && (
-              <>
-                <p className="flex items-center gap-2 text-sm text-on-surface-variant">
-                  <Clock className="h-4 w-4" /> Normal work is done for today.
-                </p>
-                <Button variant="secondary" icon={<Moon className="h-4 w-4" />} loading={busy === "OVERTIME_START"} onClick={() => void sessionAction("OVERTIME_START")}>
-                  Start Overtime
-                </Button>
-              </>
-            )}
-            {phase === "OVERTIME" && (
-              <Button variant="dark" icon={<Square className="h-4 w-4" />} loading={busy === "OVERTIME_END"} onClick={() => void sessionAction("OVERTIME_END")}>
-                End Overtime
+            </div>
+          </Alert>
+        )}
+        {phase === "CHECKED_OUT" && !openOt && lastOvertime?.status === "AUTO_STOPPED" && lastOvertime.ended_at && (
+          <Alert tone="warning">
+            Overtime stopped automatically at {fmtTime(lastOvertime.ended_at)} after a period without activity. To continue, send a new overtime request.
+          </Alert>
+        )}
+        {!ws.online && (phase === "NOT_CHECKED_IN" || phase === "WORKING") && (
+          <p className="text-xs text-on-surface-variant">Check-in and check-out need a connection (the server verifies them). Breaks work offline.</p>
+        )}
+        {phase === "WORKING" && view.pendingEvents > 0 && ws.online && (
+          <p className="text-xs text-on-surface-variant">Check-out is available once your offline actions have synced.</p>
+        )}
+        {(phase === "WORKING" || phase === "OVERTIME") && state.inactivity_timeout_minutes && (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
+            <span>
+              Activity check: {state.inactivity_timeout_minutes} minutes without any activity in Nexvra HRMS ends the session automatically. Only the
+              time of your last activity is recorded — never what you type or view.
+            </span>
+            {ws.activity.systemIdleSupported && !ws.activity.systemIdleEnabled && (
+              <Button size="sm" variant="ghost" icon={<Monitor className="h-4 w-4" />} onClick={() => void ws.activity.enableSystemIdle()}>
+                Also count activity in other apps
               </Button>
             )}
           </div>
         )}
-        {needsConnection && (phase === "NOT_CHECKED_IN" || phase === "WORKING") && (
-          <p className="text-xs text-on-surface-variant">Check-in and check-out need a connection (the server verifies them). Breaks work offline.</p>
-        )}
-        {phase === "WORKING" && view.pendingEvents > 0 && online && (
-          <p className="text-xs text-on-surface-variant">Check-out is available once your offline actions have synced.</p>
+        {record?.location_issue && phase === "WORKING" && record.mode === "OFFICE" && (
+          <p className="text-xs text-warning">
+            Location monitoring problem ({record.location_issue.toLowerCase().replace("_", " ")}). This is recorded for HR; it does not check you out.
+          </p>
         )}
 
         {view.breaks.length > 0 && (
@@ -424,7 +392,7 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
               <History className="h-4 w-4" /> Break history ({view.breaks.length})
             </button>
             {showHistory && (
-              <ul className="mt-3 divide-y divide-surface-container-high/40 rounded-lg border border-surface-container-high/40" aria-label="Break history">
+              <ul className="mt-3 divide-y divide-surface-container-high/40 rounded-lg bg-surface-container" aria-label="Break history">
                 {view.breaks.map((b, i) => (
                   <li key={`${b.start}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                     <span className="flex items-center gap-2 text-on-surface">
@@ -442,13 +410,6 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
           </div>
         )}
       </div>
-
-      <CheckoutGuard
-        open={guardOpen}
-        onClose={() => setGuardOpen(false)}
-        onCheckout={() => void checkOut()}
-        checkingOut={busy === "check-out"}
-      />
     </Card>
   );
 }

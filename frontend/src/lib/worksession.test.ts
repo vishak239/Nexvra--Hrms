@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { WorkSessionState } from "./types";
+import { breakSession, overtimeSession, record, session } from "@/test/fixtures";
+import type { AttendanceRecord, WorkSessionState } from "./types";
 import {
   clockOffset,
   currentBreakSeconds,
@@ -16,41 +17,13 @@ import {
 const T = (hhmm: string) => `2026-10-02T${hhmm}:00Z`;
 const at = (hhmm: string) => Date.parse(T(hhmm));
 
-function state(overrides: Partial<WorkSessionState> = {}, record: Partial<NonNullable<WorkSessionState["record"]>> | null = {}): WorkSessionState {
-  return {
-    date: "2026-10-02",
+function state(overrides: Partial<WorkSessionState> = {}, rec: Partial<AttendanceRecord> | null = {}): WorkSessionState {
+  return session("none", {
     server_time: T("12:00"),
-    self_attendance_enabled: true,
     break_allowance_minutes: null,
-    record:
-      record === null
-        ? null
-        : {
-            id: 1,
-            employee: { id: 4, employee_code: "E-4", full_name: "Demo" },
-            date: "2026-10-02",
-            check_in: T("09:00"),
-            check_out: null,
-            status: "PRESENT",
-            is_late: false,
-            worked_minutes: null,
-            session_minutes: null,
-            break_minutes: 0,
-            total_break_seconds: 0,
-            break_over_allowance_minutes: null,
-            source: "SELF",
-            remarks: "",
-            updated_at: T("09:00"),
-            ...record,
-          },
-    breaks: [],
-    active_break: null,
-    overtime: [],
-    active_overtime: null,
-    blocking_tasks: 0,
-    checkout_exempt: false,
+    record: rec === null ? null : record({ employee: { id: 4, employee_code: "E-4", full_name: "Demo" }, check_in: T("09:00"), updated_at: T("09:00"), ...rec }),
     ...overrides,
-  };
+  });
 }
 
 const queued = (type: QueuedEvent["type"], hhmm: string, id = `${type}-${hhmm}`): QueuedEvent => ({ id, type, occurredAt: T(hhmm), attempts: 0 });
@@ -63,10 +36,7 @@ describe("break timer and working time", () => {
   it("counts a running break and excludes it from worked time", () => {
     const view = deriveSession(
       state({
-        active_break: {
-          id: 9, employee: { id: 4, employee_code: "E-4", full_name: "Demo" }, attendance: 1, date: "2026-10-02",
-          started_at: T("12:00"), ended_at: null, duration_seconds: null, status: "ACTIVE", source: "ONLINE", created_at: T("12:00"),
-        },
+        active_break: breakSession({ id: 9, started_at: T("12:00"), created_at: T("12:00") }),
       }, { total_break_seconds: 600 }),
     );
     expect(view.phase).toBe("ON_BREAK");
@@ -89,11 +59,7 @@ describe("overtime timer", () => {
     const view = deriveSession(
       state(
         {
-          active_overtime: {
-            id: 3, employee: { id: 4, employee_code: "E-4", full_name: "Demo" }, attendance: 1, date: "2026-10-02",
-            started_at: T("18:00"), ended_at: null, duration_seconds: null, status: "ACTIVE", trigger: "AFTER_CHECKOUT",
-            source: "ONLINE", created_at: T("18:00"), updated_at: T("18:00"),
-          },
+          active_overtime: overtimeSession({ id: 3, started_at: T("18:00"), created_at: T("18:00"), updated_at: T("18:00") }),
           overtime: [],
         },
         { check_out: T("17:00") },

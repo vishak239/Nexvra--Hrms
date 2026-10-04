@@ -4,6 +4,7 @@ import { CalendarCheck, Pencil, Plus, Trash2 } from "@/components/ui/icons";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { OvertimeTable } from "@/components/attendance/OvertimeTable";
+import { OvertimeRequestsPanel, WfhRequestsPanel } from "@/components/attendance/RequestPanels";
 import { WorkSessionCard } from "@/components/attendance/WorkSessionCard";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, PageHeader, StatusBadge } from "@/components/ui/Display";
@@ -18,7 +19,7 @@ import { tryApi, useAction, useResource } from "@/lib/hooks";
 import type { AttendanceRecord, Department, Employee, EmployeeRef, OvertimeSession, Paginated } from "@/lib/types";
 import { BreakTotal } from "@/components/attendance/BreakTotal";
 
-type Tab = "mine" | "daily" | "records";
+type Tab = "mine" | "daily" | "records" | "wfh" | "overtime";
 
 function monthStart() {
   return `${todayISO().slice(0, 8)}01`;
@@ -491,6 +492,8 @@ function AttendanceContent() {
     ...(hasSelf ? [{ value: "mine" as Tab, label: "My attendance" }] : []),
     ...(hasTeam ? [{ value: "daily" as Tab, label: can("attendance.view_all") ? "Daily status" : "Team today" }] : []),
     ...(hasTeam ? [{ value: "records" as Tab, label: "Records" }] : []),
+    ...(hasSelf || can("wfh.approve") ? [{ value: "wfh" as Tab, label: "Work from home" }] : []),
+    ...(hasSelf || hasTeam || can("overtime.approve") ? [{ value: "overtime" as Tab, label: "Overtime" }] : []),
   ];
   const requested = params.get("tab") as Tab | null;
   const [tab, setTab] = useState<Tab>(tabs.find((t) => t.value === requested)?.value ?? tabs[0]?.value ?? "mine");
@@ -498,11 +501,13 @@ function AttendanceContent() {
   if (tabs.length === 0) return <NoAccess />;
   return (
     <>
-      <PageHeader title="Attendance" description="Check-ins, daily status and attendance history." />
+      <PageHeader title="Attendance" description="Check-ins, breaks, work from home, overtime and attendance history." />
       {tabs.length > 1 && <Tabs tabs={tabs} value={tab} onChange={setTab} />}
       {tab === "mine" && me?.employee && <MyAttendance employeeId={me.employee.id} />}
       {tab === "daily" && <DailyStatus />}
       {tab === "records" && <AllRecords />}
+      {tab === "wfh" && <WfhRequestsPanel />}
+      {tab === "overtime" && <OvertimeRequestsPanel />}
     </>
   );
 }

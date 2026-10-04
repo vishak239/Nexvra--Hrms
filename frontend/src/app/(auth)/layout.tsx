@@ -4,7 +4,7 @@ import { NexvraLogo } from "@/components/brand/NexvraLogo";
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-screen bg-surface-container-lowest lg:grid-cols-2">
-      <div className="relative hidden flex-col justify-between border-r border-surface-container-high/40 bg-black p-12 lg:flex">
+      <div className="dark relative hidden flex-col justify-between border-r border-surface-container-high/40 bg-black p-12 lg:flex">
         <div className="flex items-center gap-1">
           <NexvraLogo height={56} />
           <div className="-ml-1.5 flex flex-col">
@@ -26,7 +26,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
       <div className="flex flex-col">
-        <div className="flex items-center gap-1 border-b border-surface-container-high/40 bg-black px-space-lg py-2 lg:hidden">
+        <div className="dark flex items-center gap-1 border-b border-surface-container-high/40 bg-black px-space-lg py-2 lg:hidden">
           <NexvraLogo height={44} />
           <span className="-ml-1 font-headline-sm text-headline-sm font-semibold tracking-tight text-primary">NEXVRA HRMS</span>
         </div>

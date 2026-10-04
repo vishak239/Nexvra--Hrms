@@ -4,8 +4,11 @@ import { Bell, KeyRound, LogOut, Menu, MessageSquare, UserRound, X } from "@/com
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AttendanceActions } from "@/components/attendance/AttendanceActions";
+import { WorkSessionProvider } from "@/components/attendance/WorkSessionProvider";
 import { NexvraLogo } from "@/components/brand/NexvraLogo";
 import { ConnectionIndicator, OfflineBanner } from "@/components/connection/ConnectionIndicator";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Avatar } from "@/components/ui/Display";
 import { ErrorState, Loading, NoAccess } from "@/components/ui/States";
 import { api } from "@/lib/api";
@@ -20,7 +23,8 @@ function Sidebar({ me, onNavigate }: { me: Me; onNavigate?: () => void }) {
   const router = useRouter();
   const photo = me.employee?.has_photo ? `/api/employees/${me.employee.id}/photo/` : null;
   return (
-    <div className="flex h-full flex-col border-r border-surface-container-high/40 bg-black">
+    // `dark`: the sidebar stays black in both themes (the official logo has a black background).
+    <div className="dark flex h-full flex-col border-r border-surface-container-high/40 bg-black text-on-surface">
       <div className="flex h-16 items-center border-b border-surface-container-high/40 px-space-md">
         <Link href="/dashboard" onClick={onNavigate} className="flex items-center gap-1" aria-label="Nexvra HRMS home">
           <NexvraLogo height={44} />
@@ -237,6 +241,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <ConnectionProvider userId={me.id}>
+    <WorkSessionProvider>
     <div className="min-h-screen">
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
         <Sidebar me={me} />
@@ -268,11 +273,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Menu className="h-6 w-6" />
           </button>
           <HeaderTrail />
-          <div className="flex items-center gap-space-sm sm:gap-space-md">
+          <div className="flex items-center gap-space-sm">
+            <AttendanceActions />
             <ConnectionIndicator />
-            <span className="hidden rounded-lg border border-surface-container-high bg-surface-container-low px-space-sm py-1 font-label-sm text-label-sm text-primary-fixed md:inline-flex">
+            <span className="hidden rounded-lg border border-surface-container-high bg-surface-container-low px-space-sm py-1 font-label-sm text-label-sm text-primary-fixed 2xl:inline-flex">
               {me.role.name}
             </span>
+            <ThemeToggle />
             {me.permissions.includes("messages.use") && <MessagesLink />}
             <NotificationBell />
             <UserMenu me={me} />
@@ -282,6 +289,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="mx-auto w-full max-w-[1600px] px-margin py-space-xl sm:px-margin-md lg:px-margin-lg">{children}</main>
       </div>
     </div>
+    </WorkSessionProvider>
     </ConnectionProvider>
   );
 }

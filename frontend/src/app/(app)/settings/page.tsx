@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "@/components/ui/icons";
+import { LocateFixed, Pencil, Plus, Trash2 } from "@/components/ui/icons";
 import { useEffect, useState, type FormEvent } from "react";
 import { RequirePermission } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { MONTHS, WEEKDAYS } from "@/lib/format";
 import { tryApi, useAction, useResource } from "@/lib/hooks";
+import { currentLocation } from "@/lib/location";
 import type { Company, CompanySettings, Department, Designation, Employee, Paginated } from "@/lib/types";
 
 type Tab = "company" | "policies" | "departments" | "designations";
@@ -74,6 +75,12 @@ type PolicyForm = {
   work_end_time: string;
   late_grace_minutes: string;
   break_allowance_minutes: string;
+  workplace_latitude: string;
+  workplace_longitude: string;
+  geofence_radius_m: string;
+  geofence_max_accuracy_m: string;
+  inactivity_timeout_minutes: string;
+  overtime_requires_approval: boolean;
   half_day_min_hours: string;
   full_day_min_hours: string;
   self_attendance_enabled: boolean;
@@ -92,6 +99,12 @@ function toForm(s: CompanySettings): PolicyForm {
     work_end_time: s.work_end_time?.slice(0, 5) ?? "",
     late_grace_minutes: s.late_grace_minutes?.toString() ?? "",
     break_allowance_minutes: s.break_allowance_minutes?.toString() ?? "",
+    workplace_latitude: s.workplace_latitude ?? "",
+    workplace_longitude: s.workplace_longitude ?? "",
+    geofence_radius_m: s.geofence_radius_m.toString(),
+    geofence_max_accuracy_m: s.geofence_max_accuracy_m.toString(),
+    inactivity_timeout_minutes: s.inactivity_timeout_minutes?.toString() ?? "",
+    overtime_requires_approval: s.overtime_requires_approval,
     half_day_min_hours: s.half_day_min_hours ?? "",
     full_day_min_hours: s.full_day_min_hours ?? "",
     self_attendance_enabled: s.self_attendance_enabled,
@@ -110,6 +123,7 @@ function PoliciesTab() {
   const edit = can("settings.manage");
   const { data, error, loading, reload } = useResource<CompanySettings>("/api/settings/");
   const [form, setForm] = useState<PolicyForm | null>(null);
+  const [locating, setLocating] = useState(false);
   const save = useAction();
   useEffect(() => {
     if (data) setForm(toForm(data));
@@ -129,6 +143,12 @@ function PoliciesTab() {
       work_end_time: orNull(form.work_end_time),
       late_grace_minutes: orNull(form.late_grace_minutes),
       break_allowance_minutes: orNull(form.break_allowance_minutes),
+      workplace_latitude: orNull(form.workplace_latitude.trim()),
+      workplace_longitude: orNull(form.workplace_longitude.trim()),
+      geofence_radius_m: form.geofence_radius_m || "20",
+      geofence_max_accuracy_m: form.geofence_max_accuracy_m || "100",
+      inactivity_timeout_minutes: orNull(form.inactivity_timeout_minutes),
+      overtime_requires_approval: form.overtime_requires_approval,
       half_day_min_hours: orNull(form.half_day_min_hours),
       full_day_min_hours: orNull(form.full_day_min_hours),
       self_attendance_enabled: form.self_attendance_enabled,
@@ -149,8 +169,8 @@ function PoliciesTab() {
   return (
     <form onSubmit={onSubmit} className="space-y-6" noValidate>
       <Alert tone="info">
-        Nexvra&apos;s HR policies have not been specified, so every rule here is optional. <strong>Leave a field empty and that rule is not applied.</strong>{" "}
-        Changes are recorded in the audit log.
+        Owner policies already set: 60-minute daily break, 20 m check-in radius, 30 minutes of inactivity, overtime approval.{" "}
+        <strong>Leave any other field empty and that rule is not applied.</strong> Changes are recorded in the audit log.
       </Alert>
       <FormError error={save.error} />
 
@@ -200,6 +220,63 @@ function PoliciesTab() {
             <TextField label="Daily break allowance (minutes)" type="number" min="1" max="480" value={form.break_allowance_minutes} onChange={(e) => set("break_allowance_minutes", e.target.value)} error={f.break_allowance_minutes} hint="e.g. 60 for a 1-hour break. Empty = no limit." disabled={!edit} />
           </div>
           <CheckboxField label="Allow employees to check in and out themselves" checked={form.self_attendance_enabled} onChange={(e) => set("self_attendance_enabled", e.target.checked)} disabled={!edit} />
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Workplace & monitoring"
+          description="Office check-in is only possible within the radius of this location. The server checks it; the browser only displays it."
+          actions={
+            edit && (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                icon={<LocateFixed className="h-4 w-4" />}
+                loading={locating}
+                onClick={async () => {
+                  setLocating(true);
+                  try {
+                    const fix = await currentLocation();
+                    setForm((current) =>
+                      current && {
+                        ...current,
+                        workplace_latitude: fix.latitude.toFixed(6),
+                        workplace_longitude: fix.longitude.toFixed(6),
+                      },
+                    );
+                    toast(`Location captured (±${Math.round(fix.accuracy)} m). Save to apply.`);
+                  } catch {
+                    toast("Your location could not be read. Allow location access or enter the coordinates.", "error");
+                  } finally {
+                    setLocating(false);
+                  }
+                }}
+              >
+                Use my current location
+              </Button>
+            )
+          }
+        />
+        <div className="space-y-5 p-5">
+          {!form.workplace_latitude && (
+            <Alert tone="warning">No workplace location is set, so the 20 m check-in rule is not applied yet.</Alert>
+          )}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <TextField label="Workplace latitude" inputMode="decimal" value={form.workplace_latitude} onChange={(e) => set("workplace_latitude", e.target.value)} error={f.workplace_latitude} placeholder="e.g. 12.971600" disabled={!edit} />
+            <TextField label="Workplace longitude" inputMode="decimal" value={form.workplace_longitude} onChange={(e) => set("workplace_longitude", e.target.value)} error={f.workplace_longitude} placeholder="e.g. 77.594600" disabled={!edit} />
+            <TextField label="Check-in radius (metres)" type="number" min="5" max="1000" value={form.geofence_radius_m} onChange={(e) => set("geofence_radius_m", e.target.value)} error={f.geofence_radius_m} hint="Owner policy: 20." disabled={!edit} />
+            <TextField label="Required GPS accuracy (metres)" type="number" min="5" max="5000" value={form.geofence_max_accuracy_m} onChange={(e) => set("geofence_max_accuracy_m", e.target.value)} error={f.geofence_max_accuracy_m} hint="Less precise readings are refused." disabled={!edit} />
+            <TextField label="Inactivity limit (minutes)" type="number" min="5" max="480" value={form.inactivity_timeout_minutes} onChange={(e) => set("inactivity_timeout_minutes", e.target.value)} error={f.inactivity_timeout_minutes} hint="Owner policy: 30. Empty = off." disabled={!edit} />
+          </div>
+          <CheckboxField
+            label="Overtime needs approval by HR or a Super Admin"
+            hint="When off, overtime starts as soon as the employee submits the declaration."
+            checked={form.overtime_requires_approval}
+            onChange={(e) => set("overtime_requires_approval", e.target.checked)}
+            disabled={!edit}
+          />
         </div>
       </Card>
 

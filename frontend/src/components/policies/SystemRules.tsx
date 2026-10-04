@@ -36,6 +36,12 @@ export function SystemRules() {
         { label: "Late after", value: s.late_grace_minutes != null && s.work_start_time ? `${s.late_grace_minutes} min grace` : null },
         { label: "Daily break allowance", value: s.break_allowance_minutes ? `${s.break_allowance_minutes} min` : null },
         {
+          label: "Office check-in area",
+          value: s.workplace_latitude && s.workplace_longitude ? `Within ${s.geofence_radius_m} m of the workplace` : null,
+        },
+        { label: "Inactivity limit", value: s.inactivity_timeout_minutes ? `${s.inactivity_timeout_minutes} min` : null },
+        { label: "Overtime", value: s.overtime_requires_approval ? "Needs HR approval" : "Starts on declaration" },
+        {
           label: "Half day / full day",
           value: s.half_day_min_hours && s.full_day_min_hours ? `${Number(s.half_day_min_hours)} h / ${Number(s.full_day_min_hours)} h` : null,
         },

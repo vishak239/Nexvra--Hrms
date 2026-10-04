@@ -24,6 +24,8 @@ const SETTINGS: CompanySettings = {
   late_grace_minutes: 10, break_allowance_minutes: 60, half_day_min_hours: null, full_day_min_hours: null,
   self_attendance_enabled: true, leave_year_start_month: null, employee_document_upload_enabled: false,
   deactivate_user_on_exit: false, max_upload_size_mb: null, updated_at: "2026-10-01T00:00:00Z",
+  workplace_latitude: null, workplace_longitude: null, geofence_radius_m: 20, geofence_max_accuracy_m: 100,
+  inactivity_timeout_minutes: 30, overtime_requires_approval: true,
 };
 
 const POLICY: Policy = {

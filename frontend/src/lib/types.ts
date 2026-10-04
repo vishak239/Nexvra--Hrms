@@ -117,6 +117,12 @@ export interface CompanySettings {
   work_end_time: string | null;
   late_grace_minutes: number | null;
   break_allowance_minutes: number | null;
+  workplace_latitude: string | null;
+  workplace_longitude: string | null;
+  geofence_radius_m: number;
+  geofence_max_accuracy_m: number;
+  inactivity_timeout_minutes: number | null;
+  overtime_requires_approval: boolean;
   half_day_min_hours: string | null;
   full_day_min_hours: string | null;
   self_attendance_enabled: boolean;
@@ -145,6 +151,12 @@ export interface AttendanceRecord {
   total_break_seconds: number;
   /** Break time beyond the daily allowance; null when no allowance is configured. */
   break_over_allowance_minutes: number | null;
+  mode: AttendanceMode;
+  checkout_reason: CheckoutReason | "";
+  check_in_distance_m: number | null;
+  check_out_distance_m: number | null;
+  last_activity_at: string | null;
+  location_issue: string;
   source: "SELF" | "ADMIN";
   remarks: string;
   updated_at: string;
@@ -162,23 +174,62 @@ export interface BreakSession {
   ended_at: string | null;
   duration_seconds: number | null;
   status: SessionStatus;
+  end_reason: "" | "MANUAL" | "ALLOWANCE_EXHAUSTED" | "CHECKOUT";
   source: SessionSource;
   created_at: string;
 }
+
+export type OvertimeStatus = "REQUESTED" | "APPROVED" | "REJECTED" | "ACTIVE" | "AUTO_STOPPED" | "COMPLETED" | "CANCELLED";
 
 export interface OvertimeSession {
   id: number;
   employee: EmployeeRef;
   attendance: number | null;
   date: string;
-  started_at: string;
+  started_at: string | null;
   ended_at: string | null;
   duration_seconds: number | null;
-  status: SessionStatus;
+  status: OvertimeStatus;
   trigger: "AFTER_CHECKOUT";
   source: SessionSource;
+  tasks: { id: number; title: string; priority: TaskPriority; status: TaskStatus }[];
+  work_description: string;
+  other_reason: string;
+  declaration_confirmed: boolean;
+  requested_at: string | null;
+  decided_by_name: string | null;
+  decided_at: string | null;
+  decision_note: string;
+  end_reason: "" | "MANUAL" | "OVERTIME_INACTIVITY_TIMEOUT" | "EXPIRED";
+  last_activity_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type AttendanceMode = "OFFICE" | "WORK_FROM_HOME";
+export type CheckoutReason = "MANUAL" | "GEO_FENCE_EXIT" | "INACTIVITY_TIMEOUT" | "ADMIN";
+export type WfhStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+
+export interface WorkFromHomeRequest {
+  id: number;
+  employee: EmployeeRef;
+  date: string;
+  reason: string;
+  remarks: string;
+  status: WfhStatus;
+  decided_by_name: string | null;
+  decided_at: string | null;
+  decision_note: string;
+  cancelled_at: string | null;
+  created_at: string;
+}
+
+export interface Workplace {
+  configured: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  radius_m: number;
+  max_accuracy_m: number;
 }
 
 /** GET /api/attendance/today/ - the server-authoritative work session. */
@@ -187,6 +238,15 @@ export interface WorkSessionState {
   server_time: string;
   self_attendance_enabled: boolean;
   break_allowance_minutes: number | null;
+  /** Server-computed at server_time, including a break in progress. */
+  break_used_seconds: number;
+  break_remaining_seconds: number | null;
+  inactivity_timeout_minutes: number | null;
+  heartbeat_seconds: number;
+  overtime_requires_approval: boolean;
+  workplace: Workplace;
+  wfh_today: WorkFromHomeRequest | null;
+  open_overtime_request: OvertimeSession | null;
   record: AttendanceRecord | null;
   breaks: BreakSession[];
   active_break: BreakSession | null;

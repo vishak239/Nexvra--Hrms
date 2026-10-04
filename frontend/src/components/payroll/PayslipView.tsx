@@ -42,7 +42,7 @@ export function PayslipView({ payslip, company }: { payslip: Payslip; company?: 
   const deductions = payslip.items.filter((i) => i.kind === "DEDUCTION");
   return (
     <article className="overflow-hidden rounded-xl bg-surface-container-low print:border-0">
-      <header className="print-keep flex flex-wrap items-center justify-between gap-4 border-b border-surface-container-high/40 bg-black px-6 py-4 text-primary print:[-webkit-print-color-adjust:exact] print:[print-color-adjust:exact]">
+      <header className="dark print-keep flex flex-wrap items-center justify-between gap-4 border-b border-surface-container-high/40 bg-black px-6 py-4 text-primary print:[-webkit-print-color-adjust:exact] print:[print-color-adjust:exact]">
         <div className="flex items-center gap-1">
           <NexvraLogo height={48} />
           <div className="-ml-2">

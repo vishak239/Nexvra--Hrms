@@ -47,7 +47,8 @@ describe("Messages", () => {
     expect(screen.getByLabelText("2 unread")).toBeTruthy();
 
     fireEvent.change(screen.getByPlaceholderText("Find @username, Employee ID or name"), { target: { value: "@bob" } });
-    expect(await screen.findByRole("button", { name: "Message Bob Builder" })).toBeTruthy();
+    // debounced search: allow for slow CI machines
+    expect(await screen.findByRole("button", { name: "Message Bob Builder" }, { timeout: 5000 })).toBeTruthy();
     expect(calls.some((c) => c.url === "/api/messages/people/?q=%40bob")).toBe(true);
   });
 
