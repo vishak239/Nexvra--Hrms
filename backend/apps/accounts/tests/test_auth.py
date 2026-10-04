@@ -132,16 +132,18 @@ def test_change_password(org, client_for):
     assert org["alice"].user.check_password("An0ther-pass!")
 
 
-def test_password_reset_does_not_enumerate(anon, org):
-    a = anon.post("/api/auth/password-reset/", {"email": "nobody@example.test"})
-    b = anon.post("/api/auth/password-reset/", {"email": org["alice"].user.email})
+def test_password_reset_does_not_enumerate(anon, org, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):  # email is sent after the commit
+        a = anon.post("/api/auth/password-reset/", {"email": "nobody@example.test"})
+        b = anon.post("/api/auth/password-reset/", {"email": org["alice"].user.email})
     assert a.status_code == b.status_code == 200
     assert a.data == b.data
     assert len(mail.outbox) == 1
 
 
-def test_password_reset_confirm_flow(anon, org):
-    anon.post("/api/auth/password-reset/", {"email": org["alice"].user.email})
+def test_password_reset_confirm_flow(anon, org, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        anon.post("/api/auth/password-reset/", {"email": org["alice"].user.email})
     body = mail.outbox[0].body
     uid = re.search(r"uid=([^&\s]+)", body).group(1)
     token = re.search(r"token=([^&\s]+)", body).group(1)

@@ -69,8 +69,33 @@ class CompanySettings(SingletonModel):
     break_allowance_minutes = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
+        default=60,
         validators=[MinValueValidator(1), MaxValueValidator(480)],
-        help_text="Total break time allowed per working day, e.g. 60. Empty = no limit is applied.",
+        help_text="Total break time allowed per working day (owner policy: 60). Empty = no limit is applied.",
+    )
+    # Workplace geofence for office check-in. The rule applies once both coordinates are set.
+    workplace_latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+    )
+    workplace_longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+    )
+    geofence_radius_m = models.PositiveSmallIntegerField(
+        default=20, validators=[MinValueValidator(5), MaxValueValidator(1000)],
+        help_text="Office check-in is allowed within this distance of the workplace (owner policy: 20 m).",
+    )
+    geofence_max_accuracy_m = models.PositiveSmallIntegerField(
+        default=100, validators=[MinValueValidator(5), MaxValueValidator(5000)],
+        help_text="Location readings less precise than this are not accepted for office check-in.",
+    )
+    inactivity_timeout_minutes = models.PositiveSmallIntegerField(
+        null=True, blank=True, default=30, validators=[MinValueValidator(5), MaxValueValidator(480)],
+        help_text="Automatic check-out / overtime stop after this much inactivity (owner policy: 30). Empty = off.",
+    )
+    overtime_requires_approval = models.BooleanField(
+        default=True, help_text="Overtime requests must be approved by HR or a Super Admin before they can start."
     )
     half_day_min_hours = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     full_day_min_hours = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
@@ -94,13 +119,24 @@ class CompanySettings(SingletonModel):
                 | models.Q(half_day_min_hours__lt=models.F("full_day_min_hours")),
                 name="half_day_below_full_day",
             ),
+            models.CheckConstraint(
+                condition=models.Q(workplace_latitude__isnull=True, workplace_longitude__isnull=True)
+                | models.Q(workplace_latitude__isnull=False, workplace_longitude__isnull=False),
+                name="workplace_both_coordinates_or_neither",
+            ),
         ]
 
     def clean(self):
         if (self.half_day_min_hours is None) != (self.full_day_min_hours is None):
             raise ValidationError("Set both half-day and full-day minimum hours, or neither.")
+        if (self.workplace_latitude is None) != (self.workplace_longitude is None):
+            raise ValidationError("Set both workplace latitude and longitude, or neither.")
         if self.work_start_time and self.work_end_time and self.work_end_time <= self.work_start_time:
             raise ValidationError({"work_end_time": "Must be after work start time."})
+
+    @property
+    def geofence_configured(self):
+        return self.workplace_latitude is not None and self.workplace_longitude is not None
 
     @property
     def tz(self):

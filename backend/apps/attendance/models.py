@@ -14,6 +14,16 @@ class AttendanceRecord(TimeStampedModel):
         SELF = "SELF", "Self check-in"
         ADMIN = "ADMIN", "Recorded by HR"
 
+    class Mode(models.TextChoices):
+        OFFICE = "OFFICE", "Office"
+        WORK_FROM_HOME = "WORK_FROM_HOME", "Work from home"
+
+    class CheckoutReason(models.TextChoices):
+        MANUAL = "MANUAL", "Checked out by the employee"
+        GEO_FENCE_EXIT = "GEO_FENCE_EXIT", "Left the workplace area"
+        INACTIVITY_TIMEOUT = "INACTIVITY_TIMEOUT", "No activity"
+        ADMIN = "ADMIN", "Recorded by HR"
+
     employee = models.ForeignKey("employees.Employee", on_delete=models.CASCADE, related_name="attendance_records")
     date = models.DateField()
     check_in = models.DateTimeField(null=True, blank=True)
@@ -25,13 +35,38 @@ class AttendanceRecord(TimeStampedModel):
     total_break_seconds = models.PositiveIntegerField(
         default=0, help_text="Sum of completed breaks; maintained by the break services, never sent by clients."
     )
+    mode = models.CharField(max_length=16, choices=Mode.choices, default=Mode.OFFICE)
+    wfh_request = models.ForeignKey(
+        "attendance.WorkFromHomeRequest", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    checkout_reason = models.CharField(max_length=20, choices=CheckoutReason.choices, blank=True)
+    # Location metadata (office check-ins only; never collected for work from home). The
+    # coordinates are not exposed through the API; distances are.
+    check_in_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    check_in_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    check_in_accuracy_m = models.PositiveIntegerField(null=True, blank=True)
+    check_in_distance_m = models.PositiveIntegerField(null=True, blank=True)
+    check_out_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    check_out_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    check_out_distance_m = models.PositiveIntegerField(null=True, blank=True)
+    # Activity heartbeat (privacy-safe: only a timestamp, never what the user did).
+    last_activity_at = models.DateTimeField(null=True, blank=True)
+    location_issue = models.CharField(max_length=24, blank=True, help_text="Last location-monitoring problem.")
+    location_issue_at = models.DateTimeField(null=True, blank=True)
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
 
     class Meta:
         ordering = ["-date", "employee_id"]
-        indexes = [models.Index(fields=["date"])]
+        indexes = [
+            models.Index(fields=["date"]),
+            models.Index(
+                fields=["last_activity_at"],
+                condition=models.Q(check_out__isnull=True, check_in__isnull=False),
+                name="attendance_open_activity",
+            ),
+        ]
         constraints = [
             models.UniqueConstraint(fields=["employee", "date"], name="attendance_one_per_day"),
             models.CheckConstraint(
@@ -89,8 +124,14 @@ class BreakSession(TimeStampedModel):
     started_at = models.DateTimeField()
     ended_at = models.DateTimeField(null=True, blank=True)
     duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    class EndReason(models.TextChoices):
+        MANUAL = "MANUAL", "Ended by the employee"
+        ALLOWANCE_EXHAUSTED = "ALLOWANCE_EXHAUSTED", "Daily break allowance used up"
+        CHECKOUT = "CHECKOUT", "Ended at check-out"
+
     status = models.CharField(max_length=10, choices=SessionStatus.choices, default=SessionStatus.ACTIVE)
     source = models.CharField(max_length=8, choices=SessionSource.choices, default=SessionSource.ONLINE)
+    end_reason = models.CharField(max_length=20, choices=EndReason.choices, blank=True)
 
     class Meta:
         ordering = ["-started_at", "-id"]
@@ -112,43 +153,146 @@ class BreakSession(TimeStampedModel):
         return f"{self.employee_id} break {self.started_at:%Y-%m-%d %H:%M} {self.status}"
 
 
+class OvertimeStatus(models.TextChoices):
+    REQUESTED = "REQUESTED", "Requested"
+    APPROVED = "APPROVED", "Approved"
+    REJECTED = "REJECTED", "Rejected"
+    ACTIVE = "ACTIVE", "Running"
+    AUTO_STOPPED = "AUTO_STOPPED", "Stopped automatically"
+    COMPLETED = "COMPLETED", "Completed"
+    CANCELLED = "CANCELLED", "Cancelled"
+
+
+OVERTIME_OPEN = (OvertimeStatus.REQUESTED, OvertimeStatus.APPROVED)
+OVERTIME_ENDED = (OvertimeStatus.COMPLETED, OvertimeStatus.AUTO_STOPPED)
+
+
 class OvertimeSession(TimeStampedModel):
-    """Overtime is recorded separately from normal attendance and never added to its
-    worked time. It can only start after the day's normal check-out."""
+    """One overtime session, from the employee's declaration to its end.
+
+    Overtime is recorded separately from normal attendance and never added to its worked
+    time. It can only start after the day's normal check-out. Workflow (server-controlled):
+
+        REQUESTED -> APPROVED -> ACTIVE -> COMPLETED | AUTO_STOPPED
+        REQUESTED -> REJECTED;  REQUESTED/APPROVED -> CANCELLED
+
+    When CompanySettings.overtime_requires_approval is off, a valid declaration starts the
+    session directly (ACTIVE). Every session, including a restart after an automatic stop,
+    is its own row with its own declaration."""
 
     class Trigger(models.TextChoices):
         AFTER_CHECKOUT = "AFTER_CHECKOUT", "Started after normal check-out"
+
+    class EndReason(models.TextChoices):
+        MANUAL = "MANUAL", "Ended by the employee"
+        OVERTIME_INACTIVITY_TIMEOUT = "OVERTIME_INACTIVITY_TIMEOUT", "No activity"
+        EXPIRED = "EXPIRED", "Approval expired unused"
 
     employee = models.ForeignKey("employees.Employee", on_delete=models.CASCADE, related_name="overtime_sessions")
     attendance = models.ForeignKey(
         AttendanceRecord, null=True, blank=True, on_delete=models.SET_NULL, related_name="overtime_sessions"
     )
-    date = models.DateField(help_text="Company-local date the overtime started.")
-    started_at = models.DateTimeField()
+    date = models.DateField(help_text="Company-local date of the overtime (request date).")
+    started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
     duration_seconds = models.PositiveIntegerField(null=True, blank=True)
-    status = models.CharField(max_length=10, choices=SessionStatus.choices, default=SessionStatus.ACTIVE)
+    status = models.CharField(max_length=12, choices=OvertimeStatus.choices, default=OvertimeStatus.ACTIVE)
     trigger = models.CharField(max_length=16, choices=Trigger.choices, default=Trigger.AFTER_CHECKOUT)
     source = models.CharField(max_length=8, choices=SessionSource.choices, default=SessionSource.ONLINE)
+    # Declaration captured before any overtime (blank only on sessions recorded before it existed).
+    tasks = models.ManyToManyField("tasks.Task", blank=True, related_name="overtime_sessions")
+    work_description = models.TextField(blank=True)
+    other_reason = models.TextField(blank=True)
+    declaration_confirmed = models.BooleanField(default=False)
+    requested_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.CharField(max_length=500, blank=True)
+    end_reason = models.CharField(max_length=32, choices=EndReason.choices, blank=True)
+    last_activity_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ["-started_at", "-id"]
-        indexes = [models.Index(fields=["date"]), models.Index(fields=["employee", "started_at"])]
+        ordering = ["-date", "-id"]
+        indexes = [
+            models.Index(fields=["date"]),
+            models.Index(fields=["employee", "started_at"]),
+            models.Index(fields=["status", "date"]),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=["employee"],
-                condition=models.Q(status=SessionStatus.ACTIVE),
+                condition=models.Q(status=OvertimeStatus.ACTIVE),
                 name="overtime_one_active_per_employee",
             ),
+            models.UniqueConstraint(
+                fields=["employee"],
+                condition=models.Q(status__in=OVERTIME_OPEN),
+                name="overtime_one_open_request_per_employee",
+            ),
             models.CheckConstraint(
-                condition=models.Q(ended_at__isnull=True) | models.Q(ended_at__gte=models.F("started_at")),
+                condition=models.Q(ended_at__isnull=True)
+                | (models.Q(started_at__isnull=False) & models.Q(ended_at__gte=models.F("started_at"))),
                 name="overtime_end_after_start",
             ),
-            models.CheckConstraint(condition=_status_matches_end(), name="overtime_status_matches_end"),
+            models.CheckConstraint(
+                condition=models.Q(
+                    status__in=[*OVERTIME_OPEN, OvertimeStatus.REJECTED, OvertimeStatus.CANCELLED],
+                    started_at__isnull=True,
+                    ended_at__isnull=True,
+                )
+                | models.Q(status=OvertimeStatus.ACTIVE, started_at__isnull=False, ended_at__isnull=True)
+                | models.Q(
+                    status__in=OVERTIME_ENDED,
+                    started_at__isnull=False,
+                    ended_at__isnull=False,
+                    duration_seconds__isnull=False,
+                ),
+                name="overtime_status_matches_times",
+            ),
         ]
 
     def __str__(self):
         return f"{self.employee_id} overtime {self.date} {self.status}"
+
+
+class WorkFromHomeRequest(TimeStampedModel):
+    """Permission to work from home on one date. Only an APPROVED request for today lets the
+    employee check in with mode WORK_FROM_HOME (verified by the server, never by the client)."""
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    employee = models.ForeignKey("employees.Employee", on_delete=models.CASCADE, related_name="wfh_requests")
+    date = models.DateField()
+    reason = models.CharField(max_length=500)
+    remarks = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.CharField(max_length=500, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+        verbose_name = "work-from-home request"
+        indexes = [models.Index(fields=["status", "date"]), models.Index(fields=["employee", "date"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["employee", "date"],
+                condition=models.Q(status__in=["PENDING", "APPROVED"]),
+                name="wfh_one_open_request_per_day",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.employee_id} WFH {self.date} {self.status}"
 
 
 class SyncEvent(models.Model):

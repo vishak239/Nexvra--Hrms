@@ -13,9 +13,13 @@ from apps.core.exceptions import Conflict
 from apps.core.permissions import scope_queryset
 from apps.employees.models import Employee
 from apps.leaves.models import LeaveRequest
+from apps.notifications.models import Notification
+from apps.notifications.services import notify
 from apps.organization.models import CompanySettings, Holiday
 from apps.tasks.rules import assert_checkout_allowed
 
+from . import geo
+from .errors import LocationRequired, LocationTooImprecise, OutsideGeofence, WfhNotApproved
 from .models import AttendanceRecord
 from .sessions import close_open_break_at_checkout
 
@@ -62,8 +66,35 @@ def _self_employee(user, cs):
     return employee
 
 
+def office_location_check(cs, latitude, longitude, accuracy):
+    """Server-side geofence for an office check-in. Returns the distance in metres (or None
+    when no workplace is configured, i.e. the rule is not applied). Raises when not allowed.
+    The client's own distance / "inside" flags are never consulted."""
+    if not cs.geofence_configured:
+        return None
+    if latitude is None or longitude is None:
+        raise LocationRequired()
+    if accuracy is None or accuracy > cs.geofence_max_accuracy_m:
+        raise LocationTooImprecise(
+            f"Your location is not precise enough to check in (needs ±{cs.geofence_max_accuracy_m} m or better)."
+        )
+    distance = geo.haversine_m(latitude, longitude, cs.workplace_latitude, cs.workplace_longitude)
+    if not geo.within_radius(distance, cs.geofence_radius_m):
+        raise OutsideGeofence(
+            f"You are outside the workplace check-in area (about {round(distance)} m away; "
+            f"check-in is allowed within {cs.geofence_radius_m} m)."
+        )
+    return distance
+
+
+def _coord(value):
+    return None if value is None else Decimal(str(round(float(value), 6)))
+
+
 @transaction.atomic
-def check_in(request):
+def check_in(request, mode=AttendanceRecord.Mode.OFFICE, latitude=None, longitude=None, accuracy=None):
+    """Office check-in needs to pass the server-side geofence (when a workplace is configured).
+    Work-from-home check-in needs an APPROVED request for today; no location is collected."""
     cs = CompanySettings.get_solo()
     employee = _self_employee(request.user, cs)
     now = timezone.now()
@@ -71,21 +102,45 @@ def check_in(request):
     record = AttendanceRecord.objects.select_for_update().filter(employee=employee, date=today).first()
     if record is not None and record.check_in is not None:
         raise Conflict("You have already checked in today.")
+
+    wfh = None
+    distance = None
+    if mode == AttendanceRecord.Mode.WORK_FROM_HOME:
+        from .wfh import approved_request_for
+
+        wfh = approved_request_for(employee, today)
+        if wfh is None:
+            raise WfhNotApproved()
+    else:
+        distance = office_location_check(cs, latitude, longitude, accuracy)
+
     if record is None:
         record = AttendanceRecord(employee=employee, date=today, source=AttendanceRecord.Source.SELF)
     record.check_in = now
+    record.mode = mode
+    record.wfh_request = wfh
+    record.last_activity_at = now
+    if mode == AttendanceRecord.Mode.OFFICE and latitude is not None and longitude is not None:
+        record.check_in_latitude, record.check_in_longitude = _coord(latitude), _coord(longitude)
+        record.check_in_accuracy_m = None if accuracy is None else round(accuracy)
+        record.check_in_distance_m = None if distance is None else round(distance)
     record.status, record.is_late = evaluate(record, cs)
     try:
         with transaction.atomic():
             record.save()
     except IntegrityError:
         raise Conflict("You have already checked in today.") from None
-    audit.record(request, "ATTENDANCE_CHECK_IN", obj=record)
+    audit.record(
+        request,
+        "ATTENDANCE_CHECK_IN",
+        obj=record,
+        metadata={"mode": mode, "distance_m": record.check_in_distance_m, "wfh_request": getattr(wfh, "pk", None)},
+    )
     return record
 
 
 @transaction.atomic
-def check_out(request):
+def check_out(request, latitude=None, longitude=None):
     cs = CompanySettings.get_solo()
     employee = _self_employee(request.user, cs)
     now = timezone.now()
@@ -98,12 +153,62 @@ def check_out(request):
     # Task checkout protection (HR / Manager / Employee; Super Admin exempt). See apps/tasks/rules.py.
     assert_checkout_allowed(request.user)
     # An open break ends at check-out; break time is excluded from worked time.
-    record = close_open_break_at_checkout(record, now)
+    record = close_open_break_at_checkout(record, now, cs)
     record.check_out = now
+    record.checkout_reason = AttendanceRecord.CheckoutReason.MANUAL
+    if record.mode == AttendanceRecord.Mode.OFFICE and latitude is not None and longitude is not None:
+        record.check_out_latitude, record.check_out_longitude = _coord(latitude), _coord(longitude)
+        if cs.geofence_configured:
+            record.check_out_distance_m = round(
+                geo.haversine_m(latitude, longitude, cs.workplace_latitude, cs.workplace_longitude)
+            )
     record.status, record.is_late = evaluate(record, cs)
     record.save()
-    audit.record(request, "ATTENDANCE_CHECK_OUT", obj=record)
+    audit.record(request, "ATTENDANCE_CHECK_OUT", obj=record, metadata={"reason": record.checkout_reason})
     return record
+
+
+def auto_checkout(record, at, reason, *, request=None, latitude=None, longitude=None, distance=None, cs=None):
+    """System check-out (geofence exit or inactivity). Idempotent: a record that is already
+    checked out is left untouched and False is returned. The caller holds a row lock.
+    Task checkout protection does not apply: this is not the employee's own action."""
+    if record.check_out is not None or record.check_in is None:
+        return False
+    cs = cs or CompanySettings.get_solo()
+    at = max(at, record.check_in)
+    record = close_open_break_at_checkout(record, at, cs)
+    record.check_out = at
+    record.checkout_reason = reason
+    if latitude is not None and longitude is not None:
+        record.check_out_latitude, record.check_out_longitude = _coord(latitude), _coord(longitude)
+    if distance is not None:
+        record.check_out_distance_m = round(distance)
+    record.status, record.is_late = evaluate(record, cs)
+    record.save()
+    audit.record(
+        request,
+        "ATTENDANCE_AUTO_CHECKOUT",
+        obj=record,
+        metadata={
+            "reason": reason,
+            "check_out": at,
+            "last_activity_at": record.last_activity_at,
+            "distance_m": record.check_out_distance_m,
+        },
+        actor=None,
+    )
+    why = {
+        AttendanceRecord.CheckoutReason.GEO_FENCE_EXIT: "you left the workplace area",
+        AttendanceRecord.CheckoutReason.INACTIVITY_TIMEOUT: f"no activity for {cs.inactivity_timeout_minutes} minutes",
+    }.get(reason, "an automatic rule")
+    notify(
+        [record.employee.user],
+        Notification.Type.ATTENDANCE_AUTO_CHECKOUT,
+        "You were checked out automatically",
+        f"Checked out at {timezone.localtime(at, cs.tz):%H:%M} because {why}.",
+        obj=record,
+    )
+    return True
 
 
 def assert_can_manage_record_for(actor, employee):
@@ -133,6 +238,8 @@ def admin_save(request, data, record=None):
     if explicit_status:
         record.status = explicit_status
     record.source = AttendanceRecord.Source.ADMIN
+    if "check_out" in data and data["check_out"] is not None:
+        record.checkout_reason = AttendanceRecord.CheckoutReason.ADMIN
     record.updated_by = request.user
     record.save()
     action = "ATTENDANCE_CORRECTED" if before else "ATTENDANCE_RECORDED"

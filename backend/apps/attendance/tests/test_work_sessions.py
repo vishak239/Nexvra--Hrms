@@ -30,6 +30,39 @@ def post(client, path, moment, data=None):
         return client.post(path, data or {}, format="json")
 
 
+@pytest.fixture(autouse=True)
+def _time_rules_off(configure):
+    """These scenarios simulate whole days without activity reports, so the inactivity rule and
+    the break allowance (tested in test_attendance_rules.py) are switched off here."""
+    configure(inactivity_timeout_minutes=None, break_allowance_minutes=None)
+
+
+DECLARATION = {
+    "use_other_reason": True,
+    "other_reason": "Production release support for the payroll team",
+    "work_description": "Deploy and monitor the payroll release.",
+    "declaration_confirmed": True,
+}
+
+
+def approved_overtime(org, client, moment):
+    """Overtime declaration at `moment` (after check-out), approved by HR at the same time."""
+    res = post(client, "/api/attendance/overtime/request/", moment, DECLARATION)
+    assert res.status_code == 201, res.data
+    request_id = res.data["state"]["open_overtime_request"]["id"]
+    approved = post(client_for_hr(org), f"/api/attendance/overtime/{request_id}/approve/", moment)
+    assert approved.status_code == 200, approved.data
+    return request_id
+
+
+def client_for_hr(org):
+    from rest_framework.test import APIClient
+
+    client = APIClient()
+    client.force_login(org["hr"].user)
+    return client
+
+
 def checked_in(client, moment=None):
     res = post(client, "/api/attendance/check-in/", moment or at(9))
     assert res.status_code == 201, res.data
@@ -146,7 +179,9 @@ def test_overtime_flow_is_separate_from_attendance(org, client_for):
     alice = client_for(org["alice"])
     checked_in(alice)
     assert post(alice, "/api/attendance/overtime/start/", at(16)).status_code == 409  # before normal check-out
+    assert post(alice, "/api/attendance/overtime/request/", at(16), DECLARATION).status_code == 409
     post(alice, "/api/attendance/check-out/", at(17))
+    approved_overtime(org, alice, at(17, 5))
     res = post(alice, "/api/attendance/overtime/start/", at(17, 30))
     assert res.status_code == 200, res.data
     assert res.data["state"]["active_overtime"]["status"] == "ACTIVE"
@@ -169,8 +204,10 @@ def test_overtime_cannot_overlap_previous(org, client_for):
     alice = client_for(org["alice"])
     checked_in(alice)
     post(alice, "/api/attendance/check-out/", at(17))
+    approved_overtime(org, alice, at(17, 5))
     post(alice, "/api/attendance/overtime/start/", at(17, 10))
     post(alice, "/api/attendance/overtime/end/", at(18))
+    approved_overtime(org, alice, at(18, 30))  # a new session needs its own approval
     with freeze(at(19)):
         res = alice.post(
             "/api/attendance/sync/",
@@ -178,7 +215,7 @@ def test_overtime_cannot_overlap_previous(org, client_for):
             format="json",
         )
     assert res.data["results"][0]["status"] == "CONFLICT"
-    assert OvertimeSession.objects.filter(employee=org["alice"]).count() == 1
+    assert OvertimeSession.objects.filter(employee=org["alice"], started_at__isnull=False).count() == 1
 
 
 def test_overtime_visibility_by_role(org, client_for):
@@ -186,6 +223,7 @@ def test_overtime_visibility_by_role(org, client_for):
         client = client_for(org[who])
         checked_in(client)
         post(client, "/api/attendance/check-out/", at(17))
+        approved_overtime(org, client, at(17, 1))
         post(client, "/api/attendance/overtime/start/", at(17, 5))
         post(client, "/api/attendance/overtime/end/", at(18))
 
@@ -208,6 +246,13 @@ def test_all_roles_can_use_breaks_and_overtime(org, client_for):
         assert post(client, "/api/attendance/breaks/start/", at(12)).status_code == 200
         assert post(client, "/api/attendance/breaks/end/", at(12, 10)).status_code == 200
         assert post(client, "/api/attendance/check-out/", at(17)).status_code == 200
+        if who == "hr":  # nobody approves their own request: a Super Admin approves HR's
+            res = post(client, "/api/attendance/overtime/request/", at(17, 1), DECLARATION)
+            sa = client_for(org["super_admin"])
+            rid = res.data["state"]["open_overtime_request"]["id"]
+            assert post(sa, f"/api/attendance/overtime/{rid}/approve/", at(17, 1)).status_code == 200
+        else:
+            approved_overtime(org, client, at(17, 1))
         assert post(client, "/api/attendance/overtime/start/", at(17, 1)).status_code == 200
         assert post(client, "/api/attendance/overtime/end/", at(17, 31)).status_code == 200
 
@@ -233,7 +278,8 @@ def test_pending_task_blocks_checkout_until_response(org, client_for):
     alice = client_for(org["alice"])
     task = make_task(org, org["alice"])
     checked_in(alice)
-    state = alice.get("/api/attendance/today/")
+    with freeze(at(10)):
+        state = alice.get("/api/attendance/today/")
     res = post(alice, "/api/attendance/check-out/", at(17))
     assert res.status_code == 409
     assert res.data["error"]["code"] == "checkout_blocked_by_tasks"

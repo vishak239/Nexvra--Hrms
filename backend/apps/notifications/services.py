@@ -1,4 +1,7 @@
+from django.conf import settings
 from django.utils import timezone
+
+from apps.core.mail import send_email
 
 from .models import Notification
 
@@ -11,6 +14,7 @@ ENTITY_LINKS = {
     "messaging.Conversation": "/messages?c={id}",
     "attendance.OvertimeSession": "/attendance",
     "attendance.AttendanceRecord": "/attendance",
+    "attendance.WorkFromHomeRequest": "/attendance?tab=wfh",
 }
 
 
@@ -21,8 +25,9 @@ def link_for(notification):
     return template.format(id=notification.entity_id)
 
 
-def notify(recipients, type, title, message="", obj=None):
-    """Create one in-app notification per distinct, active recipient."""
+def notify(recipients, type, title, message="", obj=None, email=False):
+    """Create one in-app notification per distinct, active recipient. With `email=True` the
+    same text is also emailed (used for important HR decisions, not for routine events)."""
     seen = set()
     rows = []
     for user in recipients:
@@ -40,6 +45,15 @@ def notify(recipients, type, title, message="", obj=None):
             )
         )
     Notification.objects.bulk_create(rows)
+    if email and rows:
+        link = f"{settings.FRONTEND_URL.rstrip('/')}{link_for(rows[0]) or '/notifications'}"
+        for row in rows:  # one email each, so recipients never see each other's addresses
+            send_email(
+                f"Nexvra HRMS: {title}",
+                f"{title}\n\n{message}\n\nOpen Nexvra HRMS: {link}".strip(),
+                [row.recipient.email],
+                purpose=f"notification:{type}",
+            )
     return rows
 
 

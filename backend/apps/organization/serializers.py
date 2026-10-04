@@ -21,6 +21,12 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "work_end_time",
             "late_grace_minutes",
             "break_allowance_minutes",
+            "workplace_latitude",
+            "workplace_longitude",
+            "geofence_radius_m",
+            "geofence_max_accuracy_m",
+            "inactivity_timeout_minutes",
+            "overtime_requires_approval",
             "half_day_min_hours",
             "full_day_min_hours",
             "self_attendance_enabled",
@@ -50,6 +56,10 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             )
         if half is not None and half >= full:
             raise serializers.ValidationError({"half_day_min_hours": ["Must be less than full-day minimum hours."]})
+        if (merged["workplace_latitude"] is None) != (merged["workplace_longitude"] is None):
+            raise serializers.ValidationError(
+                {"workplace_latitude": ["Set both workplace latitude and longitude, or neither."]}
+            )
         start, end = merged["work_start_time"], merged["work_end_time"]
         if start and end and end <= start:
             raise serializers.ValidationError({"work_end_time": ["Must be after work start time."]})

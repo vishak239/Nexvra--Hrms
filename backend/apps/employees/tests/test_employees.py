@@ -26,12 +26,13 @@ def new_employee_payload(**overrides):
 # --- HR CRUD -----------------------------------------------------------------------
 
 
-def test_hr_creates_employee_with_login_account(org, client_for):
-    res = client_for(org["hr"]).post(
-        "/api/employees/",
-        new_employee_payload(department=org["department"].id, manager=org["manager"].id),
-        format="json",
-    )
+def test_hr_creates_employee_with_login_account(org, client_for, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):  # the account email is sent after the commit
+        res = client_for(org["hr"]).post(
+            "/api/employees/",
+            new_employee_payload(department=org["department"].id, manager=org["manager"].id),
+            format="json",
+        )
     assert res.status_code == 201, res.data
     emp = Employee.objects.get(employee_code="NX-100")
     assert emp.user.email == "dana@example.test"

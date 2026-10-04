@@ -1,11 +1,14 @@
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
+from django.db.models import Q
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework.exceptions import PermissionDenied
 
+from apps.core.mail import send_email
+
 from .models import User
+from .rbac import SUPER_ADMIN
 
 
 def assert_can_assign_role(actor, role):
@@ -37,7 +40,8 @@ def send_password_setup_email(user, *, reset=True):
     else:
         subject = "Your Nexvra HRMS account"
         body = f"An account has been created for you.\n\nSet your password: {link}"
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=True)
+    # A one-time link (signed, expires after PASSWORD_RESET_TIMEOUT, invalid once used) - never a password.
+    return send_email(subject, body, [user.email], purpose="password_reset" if reset else "account_created")
 
 
 def active_user_by_email(email):
@@ -57,3 +61,10 @@ def assert_can_edit_user(actor, target, new_role=None, new_is_active=None):
         assert_can_manage_user(actor, target)
     if role_change:
         assert_can_assign_role(actor, new_role)
+
+
+def users_with_permission(code):
+    """Active users whose role grants `code` (Super Admin always qualifies)."""
+    return User.objects.filter(is_active=True).filter(
+        Q(role__permissions__codename=code) | Q(role__code=SUPER_ADMIN)
+    ).distinct()

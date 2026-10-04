@@ -14,12 +14,11 @@ import datetime
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
-from apps.accounts.models import User
-from apps.accounts.rbac import SUPER_ADMIN
+from apps.accounts.services import users_with_permission
 from apps.audit import services as audit
 from apps.core.exceptions import Conflict
 from apps.employees.models import Employee
@@ -28,12 +27,6 @@ from apps.notifications.services import notify
 from apps.organization.models import CompanySettings, Holiday
 
 from .models import LeaveBalance, LeaveBalanceTransaction, LeaveRequest, LeaveType
-
-
-def users_with_permission(code):
-    return User.objects.filter(is_active=True).filter(
-        Q(role__permissions__codename=code) | Q(role__code=SUPER_ADMIN)
-    ).distinct()
 
 
 def count_leave_days(start, end, is_half_day, cs):

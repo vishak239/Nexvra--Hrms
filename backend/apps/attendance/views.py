@@ -1,10 +1,10 @@
 import datetime
 
 import django_filters
-from django.utils import timezone
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from apps.audit import services as audit
 from apps.core.exceptions import Conflict
@@ -14,29 +14,63 @@ from apps.employees.serializers import employee_ref
 from apps.organization.models import CompanySettings
 from apps.tasks import rules as task_rules
 
-from . import services, sessions
-from .models import AttendanceRecord, BreakSession, OvertimeSession, SyncEvent
+from . import activity, services, sessions, wfh
+from .models import AttendanceRecord, BreakSession, OvertimeSession, SyncEvent, WorkFromHomeRequest
 from .serializers import (
     AttendanceAdminSerializer,
     AttendanceRecordSerializer,
     BreakSessionSerializer,
+    CheckInSerializer,
+    CheckOutSerializer,
+    DecisionSerializer,
     EventIdSerializer,
+    HeartbeatSerializer,
+    OvertimeRequestSerializer,
     OvertimeSessionSerializer,
     SyncEventSerializer,
     SyncRequestSerializer,
+    WorkFromHomeRequestSerializer,
 )
 
+# How often the browser reports activity while a session or overtime is open.
+HEARTBEAT_SECONDS = 120
 
-def today_payload(request):
+
+def today_payload(request, reconcile=True):
     """Server-authoritative work-session state for the current user (used by the UI to
-    render timers and to recover a session after the browser was closed)."""
+    render timers and to recover a session after the browser was closed). Reading it first
+    applies the time-based rules (break allowance, inactivity), so a session left open in a
+    closed browser is settled even before the scheduled reconciliation runs."""
+    if reconcile:
+        employee = Employee.objects.filter(user=request.user).first()
+        if employee is not None:
+            activity.reconcile_employee(employee, request=request)
     state = sessions.today_state(request.user)
     record = state["record"]
+    cs = state["cs"]
+    dt = serializers.DateTimeField()
     return {
         "date": state["date"],
-        "server_time": serializers.DateTimeField().to_representation(timezone.now()),
-        "self_attendance_enabled": state["cs"].self_attendance_enabled,
-        "break_allowance_minutes": state["cs"].break_allowance_minutes,
+        "server_time": dt.to_representation(state["now"]),
+        "self_attendance_enabled": cs.self_attendance_enabled,
+        "break_allowance_minutes": cs.break_allowance_minutes,
+        "break_used_seconds": state["break_used_seconds"],
+        "break_remaining_seconds": state["break_remaining_seconds"],
+        "inactivity_timeout_minutes": cs.inactivity_timeout_minutes,
+        "heartbeat_seconds": HEARTBEAT_SECONDS,
+        "overtime_requires_approval": cs.overtime_requires_approval,
+        # The workplace itself is not personal data; employees need it to see their distance.
+        "workplace": {
+            "configured": cs.geofence_configured,
+            "latitude": float(cs.workplace_latitude) if cs.geofence_configured else None,
+            "longitude": float(cs.workplace_longitude) if cs.geofence_configured else None,
+            "radius_m": cs.geofence_radius_m,
+            "max_accuracy_m": cs.geofence_max_accuracy_m,
+        },
+        "wfh_today": WorkFromHomeRequestSerializer(state["wfh"]).data if state["wfh"] else None,
+        "open_overtime_request": (
+            OvertimeSessionSerializer(state["open_overtime"]).data if state["open_overtime"] else None
+        ),
         "record": AttendanceRecordSerializer(record).data if record else None,
         "breaks": BreakSessionSerializer(state["breaks"], many=True).data,
         "active_break": BreakSessionSerializer(state["active_break"]).data if state["active_break"] else None,
@@ -49,11 +83,20 @@ def today_payload(request):
     }
 
 
+def settle_rules(request):
+    """Apply due time-based rules (inactivity, break allowance) before a manual action, so a
+    direct API call cannot act on a session the rules have already closed."""
+    employee = Employee.objects.filter(user=request.user).first()
+    if employee is not None:
+        activity.reconcile_employee(employee, request=request)
+
+
 def perform_event(request, event_type):
     """Online break/overtime action. With a client_event_id the call is idempotent: a retry of
     an already-applied event returns the current state instead of failing or applying twice."""
     ser = EventIdSerializer(data=request.data)
     ser.is_valid(raise_exception=True)
+    settle_rules(request)
     client_event_id = ser.validated_data.get("client_event_id")
     duplicate = False
     if client_event_id is None:
@@ -92,6 +135,7 @@ class AttendanceViewSet(
         "today": ("attendance.self",),
         "check_in": ("attendance.self",),
         "check_out": ("attendance.self",),
+        "heartbeat": ("attendance.self",),
         "sync": ("attendance.self",),
         "daily": ("attendance.view_team", "attendance.view_all"),
         "create": ("attendance.manage",),
@@ -101,6 +145,7 @@ class AttendanceViewSet(
     }
     filterset_class = AttendanceFilter
     ordering_fields = ["date", "check_in"]
+    throttle_scope = None  # only the heartbeat action is rate-limited (scope "heartbeat")
 
     lookup_value_regex = r"\d+"
 
@@ -142,13 +187,28 @@ class AttendanceViewSet(
 
     @action(detail=False, methods=["post"], url_path="check-in")
     def check_in(self, request):
-        record = services.check_in(request)
+        ser = CheckInSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        record = services.check_in(request, **ser.validated_data)
         return Response(AttendanceRecordSerializer(record).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["post"], url_path="check-out")
     def check_out(self, request):
-        record = services.check_out(request)
+        ser = CheckOutSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        settle_rules(request)
+        record = services.check_out(request, latitude=data.get("latitude"), longitude=data.get("longitude"))
         return Response(AttendanceRecordSerializer(record).data)
+
+    @action(detail=False, methods=["post"], throttle_classes=[ScopedRateThrottle], throttle_scope="heartbeat")
+    def heartbeat(self, request):
+        """Privacy-safe activity report: seconds since the last interaction (+ location in
+        office mode). Applies the inactivity / geofence rules and returns the fresh state."""
+        ser = HeartbeatSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        changed = activity.heartbeat(request, **ser.validated_data)
+        return Response({"changed": changed, "state": today_payload(request, reconcile=False)})
 
     @action(detail=False, methods=["post"])
     def sync(self, request):
@@ -257,14 +317,51 @@ class OvertimeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
         "retrieve": (),
         "start": ("attendance.self",),
         "end": ("attendance.self",),
+        "request_overtime": ("attendance.self",),
+        "cancel": ("attendance.self",),
+        "approve": ("overtime.approve",),
+        "reject": ("overtime.approve",),
     }
     filterset_class = OvertimeFilter
     ordering_fields = ["started_at", "date", "duration_seconds"]
     lookup_value_regex = r"\d+"
 
     def get_queryset(self):
-        qs = OvertimeSession.objects.select_related("employee__user")
+        qs = OvertimeSession.objects.select_related("employee__user", "decided_by").prefetch_related("tasks")
         return scope_queryset(qs, self.request.user, "attendance")
+
+    @action(detail=False, methods=["post"], url_path="request")
+    def request_overtime(self, request):
+        """The overtime declaration: tasks or another reason, a description, a confirmation."""
+        ser = OvertimeRequestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        sessions.request_overtime(
+            request,
+            task_ids=data["task_ids"],
+            work_description=data["work_description"],
+            other_reason=data["other_reason"],
+        )
+        return Response({"state": today_payload(request)}, status=status.HTTP_201_CREATED)
+
+    def _decide(self, request, approve):
+        ser = DecisionSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        session = sessions.decide_overtime(request, self.get_object(), approve, ser.validated_data["note"])
+        return Response(OvertimeSessionSerializer(session).data)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self._decide(request, True)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self._decide(request, False)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        sessions.cancel_overtime(request, self.get_object())
+        return Response({"state": today_payload(request)})
 
     @action(detail=False, methods=["post"])
     def start(self, request):
@@ -296,3 +393,61 @@ class SyncEventViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     def get_queryset(self):
         qs = SyncEvent.objects.select_related("employee__user")
         return scope_queryset(qs, self.request.user, "attendance")
+
+
+class WorkFromHomeFilter(django_filters.FilterSet):
+    date_from = django_filters.DateFilter(field_name="date", lookup_expr="gte")
+    date_to = django_filters.DateFilter(field_name="date", lookup_expr="lte")
+
+    class Meta:
+        model = WorkFromHomeRequest
+        fields = ["employee", "status", "date"]
+
+
+class WorkFromHomeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """Work-from-home requests: employees create/cancel their own; HR / Super Admin decide.
+    Visibility follows the attendance scope (own / team / all)."""
+
+    serializer_class = WorkFromHomeRequestSerializer
+    permission_classes = [HasPermission]
+    required_permissions = {
+        "list": (),
+        "retrieve": (),
+        "create": ("attendance.self",),
+        "cancel": ("attendance.self",),
+        "approve": ("wfh.approve",),
+        "reject": ("wfh.approve",),
+    }
+    filterset_class = WorkFromHomeFilter
+    ordering_fields = ["date", "created_at"]
+    lookup_value_regex = r"\d+"
+
+    def get_queryset(self):
+        qs = WorkFromHomeRequest.objects.select_related("employee__user", "decided_by")
+        return scope_queryset(qs, self.request.user, "attendance")
+
+    def create(self, request):
+        ser = WorkFromHomeRequestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        obj = wfh.create_request(request, date=data["date"], reason=data["reason"], remarks=data.get("remarks", ""))
+        return Response(WorkFromHomeRequestSerializer(obj).data, status=status.HTTP_201_CREATED)
+
+    def _decide(self, request, approve):
+        ser = DecisionSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        obj = wfh.decide(request, self.get_object(), approve, ser.validated_data["note"])
+        return Response(WorkFromHomeRequestSerializer(obj).data)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self._decide(request, True)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self._decide(request, False)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        obj = wfh.cancel(request, self.get_object())
+        return Response(WorkFromHomeRequestSerializer(obj).data)

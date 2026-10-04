@@ -21,6 +21,13 @@ def freeze(moment):
     return mock.patch("django.utils.timezone.now", return_value=moment)
 
 
+@pytest.fixture(autouse=True)
+def _inactivity_rule_off(configure):
+    """These scenarios check in and out hours apart without activity reports; the inactivity
+    rule itself is tested in test_attendance_rules.py."""
+    configure(inactivity_timeout_minutes=None)
+
+
 def test_check_in_and_out(org, client_for):
     client = client_for(org["alice"])
     with freeze(at(9)):

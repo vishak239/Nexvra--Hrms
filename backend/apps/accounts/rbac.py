@@ -48,6 +48,8 @@ PERMISSIONS = {
     "tasks.manage": "Assign, edit, remind and cancel tasks",
     "messages.use": "Send and receive private messages and files",
     "policies.manage": "Create, edit and publish company policies",
+    "wfh.approve": "Approve or reject work-from-home requests",
+    "overtime.approve": "Approve or reject overtime requests",
 }
 
 _EMPLOYEE = {"attendance.self", "leave.apply", "payroll.view_own", "documents.view_own", "messages.use"}
@@ -80,6 +82,8 @@ _HR = _MANAGER | {
     "tasks.view_all",
     "tasks.manage",
     "policies.manage",
+    "wfh.approve",
+    "overtime.approve",
 }
 
 # code: (name, level, default permissions)

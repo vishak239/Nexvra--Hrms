@@ -13,14 +13,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env")
 
+# development | staging | production. Staging and production refuse to start with unsafe
+# settings (debug on, default/short secret key, wildcard hosts); see docs/deployment.md.
+APP_ENV = env("DJANGO_ENV", default="development")
+if APP_ENV not in ("development", "staging", "production"):
+    raise ImproperlyConfigured("DJANGO_ENV must be development, staging or production.")
+IS_DEPLOYED = APP_ENV in ("staging", "production")
+
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
+if IS_DEPLOYED and DEBUG:
+    raise ImproperlyConfigured(f"DJANGO_DEBUG must be False in {APP_ENV}.")
 
 INSECURE_DEFAULT_KEY = "insecure-dev-key-change-me"
 SECRET_KEY = env("DJANGO_SECRET_KEY", default=INSECURE_DEFAULT_KEY)
 if not DEBUG and SECRET_KEY == INSECURE_DEFAULT_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is False.")
+if IS_DEPLOYED and (len(SECRET_KEY) < 50 or SECRET_KEY in ("change-me", INSECURE_DEFAULT_KEY)):
+    raise ImproperlyConfigured("Set a strong, unique DJANGO_SECRET_KEY (50+ random characters).")
 
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+if IS_DEPLOYED and (not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS):
+    raise ImproperlyConfigured("Set DJANGO_ALLOWED_HOSTS to the real domain name(s); '*' is not allowed.")
 CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=["http://localhost:3000"])
 
 INSTALLED_APPS = [
@@ -130,6 +143,8 @@ SESSION_COOKIE_NAME = "nexvra_session"
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False  # the SPA must read it to send X-CSRFToken
 SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
 PASSWORD_RESET_TIMEOUT = env.int("PASSWORD_RESET_TIMEOUT", default=60 * 60 * 24)
 
@@ -156,7 +171,19 @@ EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)  # port 465; use TLS *or* SSL, not both
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=15)  # seconds; a slow SMTP server never hangs a request
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="hrms@localhost")
+SERVER_EMAIL = env("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ImproperlyConfigured("Set only one of EMAIL_USE_TLS and EMAIL_USE_SSL.")
+
+# --- Backups (manage.py backup_hrms / restore_hrms) -----------------------------
+# Must be outside any publicly served directory. Copy the folder off-site (see docs/backup.md).
+BACKUP_DIR = Path(env("BACKUP_DIR", default=str(BASE_DIR.parent / "backups")))
+BACKUP_RETENTION_DAYS = env.int("BACKUP_RETENTION_DAYS", default=14)
+BACKUP_COPY_DIR = env("BACKUP_COPY_DIR", default="")  # optional second location (mounted/synced drive)
+PG_BIN_DIR = env("PG_BIN_DIR", default="")  # folder with pg_dump / pg_restore if not on PATH
 
 # --- Django admin --------------------------------------------------------------
 DJANGO_ADMIN_ENABLED = env.bool("DJANGO_ADMIN_ENABLED", default=DEBUG)
@@ -177,6 +204,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "login": env("THROTTLE_LOGIN", default="10/min"),
         "password_reset": env("THROTTLE_PASSWORD_RESET", default="5/hour"),
+        "heartbeat": env("THROTTLE_HEARTBEAT", default="30/min"),
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -189,9 +217,27 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
+LOG_FILE = env("LOG_FILE", default="")  # e.g. /var/log/nexvra-hrms/backend.log (rotated, 10 x 5 MB)
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": env("LOG_LEVEL", default="INFO")},
+    "formatters": {"standard": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "standard"},
+        **(
+            {
+                "file": {
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": LOG_FILE,
+                    "maxBytes": 5 * 1024 * 1024,
+                    "backupCount": 10,
+                    "formatter": "standard",
+                    "encoding": "utf-8",
+                }
+            }
+            if LOG_FILE
+            else {}
+        ),
+    },
+    "root": {"handlers": ["console", *(["file"] if LOG_FILE else [])], "level": env("LOG_LEVEL", default="INFO")},
 }

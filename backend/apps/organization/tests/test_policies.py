@@ -130,6 +130,12 @@ def test_policy_titles_are_unique_ignoring_case(org, client_for):
 # --- break allowance (a structured policy rule in Settings) --------------------------------
 
 
+def test_owner_break_policy_is_the_default(db):
+    from apps.organization.models import CompanySettings
+
+    assert CompanySettings.get_solo().break_allowance_minutes == 60
+
+
 @pytest.mark.parametrize("value, ok", [(60, True), (None, True), (0, False), (481, False)])
 def test_break_allowance_validation(org, client_for, value, ok):
     res = client_for(org["hr"]).patch("/api/settings/", {"break_allowance_minutes": value}, format="json")
@@ -154,6 +160,7 @@ def test_break_over_allowance_is_reported_on_records(org, client_for, configure)
     url = f"/api/attendance/?date={day.isoformat()}"
 
     # no allowance configured -> the rule is not applied
+    configure(break_allowance_minutes=None)
     assert client.get(url).data["results"][0]["break_over_allowance_minutes"] is None
 
     configure(break_allowance_minutes=60)
@@ -168,6 +175,7 @@ def test_break_over_allowance_is_reported_on_records(org, client_for, configure)
 
 def test_today_payload_includes_break_allowance(org, client_for, configure):
     client = client_for(org["alice"])
+    configure(break_allowance_minutes=None)
     with mock.patch("django.utils.timezone.now", return_value=datetime.datetime(2025, 3, 3, 10, tzinfo=UTC)):
         assert client.get("/api/attendance/today/").data["break_allowance_minutes"] is None
         configure(break_allowance_minutes=60)

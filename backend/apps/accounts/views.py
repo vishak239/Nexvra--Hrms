@@ -248,5 +248,5 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
             user.save(update_fields=["password", "must_change_password"])
         changes = audit.diff(before, audit.snapshot(user, fields))
         if password:
-            changes["password"] = "set"
+            changes["password"] = "set"  # nosec B105 - audit marker, not a password
         audit.record(self.request, "USER_UPDATED", obj=user, changes=changes)

@@ -20,6 +20,14 @@ class Notification(models.Model):
         OVERTIME_STARTED = "OVERTIME_STARTED", "Overtime started"
         OVERTIME_COMPLETED = "OVERTIME_COMPLETED", "Overtime completed"
         SYNC_STATUS = "SYNC_STATUS", "Offline sync status"
+        WFH_REQUESTED = "WFH_REQUESTED", "Work from home requested"
+        WFH_APPROVED = "WFH_APPROVED", "Work from home approved"
+        WFH_REJECTED = "WFH_REJECTED", "Work from home rejected"
+        OVERTIME_REQUESTED = "OVERTIME_REQUESTED", "Overtime requested"
+        OVERTIME_APPROVED = "OVERTIME_APPROVED", "Overtime approved"
+        OVERTIME_REJECTED = "OVERTIME_REJECTED", "Overtime rejected"
+        OVERTIME_AUTO_STOPPED = "OVERTIME_AUTO_STOPPED", "Overtime stopped automatically"
+        ATTENDANCE_AUTO_CHECKOUT = "ATTENDANCE_AUTO_CHECKOUT", "Automatic check-out"
         GENERAL = "GENERAL", "General"
 
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")

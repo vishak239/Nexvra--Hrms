@@ -8,6 +8,7 @@ router.include_root_view = False
 router.register("breaks", views.BreakViewSet, basename="attendance-break")
 router.register("overtime", views.OvertimeViewSet, basename="attendance-overtime")
 router.register("sync-events", views.SyncEventViewSet, basename="attendance-sync-event")
+router.register("wfh", views.WorkFromHomeViewSet, basename="attendance-wfh")
 router.register("", views.AttendanceViewSet, basename="attendance")
 
 urlpatterns = router.urls

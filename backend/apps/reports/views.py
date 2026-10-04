@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.attendance import services as attendance
-from apps.attendance.models import AttendanceRecord, BreakSession, OvertimeSession, SessionStatus
+from apps.attendance.models import AttendanceRecord, BreakSession, OvertimeSession, OvertimeStatus, SessionStatus
 from apps.attendance.serializers import AttendanceRecordSerializer
 from apps.core.permissions import HasPermission, scope_queryset
 from apps.employees.models import Employee
@@ -199,7 +199,7 @@ class DashboardView(APIView):
 
         if user.has_permission("attendance.view_all") or user.has_permission("attendance.view_team"):
             breaks = scope_queryset(BreakSession.objects.filter(status=SessionStatus.ACTIVE), user, "attendance")
-            overtime = scope_queryset(OvertimeSession.objects.filter(status=SessionStatus.ACTIVE), user, "attendance")
+            overtime = scope_queryset(OvertimeSession.objects.filter(status=OvertimeStatus.ACTIVE), user, "attendance")
             data["work_sessions_now"] = {
                 "on_break": breaks.exclude(employee__user=user).count(),
                 "overtime_running": overtime.exclude(employee__user=user).count(),
