@@ -1,0 +1,14 @@
+# Docker build context = backend/. Never ship secrets, employee files, local tooling or caches.
+.env
+.env.*
+.venv
+private_media
+private_media.before-restore-*
+staticfiles
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov
+**/__pycache__
+**/*.pyc
+**/*.pyo
