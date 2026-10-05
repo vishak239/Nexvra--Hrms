@@ -35,6 +35,7 @@ const ICONS = {
   EyeOff: "visibility_off",
   FileText: "description",
   FolderShared: "folder_shared",
+  Groups: "groups",
   Gavel: "gavel",
   History: "history",
   Inbox: "inbox",

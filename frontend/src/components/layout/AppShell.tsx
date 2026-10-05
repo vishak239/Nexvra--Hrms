@@ -8,10 +8,10 @@ import { AttendanceActions } from "@/components/attendance/AttendanceActions";
 import { WorkSessionProvider } from "@/components/attendance/WorkSessionProvider";
 import { NexvraLogo } from "@/components/brand/NexvraLogo";
 import { ConnectionIndicator, OfflineBanner } from "@/components/connection/ConnectionIndicator";
+import { NotificationCenterProvider, useNotificationCenter } from "@/components/layout/NotificationCenter";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Avatar } from "@/components/ui/Display";
 import { ErrorState, Loading, NoAccess } from "@/components/ui/States";
-import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ConnectionProvider } from "@/lib/connection";
 import { navTrail, visibleNav } from "@/lib/nav";
@@ -162,26 +162,6 @@ function HeaderTrail() {
   );
 }
 
-/** Unread count, refreshed on navigation and when the window regains focus (no polling). */
-function useUnreadCount(path: string) {
-  const pathname = usePathname();
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let alive = true;
-    const load = () =>
-      api<{ count: number }>(path)
-        .then((r) => alive && setCount(r.count))
-        .catch(() => undefined);
-    void load();
-    window.addEventListener("focus", load);
-    return () => {
-      alive = false;
-      window.removeEventListener("focus", load);
-    };
-  }, [path, pathname]);
-  return count;
-}
-
 function CountLink({ href, label, count, icon }: { href: string; label: string; count: number; icon: ReactNode }) {
   return (
     <Link
@@ -200,12 +180,12 @@ function CountLink({ href, label, count, icon }: { href: string; label: string; 
 }
 
 function NotificationBell() {
-  const count = useUnreadCount("/api/notifications/unread-count/");
+  const count = useNotificationCenter()?.notifications ?? 0;
   return <CountLink href="/notifications" label="Notifications" count={count} icon={<Bell className="h-6 w-6" />} />;
 }
 
 function MessagesLink() {
-  const count = useUnreadCount("/api/messages/unread-count/");
+  const count = useNotificationCenter()?.messages ?? 0;
   return <CountLink href="/messages" label="Messages" count={count} icon={<MessageSquare className="h-6 w-6" />} />;
 }
 
@@ -239,6 +219,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <ConnectionProvider userId={me.id}>
+    <NotificationCenterProvider userId={me.id}>
     <WorkSessionProvider>
     <div className="min-h-screen">
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
@@ -288,6 +269,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
     </div>
     </WorkSessionProvider>
+    </NotificationCenterProvider>
     </ConnectionProvider>
   );
 }

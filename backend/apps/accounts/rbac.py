@@ -50,6 +50,8 @@ PERMISSIONS = {
     "policies.manage": "Create, edit and publish company policies",
     "wfh.approve": "Approve or reject work-from-home requests",
     "overtime.approve": "Approve or reject overtime requests",
+    "meetings.manage": "Schedule, start and end company meetings (pauses working time)",
+    "resume.approve": "Approve or reject Resume Work requests after an automatic check-out",
 }
 
 _EMPLOYEE = {"attendance.self", "leave.apply", "payroll.view_own", "documents.view_own", "messages.use"}
@@ -84,6 +86,8 @@ _HR = _MANAGER | {
     "policies.manage",
     "wfh.approve",
     "overtime.approve",
+    "meetings.manage",
+    "resume.approve",
 }
 
 # code: (name, level, default permissions)

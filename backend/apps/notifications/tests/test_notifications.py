@@ -32,3 +32,52 @@ def test_notify_skips_inactive_and_duplicate_recipients(org):
     org["bob"].user.save()
     rows = notify([org["alice"].user, org["alice"].user, org["bob"].user], Notification.Type.GENERAL, "Hi")
     assert len(rows) == 1
+
+
+def test_updates_poll_returns_only_new_items_and_counts(org, client_for):
+    import datetime
+    from unittest import mock
+
+    from django.utils import timezone
+
+    client = client_for(org["alice"])
+    notify([org["alice"].user], Notification.Type.GENERAL, "Old")
+    first = client.get("/api/notifications/updates/")
+    assert first.status_code == 200
+    assert first.data["notifications"] == []  # no cursor yet: nothing is popped up
+    assert first.data["unread_notifications"] == 1
+    assert first.data["unread_messages"] == 0
+    since = first.data["server_time"]
+    later = timezone.now() + datetime.timedelta(seconds=5)
+    with mock.patch("django.utils.timezone.now", return_value=later):
+        notify([org["alice"].user], Notification.Type.GENERAL, "New")
+        notify([org["bob"].user], Notification.Type.GENERAL, "Not mine")
+        res = client.get("/api/notifications/updates/", {"since": since})
+    assert [n["title"] for n in res.data["notifications"]] == ["New"]
+    assert res.data["unread_notifications"] == 2
+    again = client.get("/api/notifications/updates/", {"since": res.data["server_time"]})
+    assert again.data["notifications"] == []  # never shown twice
+    assert client.get("/api/notifications/updates/", {"since": "yesterday"}).status_code == 400
+
+
+def test_updates_poll_resurfaces_a_refreshed_message_alert(org, client_for):
+    import datetime
+    from unittest import mock
+
+    from django.utils import timezone
+
+    from apps.messaging.models import Conversation
+    from apps.notifications.services import notify_collapsed
+
+    conversation = Conversation.objects.create()
+    client = client_for(org["alice"])
+    notify_collapsed(org["alice"].user, Notification.Type.MESSAGE_RECEIVED, "New message from Bob", "", conversation)
+    since = client.get("/api/notifications/updates/").data["server_time"]
+    later = timezone.now() + datetime.timedelta(seconds=5)
+    with mock.patch("django.utils.timezone.now", return_value=later):
+        notify_collapsed(
+            org["alice"].user, Notification.Type.MESSAGE_RECEIVED, "New message from Bob", "", conversation
+        )
+        res = client.get("/api/notifications/updates/", {"since": since})
+    assert len(res.data["notifications"]) == 1 and res.data["notifications"][0]["type"] == "MESSAGE_RECEIVED"
+    assert Notification.objects.filter(recipient=org["alice"].user).count() == 1  # still one collapsed row

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, StatusBadge } from "@/components/ui/Display";
-import { History, LocateFixed, LocationOff, MapPin, Monitor, RotateCcw, Timer } from "@/components/ui/icons";
+import { History, LocateFixed, LocationOff, MapPin, Monitor, RotateCcw, Timer, Groups } from "@/components/ui/icons";
 import { Alert, ErrorState, Loading } from "@/components/ui/States";
 import { useAuth } from "@/lib/auth";
 import { fmtDate, fmtDateTime, fmtTime } from "@/lib/format";
@@ -12,6 +12,8 @@ import {
   fmtClock,
   fmtDuration,
   hasActiveSession,
+  meetingSeconds,
+  nonWorkingSeconds,
   overtimeSeconds,
   totalBreakSeconds,
   workedSeconds,
@@ -25,6 +27,7 @@ const PHASE_LABEL: Record<Phase, string> = {
   NOT_CHECKED_IN: "Not checked in",
   WORKING: "Working",
   ON_BREAK: "On break",
+  IN_MEETING: "In a meeting",
   CHECKED_OUT: "Checked out",
   OVERTIME: "Overtime running",
 };
@@ -33,6 +36,7 @@ const PHASE_TONE: Record<Phase, "neutral" | "green" | "amber" | "blue" | "dark">
   NOT_CHECKED_IN: "neutral",
   WORKING: "green",
   ON_BREAK: "amber",
+  IN_MEETING: "amber",
   CHECKED_OUT: "neutral",
   OVERTIME: "blue",
 };
@@ -171,9 +175,10 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
 
   // Opening the attendance card is the moment to look up the location for office check-in.
   const requestLocation = ws?.requestLocation;
+  const resume = view?.resume;
   useEffect(() => {
-    if (phase === "NOT_CHECKED_IN" && state?.workplace.configured) requestLocation?.();
-  }, [phase, state?.workplace.configured, requestLocation]);
+    if ((phase === "NOT_CHECKED_IN" || resume === "approved") && state?.workplace.configured) requestLocation?.();
+  }, [phase, resume, state?.workplace.configured, requestLocation]);
 
   // "Active work session detected" once per browser session (e.g. after the browser was closed).
   useEffect(() => {
@@ -208,9 +213,15 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
   const openOt = state.open_overtime_request;
   const autoCheckout =
     record?.checkout_reason === "GEO_FENCE_EXIT" || record?.checkout_reason === "INACTIVITY_TIMEOUT" ? record : null;
+  const worked = workedSeconds(view, serverNow);
+  const meeting = meetingSeconds(view, serverNow);
+  const nonWorking = nonWorkingSeconds(view, serverNow);
+  const required = state.required_work_seconds;
+  const resumeRequest = state.resume_request;
 
-  let headline = { label: "Worked today", seconds: workedSeconds(view, serverNow), testId: "work-timer" };
+  let headline = { label: "Worked today", seconds: worked, testId: "work-timer" };
   if (phase === "ON_BREAK") headline = { label: "Break timer", seconds: breakNow, testId: "break-timer" };
+  if (phase === "IN_MEETING") headline = { label: "Worked today — paused", seconds: worked, testId: "work-timer" };
   if (phase === "OVERTIME") headline = { label: "Overtime timer", seconds: overtimeSeconds(view, serverNow), testId: "overtime-timer" };
 
   return (
@@ -258,18 +269,70 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
           <Alert tone="warning">Offline — showing your last known session from {fmtDateTime(ws.staleSince)}. It refreshes automatically when the connection returns.</Alert>
         )}
         {ws.actionError && <Alert>{ws.actionError.message}</Alert>}
+        {phase === "IN_MEETING" && (
+          <Alert tone="info">
+            <span className="flex flex-wrap items-center gap-2" data-testid="meeting-status">
+              <Groups className="h-4 w-4" />
+              <strong>Meeting in progress — Working Time paused.</strong>
+              {state.active_pause?.meeting_title && <span>{state.active_pause.meeting_title}</span>}
+              {view.meetingStart && <span>· since {fmtTime(view.meetingStart)}</span>}
+              <span>It continues automatically when HR / Admin ends the meeting; no check-in needed.</span>
+            </span>
+          </Alert>
+        )}
+        {state.active_meeting && phase !== "IN_MEETING" && phase !== "CHECKED_OUT" && phase !== "OVERTIME" && (
+          <Alert tone="info">
+            <span data-testid="meeting-status">
+              <strong>Meeting in progress: {state.active_meeting.title}.</strong>{" "}
+              {phase === "NOT_CHECKED_IN" ? "If you check in now, your working time starts paused until it ends." : ""}
+            </span>
+          </Alert>
+        )}
         {autoCheckout?.check_out && (
           <Alert tone="warning">
             <span data-testid="auto-checkout">
               You were checked out automatically at {fmtTime(autoCheckout.check_out)}
               {autoCheckout.checkout_reason === "GEO_FENCE_EXIT"
                 ? ` because you left the workplace area${autoCheckout.check_out_distance_m != null ? ` (about ${autoCheckout.check_out_distance_m} m away)` : ""}.`
-                : ` after ${state.inactivity_timeout_minutes ?? 30} minutes without activity.`}
+                : ` after ${state.inactivity_timeout_minutes ?? 30} minutes without activity. You are now non-working.`}
+            </span>
+          </Alert>
+        )}
+        {view.resume === "needed" && (
+          <p className="text-body-md text-on-surface-variant" data-testid="resume-status" data-state="needed">
+            To continue working today, use <strong>Resume Work</strong> and give a reason. HR / Admin will review it.
+          </p>
+        )}
+        {view.resume === "pending" && resumeRequest && (
+          <Alert tone="info">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span data-testid="resume-status" data-state="pending">
+                <strong>Waiting for HR/Admin approval.</strong> Resume Work requested at {fmtTime(resumeRequest.created_at)}.
+              </span>
+              <Button size="sm" variant="secondary" loading={ws.busy === "resume-cancel"} onClick={() => void ws.cancelResume(resumeRequest.id)}>
+                Cancel request
+              </Button>
+            </div>
+          </Alert>
+        )}
+        {view.resume === "approved" && (
+          <Alert tone="success">
+            <span data-testid="resume-status" data-state="approved">
+              <strong>Resume approved — Check in to continue working.</strong>
+              {resumeRequest?.decided_by_name ? ` Approved by ${resumeRequest.decided_by_name}.` : ""} The usual location / work-from-home rules apply.
+            </span>
+          </Alert>
+        )}
+        {view.resume === "rejected" && (
+          <Alert tone="error">
+            <span data-testid="resume-status" data-state="rejected">
+              <strong>Resume request rejected.</strong>
+              {resumeRequest?.decision_note ? ` Note: ${resumeRequest.decision_note}` : ""} You remain checked out; you can send a new request.
             </span>
           </Alert>
         )}
 
-        {phase === "NOT_CHECKED_IN" && (
+        {(phase === "NOT_CHECKED_IN" || view.resume === "approved") && (
           <>
             {state.wfh_today?.status === "APPROVED" && (
               <Alert tone="success">Work from home is approved for today. Use “WFH check in” to start; no location is needed.</Alert>
@@ -283,29 +346,38 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
 
         {phase !== "NOT_CHECKED_IN" && phase !== "DISABLED" && (
           <div
-            className={`rounded-xl px-5 py-4 ${phase === "ON_BREAK" ? "bg-warning-container" : phase === "OVERTIME" ? "bg-surface-container-high" : "bg-surface-container"}`}
+            className={`rounded-xl px-5 py-4 ${phase === "ON_BREAK" || phase === "IN_MEETING" ? "bg-warning-container" : phase === "OVERTIME" ? "bg-surface-container-high" : "bg-surface-container"}`}
           >
             <p className="font-label-sm text-label-sm uppercase text-on-surface-variant">{headline.label}</p>
             <p role="timer" aria-label={headline.label} data-testid={headline.testId} className="mt-1 font-display text-display-lg-mobile font-bold text-primary sm:text-display-lg">
               {fmtClock(headline.seconds)}
             </p>
             {phase === "ON_BREAK" && view.breakStart && <p className="mt-1 text-xs text-on-surface-variant">Since {fmtTime(view.breakStart)} — break time is not counted as work.</p>}
+            {phase === "IN_MEETING" && <p className="mt-1 text-xs text-on-surface-variant">Meeting time is recorded separately; it is not working, break or non-working time.</p>}
             {phase === "OVERTIME" && view.overtimeStart && <p className="mt-1 text-xs text-on-surface-variant">Since {fmtTime(view.overtimeStart)} — recorded separately from normal hours.</p>}
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Stat label="Check-in" value={fmtTime(view.checkIn)} />
           <Stat label="Check-out" value={fmtTime(view.checkOut)} />
           <Stat
-            label="Break used"
+            label="Working time"
+            value={fmtDuration(worked)}
+            testId="actual-working"
+            hint={required ? (worked >= required ? "Required time reached" : `${fmtDuration(required - worked)} remaining of ${fmtDuration(required)}`) : undefined}
+          />
+          <Stat
+            label="Break time"
             value={fmtDuration(totalBreakSeconds(view, serverNow))}
             testId="total-break"
             hint={allowance ? (allowance.remaining > 0 ? `${minutes(allowance.remaining)} remaining of ${minutes(allowance.allowance)}` : "Break unavailable for the day") : undefined}
             hintTone={allowance && allowance.remaining === 0 ? "warning" : "muted"}
           />
-          <Stat label="Actual working" value={fmtDuration(workedSeconds(view, serverNow))} testId="actual-working" />
+          <Stat label="Non-working time" value={fmtDuration(nonWorking)} testId="non-working-total" hint={view.nonWorkingStart ? `Since ${fmtTime(view.nonWorkingStart)}` : undefined} />
+          <Stat label="Meeting time" value={fmtDuration(meeting)} testId="meeting-total" />
           <Stat label="Overtime" value={fmtDuration(overtimeSeconds(view, serverNow))} testId="overtime-total" />
+          {required ? <Stat label="Required working" value={fmtDuration(required)} testId="required-work" /> : null}
         </div>
         {allowance && phase !== "NOT_CHECKED_IN" && (
           <p className="text-body-md text-on-surface" data-testid="break-allowance">
@@ -368,15 +440,30 @@ export function WorkSessionCard({ onChange }: { onChange?: () => void }) {
           <p className="text-xs text-on-surface-variant">Check-out is available once your offline actions have synced.</p>
         )}
         {(phase === "WORKING" || phase === "OVERTIME") && state.inactivity_timeout_minutes && (
-          <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
-            <span>
-              Activity check: {state.inactivity_timeout_minutes} minutes without any activity in Nexvra HRMS ends the session automatically. Only the
-              time of your last activity is recorded — never what you type or view.
-            </span>
-            {ws.activity.systemIdleSupported && !ws.activity.systemIdleEnabled && (
-              <Button size="sm" variant="ghost" icon={<Monitor className="h-4 w-4" />} onClick={() => void ws.activity.enableSystemIdle()}>
-                Also count activity in other apps
-              </Button>
+          <div className="space-y-2 text-xs text-on-surface-variant" data-testid="activity-note">
+            <p>
+              Activity check: {state.inactivity_timeout_minutes} minutes without any activity ends the session automatically. Only the times of your
+              activity are recorded — never what you type or view. Activity while your connection is down is reported when it returns.
+            </p>
+            {ws.activity.systemIdleEnabled ? (
+              <p className="flex items-center gap-2 text-primary-fixed" data-testid="system-idle-status" data-enabled="true">
+                <Monitor className="h-4 w-4" /> Activity anywhere on this computer counts (keyboard / mouse active or idle — nothing else).
+              </p>
+            ) : ws.activity.systemIdleSupported ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-container px-3 py-2" data-testid="system-idle-status" data-enabled="false">
+                <span className="text-on-surface">
+                  Working in other apps? Right now only activity inside Nexvra HRMS counts. Allow this browser to see whether the computer is in use
+                  (active / idle only) so work in other apps counts too.
+                </span>
+                <Button size="sm" variant="secondary" icon={<Monitor className="h-4 w-4" />} onClick={() => void ws.activity.enableSystemIdle()}>
+                  Count activity in other apps
+                </Button>
+              </div>
+            ) : (
+              <p data-testid="system-idle-status" data-enabled="unsupported">
+                This browser cannot tell whether you are working in other apps. Use Chrome or Edge for that, or interact with Nexvra HRMS at least every
+                {` ${state.inactivity_timeout_minutes}`} minutes.
+              </p>
             )}
           </div>
         )}

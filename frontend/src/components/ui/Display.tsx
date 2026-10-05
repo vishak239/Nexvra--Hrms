@@ -88,6 +88,9 @@ const STATUS_TONES: Record<string, Tone> = {
   APPROVED: "green",
   REJECTED: "red",
   CANCELLED: "neutral",
+  SCHEDULED: "blue",
+  USED: "neutral",
+  EXPIRED: "neutral",
   IN_PROGRESS: "blue",
   COMPLETED: "green",
   OVERDUE: "red",
@@ -118,24 +121,37 @@ export function Avatar({ name, src, size = 36 }: { name: string; src?: string | 
   );
 }
 
+/** Figure colours for summary cards; each works in light and dark (theme roles). */
+export type StatAccent = "default" | "tasks" | "messages" | "notifications";
+const STAT_ACCENT: Record<StatAccent, string> = {
+  default: "text-primary",
+  tasks: "text-primary-fixed",
+  messages: "text-info",
+  notifications: "text-notice",
+};
+
 export function StatCard({
   label,
   value,
   hint,
   icon,
+  accent = "default",
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   icon?: ReactNode;
+  accent?: StatAccent;
 }) {
   return (
-    <Card className="flex flex-col justify-between p-space-md transition-colors hover:bg-surface-container">
+    <Card className="flex min-w-0 flex-col justify-between p-space-md transition-colors hover:bg-surface-container">
       <div className="flex items-start justify-between gap-3">
-        <p className="font-code-mono text-code-mono uppercase text-on-surface-variant">{label}</p>
-        {icon && <span className="text-on-surface-variant">{icon}</span>}
+        <p className="min-w-0 font-code-mono text-code-mono uppercase text-on-surface-variant">{label}</p>
+        {icon && <span className={accent === "default" ? "text-on-surface-variant" : STAT_ACCENT[accent]}>{icon}</span>}
       </div>
-      <p className="mt-space-md font-data-metric text-data-metric text-primary">{value}</p>
+      <p className={`mt-space-md font-data-metric text-data-metric ${STAT_ACCENT[accent]}`} data-accent={accent}>
+        {value}
+      </p>
       {hint && <p className="mt-1 text-body-sm text-on-surface-variant">{hint}</p>}
     </Card>
   );

@@ -25,6 +25,8 @@ DARK = {
     "surface-variant": "#353534", "on-surface": "#e5e2e1", "on-surface-variant": "#bfcbae",
     "inverse-surface": "#e5e2e1", "inverse-on-surface": "#313030", "outline": "#8a957a", "outline-variant": "#404a34",
     "warning": "#ffd60a", "warning-container": "#1f1600", "warning-outline": "#473400",
+    # Calm accents for dashboard figures (not part of the Stitch export; contrast >= 4.5:1 on cards, WCAG AA).
+    "info": "#7cc4ff", "notice": "#f5b95f",
 }
 
 # Same roles on a light canvas. In this app "surface-container-lowest" is the page canvas and
@@ -46,6 +48,7 @@ LIGHT = {
     "surface-variant": "#e1e4d6", "on-surface": "#1b1c18", "on-surface-variant": "#44483d",
     "inverse-surface": "#30312c", "inverse-on-surface": "#f2f1ec", "outline": "#6b7062", "outline-variant": "#c4c8ba",
     "warning": "#7a5900", "warning-container": "#fff4cc", "warning-outline": "#e9c46a",
+    "info": "#005b94", "notice": "#8a4b00",
 }
 
 assert DARK.keys() == LIGHT.keys()

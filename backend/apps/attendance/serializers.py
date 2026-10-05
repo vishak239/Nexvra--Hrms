@@ -4,7 +4,17 @@ from apps.employees.models import Employee
 from apps.employees.serializers import employee_ref
 from apps.organization.models import CompanySettings
 
-from .models import AttendanceRecord, BreakSession, OvertimeSession, SyncEvent, WorkFromHomeRequest
+from .models import (
+    AttendanceRecord,
+    BreakSession,
+    Meeting,
+    MeetingPause,
+    NonWorkingPeriod,
+    OvertimeSession,
+    ResumeWorkRequest,
+    SyncEvent,
+    WorkFromHomeRequest,
+)
 
 
 class AttendanceRecordSerializer(serializers.ModelSerializer):
@@ -12,6 +22,8 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
     worked_minutes = serializers.IntegerField(read_only=True)
     session_minutes = serializers.IntegerField(read_only=True)
     break_minutes = serializers.IntegerField(read_only=True)
+    meeting_minutes = serializers.IntegerField(read_only=True)
+    non_working_minutes = serializers.IntegerField(read_only=True)
     break_over_allowance_minutes = serializers.SerializerMethodField()
 
     class Meta:
@@ -28,6 +40,10 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
             "session_minutes",
             "break_minutes",
             "total_break_seconds",
+            "meeting_minutes",
+            "total_meeting_seconds",
+            "non_working_minutes",
+            "total_non_working_seconds",
             "break_over_allowance_minutes",
             "mode",
             "checkout_reason",
@@ -186,8 +202,21 @@ class CheckOutSerializer(LocationFieldsMixin):
     pass
 
 
+MAX_ACTIVITY_POINTS = 3000
+
+
 class HeartbeatSerializer(LocationFieldsMixin):
+    """Activity metadata only: when the user interacted, never what they did."""
+
     idle_seconds = serializers.IntegerField(min_value=0, max_value=86400)
+    # Seconds-ago offsets of real interactions since the last acknowledged report (at most about
+    # one per 30 s, so a day offline fits). Relative offsets: the device clock is never trusted.
+    activity = serializers.ListField(
+        child=serializers.IntegerField(min_value=0, max_value=172800),
+        max_length=MAX_ACTIVITY_POINTS,
+        required=False,
+    )
+    observed_seconds = serializers.IntegerField(min_value=0, max_value=172800, required=False)
     location_status = serializers.ChoiceField(
         choices=["ok", "denied", "unavailable", "timeout", "unsupported", "not_requested"], default="not_requested"
     )
@@ -230,3 +259,98 @@ class SyncRequestSerializer(serializers.Serializer):
         if len(ids) != len(set(ids)):
             raise serializers.ValidationError("Event ids must be unique.")
         return events
+
+
+class MeetingPauseSerializer(serializers.ModelSerializer):
+    meeting_title = serializers.CharField(source="meeting.title", read_only=True)
+    meeting_kind = serializers.CharField(source="meeting.kind", read_only=True)
+
+    class Meta:
+        model = MeetingPause
+        fields = ["id", "meeting", "meeting_title", "meeting_kind", "started_at", "ended_at", "duration_seconds",
+                  "status", "end_reason"]
+        read_only_fields = fields
+
+
+class NonWorkingPeriodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NonWorkingPeriod
+        fields = ["id", "started_at", "ended_at", "duration_seconds", "reason", "resume_request"]
+        read_only_fields = fields
+
+
+class MeetingSerializer(serializers.ModelSerializer):
+    participants = serializers.SerializerMethodField()
+    participant_count = serializers.SerializerMethodField()
+    created_by_name = serializers.CharField(source="created_by.full_name", read_only=True, default=None)
+    started_by_name = serializers.CharField(source="started_by.full_name", read_only=True, default=None)
+    ended_by_name = serializers.CharField(source="ended_by.full_name", read_only=True, default=None)
+
+    class Meta:
+        model = Meeting
+        fields = ["id", "title", "agenda", "kind", "status", "scheduled_start", "scheduled_end", "started_at",
+                  "ended_at", "end_reason", "participants", "participant_count", "created_by_name",
+                  "started_by_name", "ended_by_name", "cancelled_at", "created_at", "updated_at"]
+        read_only_fields = fields
+
+    def get_participants(self, meeting):
+        return [employee_ref(e) for e in meeting.participants.all()]
+
+    def get_participant_count(self, meeting):
+        return len(meeting.participants.all())
+
+
+class MeetingWriteSerializer(serializers.Serializer):
+    """Fields HR may set. Status, start and end times are server-controlled (start / end actions)."""
+
+    title = serializers.CharField(max_length=200)
+    agenda = serializers.CharField(max_length=5000, required=False, allow_blank=True, default="")
+    kind = serializers.ChoiceField(choices=Meeting.Kind.choices)
+    participant_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), required=False, default=list, max_length=500
+    )
+    scheduled_start = serializers.DateTimeField(required=False, allow_null=True, default=None)
+    scheduled_end = serializers.DateTimeField(required=False, allow_null=True, default=None)
+
+    def validate_title(self, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise serializers.ValidationError("Give the meeting a title (at least 3 characters).")
+        return value
+
+    def validate_participant_ids(self, ids):
+        ids = list(dict.fromkeys(ids))
+        employees = list(Employee.objects.filter(pk__in=ids).select_related("user"))
+        if len(employees) != len(ids):
+            raise serializers.ValidationError("Some participants do not exist.")
+        return employees
+
+    def validate(self, attrs):
+        start, end = attrs.get("scheduled_start"), attrs.get("scheduled_end")
+        if start and end and end <= start:
+            raise serializers.ValidationError({"scheduled_end": ["The end must be after the start."]})
+        if attrs.get("kind") == Meeting.Kind.SELECTED and "participant_ids" in attrs and not attrs["participant_ids"]:
+            if not self.partial:
+                raise serializers.ValidationError({"participant_ids": ["Choose at least one participant."]})
+        return attrs
+
+
+class ResumeWorkRequestSerializer(serializers.ModelSerializer):
+    employee = serializers.SerializerMethodField()
+    decided_by_name = serializers.CharField(source="decided_by.full_name", read_only=True, default=None)
+
+    class Meta:
+        model = ResumeWorkRequest
+        fields = ["id", "employee", "date", "reason", "status", "checked_out_at", "decided_by_name", "decided_at",
+                  "decision_note", "used_at", "created_at"]
+        read_only_fields = ["id", "employee", "date", "status", "checked_out_at", "decided_by_name", "decided_at",
+                            "decision_note", "used_at", "created_at"]
+
+    def get_employee(self, obj):
+        return employee_ref(obj.employee)
+
+    def validate_reason(self, value):
+        value = value.strip()
+        if len(value) < 10:
+            raise serializers.ValidationError("Explain why you were inactive (at least 10 characters).")
+        return value

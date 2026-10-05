@@ -28,6 +28,13 @@ class Notification(models.Model):
         OVERTIME_REJECTED = "OVERTIME_REJECTED", "Overtime rejected"
         OVERTIME_AUTO_STOPPED = "OVERTIME_AUTO_STOPPED", "Overtime stopped automatically"
         ATTENDANCE_AUTO_CHECKOUT = "ATTENDANCE_AUTO_CHECKOUT", "Automatic check-out"
+        MEETING_SCHEDULED = "MEETING_SCHEDULED", "Meeting scheduled"
+        MEETING_STARTED = "MEETING_STARTED", "Meeting started"
+        MEETING_ENDED = "MEETING_ENDED", "Meeting ended"
+        MEETING_CANCELLED = "MEETING_CANCELLED", "Meeting cancelled"
+        RESUME_REQUESTED = "RESUME_REQUESTED", "Resume work requested"
+        RESUME_APPROVED = "RESUME_APPROVED", "Resume work approved"
+        RESUME_REJECTED = "RESUME_REJECTED", "Resume work rejected"
         GENERAL = "GENERAL", "General"
 
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")

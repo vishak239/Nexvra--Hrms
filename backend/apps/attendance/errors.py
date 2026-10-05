@@ -32,3 +32,20 @@ class WfhNotApproved(exceptions.APIException):
 class BreakAllowanceUsed(Conflict):
     default_code = "break_allowance_used"
     default_detail = "Your break allowance for today is used up."
+
+
+class ResumeRequired(Conflict):
+    default_code = "resume_required"
+    default_detail = (
+        "You were checked out automatically for inactivity. Use Resume Work to ask HR / Admin to approve resuming."
+    )
+
+
+class ResumePending(Conflict):
+    default_code = "resume_pending"
+    default_detail = "Your Resume Work request is waiting for HR / Admin approval."
+
+
+class InMeeting(Conflict):
+    default_code = "in_meeting"
+    default_detail = "A meeting is in progress — your working time is paused."

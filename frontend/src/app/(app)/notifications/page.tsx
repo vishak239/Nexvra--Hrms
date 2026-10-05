@@ -4,6 +4,7 @@ import { Bell, CheckCheck } from "@/components/ui/icons";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { DesktopAlertsControl, useNotificationCenter } from "@/components/layout/NotificationCenter";
 import { Card, PageHeader } from "@/components/ui/Display";
 import { Tabs, useToast } from "@/components/ui/Overlay";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/States";
@@ -11,21 +12,12 @@ import { PAGE_SIZE, Pagination } from "@/components/ui/Table";
 import { api } from "@/lib/api";
 import { fmtDateTime } from "@/lib/format";
 import { tryApi, useResource } from "@/lib/hooks";
+import { notificationLink as linkFor } from "@/lib/notifications";
 import type { Notification, Paginated } from "@/lib/types";
-
-/** Where a notification should take the user (the server supplies `link` for most types). */
-function linkFor(n: Notification) {
-  if (n.type.startsWith("LEAVE_SUBMITTED")) return "/leave?tab=approvals";
-  if (n.link) return n.link;
-  if (n.type === "SYNC_STATUS") return "/attendance";
-  if (n.type.startsWith("LEAVE_")) return "/leave";
-  if (n.type === "PAYSLIP_PUBLISHED" && n.entity_id) return `/payslips/${n.entity_id}`;
-  if (n.type === "DOCUMENT_SHARED") return "/documents";
-  return null;
-}
 
 export default function NotificationsPage() {
   const toast = useToast();
+  const center = useNotificationCenter();
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [page, setPage] = useState(1);
   const { data, error, loading, reload } = useResource<Paginated<Notification>>("/api/notifications/", {
@@ -38,6 +30,7 @@ export default function NotificationsPage() {
     if (n.is_read) return;
     await tryApi(() => api(`/api/notifications/${n.id}/mark-read/`, { method: "POST" }));
     reload();
+    center?.refresh();
   }
 
   return (
@@ -45,17 +38,21 @@ export default function NotificationsPage() {
       <PageHeader
         title="Notifications"
         actions={
-          <Button
-            variant="secondary"
-            icon={<CheckCheck className="h-4 w-4" />}
-            onClick={async () => {
-              const r = await tryApi(() => api<{ updated: number }>("/api/notifications/mark-all-read/", { method: "POST" }));
-              toast(r.ok ? "All notifications marked as read." : r.error.message, r.ok ? "success" : "error");
-              reload();
-            }}
-          >
-            Mark all as read
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <DesktopAlertsControl />
+            <Button
+              variant="secondary"
+              icon={<CheckCheck className="h-4 w-4" />}
+              onClick={async () => {
+                const r = await tryApi(() => api<{ updated: number }>("/api/notifications/mark-all-read/", { method: "POST" }));
+                toast(r.ok ? "All notifications marked as read." : r.error.message, r.ok ? "success" : "error");
+                reload();
+                center?.refresh();
+              }}
+            >
+              Mark all as read
+            </Button>
+          </div>
         }
       />
       <Tabs

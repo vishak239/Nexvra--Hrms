@@ -4,15 +4,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader } from "@/components/ui/Display";
 import { FilterSelect, TextAreaField } from "@/components/ui/Field";
-import { Check, Home, MoreTime, X } from "@/components/ui/icons";
+import { Check, Home, MoreTime, RotateCcw, X } from "@/components/ui/icons";
 import { Modal, useToast } from "@/components/ui/Overlay";
 import { EmptyState, ErrorState, FormError, SkeletonRows } from "@/components/ui/States";
 import { PAGE_SIZE, Pagination, TBody, THead, Table, Td, Th } from "@/components/ui/Table";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fmtDate, fmtDateTime } from "@/lib/format";
+import { fmtDate, fmtDateTime, fmtTime } from "@/lib/format";
 import { tryApi, useAction, useResource } from "@/lib/hooks";
-import type { OvertimeSession, Paginated, WfhStatus, WorkFromHomeRequest } from "@/lib/types";
+import type { OvertimeSession, Paginated, ResumeStatus, ResumeWorkRequest, WfhStatus, WorkFromHomeRequest } from "@/lib/types";
 import { OvertimeTable } from "./OvertimeTable";
 import { useWorkSession } from "./WorkSessionProvider";
 
@@ -23,7 +23,31 @@ const WFH_TONE: Record<WfhStatus, "amber" | "green" | "red" | "neutral"> = {
   CANCELLED: "neutral",
 };
 
-type Decision = { kind: "wfh" | "overtime"; id: number; approve: boolean; who: string; when: string };
+type Decision = { kind: "wfh" | "overtime" | "resume"; id: number; approve: boolean; who: string; when: string };
+
+const DECISION: Record<Decision["kind"], { path: string; what: string }> = {
+  wfh: { path: "/api/attendance/wfh", what: "work from home" },
+  overtime: { path: "/api/attendance/overtime", what: "overtime" },
+  resume: { path: "/api/attendance/resume-requests", what: "Resume Work" },
+};
+
+const RESUME_TONE: Record<ResumeStatus, "amber" | "green" | "red" | "neutral"> = {
+  PENDING: "amber",
+  APPROVED: "green",
+  REJECTED: "red",
+  USED: "neutral",
+  CANCELLED: "neutral",
+  EXPIRED: "neutral",
+};
+
+const RESUME_LABEL: Record<ResumeStatus, string> = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  USED: "Checked in again",
+  CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
+};
 
 /** Approve / reject with an optional note (shown to the employee and kept in the audit log). */
 function DecisionModal({ decision, onClose, onDone }: { decision: Decision | null; onClose: () => void; onDone: () => void }) {
@@ -31,12 +55,12 @@ function DecisionModal({ decision, onClose, onDone }: { decision: Decision | nul
   const { run, pending, error } = useAction();
   const [note, setNote] = useState("");
   if (!decision) return null;
-  const path = decision.kind === "wfh" ? "/api/attendance/wfh" : "/api/attendance/overtime";
+  const { path, what } = DECISION[decision.kind];
   const verb = decision.approve ? "Approve" : "Reject";
   return (
     <Modal
       open
-      title={`${verb} ${decision.kind === "wfh" ? "work from home" : "overtime"}`}
+      title={`${verb} ${what}`}
       description={`${decision.who} · ${decision.when}`}
       onClose={onClose}
       footer={
@@ -256,6 +280,124 @@ export function OvertimeRequestsPanel() {
                 : undefined
             }
           />
+          <Pagination page={page} pageSize={PAGE_SIZE} count={data.count} onPage={setPage} />
+        </>
+      )}
+      <DecisionModal
+        decision={decision}
+        onClose={() => setDecision(null)}
+        onDone={() => {
+          setDecision(null);
+          reload();
+        }}
+      />
+    </Card>
+  );
+}
+
+/** Resume Work requests after an automatic inactivity check-out (HR / Super Admin decide). */
+export function ResumeRequestsPanel() {
+  const { me, can } = useAuth();
+  const toast = useToast();
+  const approver = can("resume.approve");
+  const [status, setStatus] = useState(approver ? "PENDING" : "");
+  const [page, setPage] = useState(1);
+  const [decision, setDecision] = useState<Decision | null>(null);
+  const { data, error, loading, reload } = useResource<Paginated<ResumeWorkRequest>>("/api/attendance/resume-requests/", {
+    status,
+    page,
+    page_size: PAGE_SIZE,
+    ordering: "-created_at",
+  });
+
+  return (
+    <Card>
+      <CardHeader
+        title="Resume Work"
+        description={
+          approver
+            ? "Requests to continue working after an automatic check-out for inactivity. Approval lets the employee check in again (location / work-from-home rules still apply); the gap is recorded as non-working time."
+            : "Your requests after an automatic check-out for inactivity."
+        }
+        actions={
+          <StatusFilter
+            value={status}
+            onChange={(v) => {
+              setStatus(v);
+              setPage(1);
+            }}
+            options={Object.entries(RESUME_LABEL)}
+          />
+        }
+      />
+      {error ? (
+        <ErrorState error={error} onRetry={reload} />
+      ) : loading && !data ? (
+        <SkeletonRows />
+      ) : !data?.results.length ? (
+        <EmptyState icon={<RotateCcw className="h-5 w-5" />} title="No Resume Work requests" description={status ? "Nothing with this status." : undefined} />
+      ) : (
+        <>
+          <Table>
+            <THead>
+              <Th>Employee</Th>
+              <Th>Checked out</Th>
+              <Th>Reason</Th>
+              <Th>Status</Th>
+              <Th>Decision</Th>
+              <Th className="text-right">Actions</Th>
+            </THead>
+            <TBody>
+              {data.results.map((r) => {
+                const own = r.employee.id === me?.employee?.id;
+                const when = `${fmtDate(r.date)} ${fmtTime(r.checked_out_at)}`;
+                return (
+                  <tr key={r.id}>
+                    <Td>
+                      <span className="font-medium text-primary">{r.employee.full_name}</span>
+                      <span className="ml-2 font-code-mono text-code-mono text-outline">{r.employee.employee_code}</span>
+                    </Td>
+                    <Td>{when}</Td>
+                    <Td className="max-w-sm whitespace-normal">{r.reason}</Td>
+                    <Td>
+                      <Badge tone={RESUME_TONE[r.status]}>{RESUME_LABEL[r.status]}</Badge>
+                    </Td>
+                    <Td className="whitespace-normal text-body-sm text-on-surface-variant">
+                      {r.decided_by_name ? `${r.decided_by_name}, ${fmtDateTime(r.decided_at)}` : "—"}
+                      {r.decision_note && <p>{r.decision_note}</p>}
+                    </Td>
+                    <Td className="text-right">
+                      <div className="flex justify-end gap-1.5">
+                        {approver && !own && r.status === "PENDING" && (
+                          <>
+                            <Button size="sm" icon={<Check className="h-4 w-4" />} onClick={() => setDecision({ kind: "resume", id: r.id, approve: true, who: r.employee.full_name, when })}>
+                              Approve
+                            </Button>
+                            <Button size="sm" variant="danger" icon={<X className="h-4 w-4" />} onClick={() => setDecision({ kind: "resume", id: r.id, approve: false, who: r.employee.full_name, when })}>
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                        {own && (r.status === "PENDING" || r.status === "APPROVED") && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={async () => {
+                              const res = await tryApi(() => api(`/api/attendance/resume-requests/${r.id}/cancel/`, { method: "POST" }));
+                              toast(res.ok ? "Request cancelled." : res.error.message, res.ok ? "success" : "error");
+                              reload();
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
+                    </Td>
+                  </tr>
+                );
+              })}
+            </TBody>
+          </Table>
           <Pagination page={page} pageSize={PAGE_SIZE} count={data.count} onPage={setPage} />
         </>
       )}

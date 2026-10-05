@@ -1,6 +1,7 @@
 import datetime
 
 import django_filters
+from django.db.models import Q
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -14,8 +15,16 @@ from apps.employees.serializers import employee_ref
 from apps.organization.models import CompanySettings
 from apps.tasks import rules as task_rules
 
-from . import activity, services, sessions, wfh
-from .models import AttendanceRecord, BreakSession, OvertimeSession, SyncEvent, WorkFromHomeRequest
+from . import activity, meetings, resume, services, sessions, wfh
+from .models import (
+    AttendanceRecord,
+    BreakSession,
+    Meeting,
+    OvertimeSession,
+    ResumeWorkRequest,
+    SyncEvent,
+    WorkFromHomeRequest,
+)
 from .serializers import (
     AttendanceAdminSerializer,
     AttendanceRecordSerializer,
@@ -25,15 +34,20 @@ from .serializers import (
     DecisionSerializer,
     EventIdSerializer,
     HeartbeatSerializer,
+    MeetingPauseSerializer,
+    MeetingSerializer,
+    MeetingWriteSerializer,
+    NonWorkingPeriodSerializer,
     OvertimeRequestSerializer,
     OvertimeSessionSerializer,
+    ResumeWorkRequestSerializer,
     SyncEventSerializer,
     SyncRequestSerializer,
     WorkFromHomeRequestSerializer,
 )
 
 # How often the browser reports activity while a session or overtime is open.
-HEARTBEAT_SECONDS = 120
+HEARTBEAT_SECONDS = 60
 
 
 def today_payload(request, reconcile=True):
@@ -42,13 +56,16 @@ def today_payload(request, reconcile=True):
     applies the time-based rules (break allowance, inactivity), so a session left open in a
     closed browser is settled even before the scheduled reconciliation runs."""
     if reconcile:
+        meetings.settle_meetings()
         employee = Employee.objects.filter(user=request.user).first()
         if employee is not None:
             activity.reconcile_employee(employee, request=request)
+            resume.expire_stale(employee)
     state = sessions.today_state(request.user)
     record = state["record"]
     cs = state["cs"]
     dt = serializers.DateTimeField()
+    pause = state["active_pause"]
     return {
         "date": state["date"],
         "server_time": dt.to_representation(state["now"]),
@@ -80,15 +97,32 @@ def today_payload(request, reconcile=True):
         ),
         "blocking_tasks": task_rules.blocking_tasks(request.user).count(),
         "checkout_exempt": task_rules.is_exempt(request.user),
+        # Meetings: working time is paused while `active_pause` is set (server-recorded).
+        "active_meeting": MeetingSerializer(state["active_meeting"]).data if state["active_meeting"] else None,
+        "active_pause": MeetingPauseSerializer(pause).data if pause else None,
+        "meeting_pauses": MeetingPauseSerializer(state["meeting_pauses"], many=True).data,
+        # Non-working time: automatic inactivity check-out until an approved re-check-in.
+        "non_working": NonWorkingPeriodSerializer(state["non_working"], many=True).data,
+        "open_non_working": (
+            NonWorkingPeriodSerializer(state["open_non_working"]).data if state["open_non_working"] else None
+        ),
+        "resume_request": (
+            ResumeWorkRequestSerializer(state["resume_request"]).data if state["resume_request"] else None
+        ),
+        "required_work_seconds": (
+            int(cs.full_day_min_hours * 3600) if cs.full_day_min_hours is not None else None
+        ),
     }
 
 
 def settle_rules(request):
     """Apply due time-based rules (inactivity, break allowance) before a manual action, so a
     direct API call cannot act on a session the rules have already closed."""
+    meetings.settle_meetings()
     employee = Employee.objects.filter(user=request.user).first()
     if employee is not None:
         activity.reconcile_employee(employee, request=request)
+        resume.expire_stale(employee)
 
 
 def perform_event(request, event_type):
@@ -189,6 +223,7 @@ class AttendanceViewSet(
     def check_in(self, request):
         ser = CheckInSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
+        settle_rules(request)
         record = services.check_in(request, **ser.validated_data)
         return Response(AttendanceRecordSerializer(record).data, status=status.HTTP_201_CREATED)
 
@@ -451,3 +486,157 @@ class WorkFromHomeViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
     def cancel(self, request, pk=None):
         obj = wfh.cancel(request, self.get_object())
         return Response(WorkFromHomeRequestSerializer(obj).data)
+
+
+class MeetingFilter(django_filters.FilterSet):
+    date_from = django_filters.DateFilter(field_name="created_at", lookup_expr="date__gte")
+    date_to = django_filters.DateFilter(field_name="created_at", lookup_expr="date__lte")
+    history = django_filters.BooleanFilter(method="filter_history", label="Completed or cancelled only")
+
+    def filter_history(self, qs, name, value):
+        finished = [Meeting.Status.COMPLETED, Meeting.Status.CANCELLED]
+        return qs.filter(status__in=finished) if value else qs.exclude(status__in=finished)
+
+    class Meta:
+        model = Meeting
+        fields = ["status", "kind"]
+
+
+class MeetingViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """Company meetings. HR / Super Admin (meetings.manage) create, start, end and cancel them and
+    see every meeting; everyone else sees overall meetings and the ones they are invited to."""
+
+    serializer_class = MeetingSerializer
+    permission_classes = [HasPermission]
+    required_permissions = {
+        "list": (),
+        "retrieve": (),
+        "create": ("meetings.manage",),
+        "partial_update": ("meetings.manage",),
+        "start": ("meetings.manage",),
+        "end": ("meetings.manage",),
+        "cancel": ("meetings.manage",),
+    }
+    filterset_class = MeetingFilter
+    ordering_fields = ["created_at", "started_at", "scheduled_start"]
+    search_fields = ["title"]
+    lookup_value_regex = r"\d+"
+
+    def get_queryset(self):
+        qs = Meeting.objects.select_related("created_by", "started_by", "ended_by").prefetch_related(
+            "participants__user"
+        )
+        if self.request.user.has_permission("meetings.manage"):
+            return qs
+        employee = Employee.objects.filter(user=self.request.user).first()
+        if employee is None:
+            return qs.filter(kind=Meeting.Kind.OVERALL)
+        return qs.filter(Q(kind=Meeting.Kind.OVERALL) | Q(participants=employee)).distinct()
+
+    def _respond(self, meeting, code=status.HTTP_200_OK):
+        return Response(MeetingSerializer(self.get_queryset().get(pk=meeting.pk)).data, status=code)
+
+    def create(self, request):
+        ser = MeetingWriteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        meeting = meetings.create_meeting(
+            request,
+            title=data["title"],
+            agenda=data["agenda"],
+            kind=data["kind"],
+            participants=data["participant_ids"],
+            scheduled_start=data["scheduled_start"],
+            scheduled_end=data["scheduled_end"],
+        )
+        return self._respond(meeting, status.HTTP_201_CREATED)
+
+    def partial_update(self, request, pk=None):
+        meeting = self.get_object()
+        ser = MeetingWriteSerializer(data={"kind": meeting.kind, **request.data}, partial=True)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        fields = [f for f in ("title", "agenda", "scheduled_start", "scheduled_end") if f in request.data]
+        meeting = meetings.update_meeting(
+            request,
+            meeting,
+            title=data.get("title"),
+            agenda=data.get("agenda"),
+            participants=data["participant_ids"] if "participant_ids" in request.data else None,
+            scheduled_start=data.get("scheduled_start"),
+            scheduled_end=data.get("scheduled_end"),
+            fields=fields,
+        )
+        return self._respond(meeting)
+
+    @action(detail=True, methods=["post"])
+    def start(self, request, pk=None):
+        return self._respond(meetings.start_meeting(request, self.get_object()))
+
+    @action(detail=True, methods=["post"])
+    def end(self, request, pk=None):
+        return self._respond(meetings.end_meeting(request, self.get_object()))
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        return self._respond(meetings.cancel_meeting(request, self.get_object()))
+
+
+class ResumeWorkFilter(django_filters.FilterSet):
+    date_from = django_filters.DateFilter(field_name="date", lookup_expr="gte")
+    date_to = django_filters.DateFilter(field_name="date", lookup_expr="lte")
+
+    class Meta:
+        model = ResumeWorkRequest
+        fields = ["employee", "status", "date"]
+
+
+class ResumeWorkRequestViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """Resume Work requests: employees create / cancel their own; HR / Super Admin decide.
+    Visibility follows the attendance scope (own / team / all)."""
+
+    serializer_class = ResumeWorkRequestSerializer
+    permission_classes = [HasPermission]
+    required_permissions = {
+        "list": (),
+        "retrieve": (),
+        "create": ("attendance.self",),
+        "cancel": ("attendance.self",),
+        "approve": ("resume.approve",),
+        "reject": ("resume.approve",),
+    }
+    filterset_class = ResumeWorkFilter
+    ordering_fields = ["date", "created_at"]
+    lookup_value_regex = r"\d+"
+
+    def get_queryset(self):
+        qs = ResumeWorkRequest.objects.select_related("employee__user", "decided_by")
+        if self.request.user.has_permission("resume.approve"):
+            return qs
+        return scope_queryset(qs, self.request.user, "attendance")
+
+    def create(self, request):
+        ser = ResumeWorkRequestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        settle_rules(request)
+        resume.create_request(request, reason=ser.validated_data["reason"])
+        return Response({"state": today_payload(request)}, status=status.HTTP_201_CREATED)
+
+    def _decide(self, request, approve):
+        ser = DecisionSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        obj = resume.decide(request, self.get_object(), approve, ser.validated_data["note"])
+        return Response(ResumeWorkRequestSerializer(obj).data)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        return self._decide(request, True)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        return self._decide(request, False)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        resume.cancel(request, self.get_object())
+        return Response({"state": today_payload(request)})

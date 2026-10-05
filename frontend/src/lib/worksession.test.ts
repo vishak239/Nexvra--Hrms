@@ -8,6 +8,8 @@ import {
   fmtClock,
   fmtDuration,
   hasActiveSession,
+  meetingSeconds,
+  nonWorkingSeconds,
   overtimeSeconds,
   totalBreakSeconds,
   workedSeconds,
@@ -109,5 +111,100 @@ describe("formatting and clocks", () => {
 
   it("reports disabled self attendance", () => {
     expect(deriveSession(state({ self_attendance_enabled: false })).phase).toBe("DISABLED");
+  });
+});
+
+describe("meetings, non-working time and Resume Work", () => {
+  const pause = (start: string) => ({
+    id: 3,
+    meeting: 11,
+    meeting_title: "All hands",
+    meeting_kind: "OVERALL" as const,
+    started_at: T(start),
+    ended_at: null,
+    duration_seconds: null,
+    status: "ACTIVE" as const,
+    end_reason: "" as const,
+  });
+
+  it("pauses working time during a meeting and counts it as meeting time", () => {
+    // 9:00 check-in, meeting since 11:00; at 11:30 working time is still 2h.
+    const view = deriveSession(state({ active_pause: pause("11:00") }));
+    expect(view.phase).toBe("IN_MEETING");
+    expect(hasActiveSession(view)).toBe(true);
+    expect(workedSeconds(view, at("11:30"))).toBe(2 * 3600);
+    expect(meetingSeconds(view, at("11:30"))).toBe(1800);
+    expect(totalBreakSeconds(view, at("11:30"))).toBe(0);
+  });
+
+  it("resumes after the meeting with the meeting excluded from working time", () => {
+    const view = deriveSession(state({}, { total_meeting_seconds: 3600 }));
+    expect(view.phase).toBe("WORKING");
+    expect(workedSeconds(view, at("13:00"))).toBe(3 * 3600); // 9-11 and 12-13
+    expect(meetingSeconds(view, at("13:00"))).toBe(3600);
+  });
+
+  it("does not let a queued break start during a meeting", () => {
+    const view = deriveSession(state({ active_pause: pause("11:00") }), [queued("BREAK_START", "11:10")]);
+    expect(view.phase).toBe("IN_MEETING");
+    expect(view.pendingEvents).toBe(0);
+  });
+
+  it("keeps non-working time out of working and break time", () => {
+    // Worked 9:00-14:00, automatic check-out at 14:00, resumed 15:00: 1h non-working.
+    const view = deriveSession(state({}, { total_non_working_seconds: 3600, total_break_seconds: 1200 }));
+    expect(workedSeconds(view, at("17:00"))).toBe(8 * 3600 - 3600 - 1200);
+    expect(nonWorkingSeconds(view, at("17:00"))).toBe(3600);
+    expect(totalBreakSeconds(view, at("17:00"))).toBe(1200);
+  });
+
+  it("counts the open non-working period after an automatic check-out", () => {
+    const view = deriveSession(
+      state(
+        {
+          open_non_working: { id: 1, started_at: T("14:00"), ended_at: null, duration_seconds: null, reason: "INACTIVITY_TIMEOUT", resume_request: null },
+        },
+        { check_out: T("14:00"), checkout_reason: "INACTIVITY_TIMEOUT" },
+      ),
+    );
+    expect(view.phase).toBe("CHECKED_OUT");
+    expect(view.resume).toBe("needed");
+    expect(nonWorkingSeconds(view, at("14:40"))).toBe(2400);
+    expect(workedSeconds(view, at("14:40"))).toBe(5 * 3600);
+  });
+
+  it.each([
+    ["PENDING", "pending"],
+    ["APPROVED", "approved"],
+    ["REJECTED", "rejected"],
+    ["USED", "needed"],
+    ["CANCELLED", "needed"],
+  ] as const)("a %s Resume Work request means %s", (status, expected) => {
+    const view = deriveSession(
+      state(
+        {
+          resume_request: {
+            id: 2,
+            employee: { id: 4, employee_code: "E-4", full_name: "Demo" },
+            date: "2026-10-02",
+            reason: "Offline discussion with the client",
+            status,
+            checked_out_at: T("14:00"),
+            decided_by_name: null,
+            decided_at: null,
+            decision_note: "",
+            used_at: null,
+            created_at: T("14:05"),
+          },
+        },
+        { check_out: T("14:00"), checkout_reason: "INACTIVITY_TIMEOUT" },
+      ),
+    );
+    expect(view.resume).toBe(expected);
+  });
+
+  it("offers no Resume Work after a manual or geofence check-out", () => {
+    expect(deriveSession(state({}, { check_out: T("17:00"), checkout_reason: "MANUAL" })).resume).toBe("none");
+    expect(deriveSession(state({}, { check_out: T("12:00"), checkout_reason: "GEO_FENCE_EXIT" })).resume).toBe("none");
   });
 });

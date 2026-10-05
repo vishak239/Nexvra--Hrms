@@ -7,6 +7,8 @@ const PAGES = [
   "/attendance",
   "/attendance?tab=wfh",
   "/attendance?tab=overtime",
+  "/attendance?tab=resume",
+  "/meetings",
   "/leave",
   "/tasks",
   "/messages",

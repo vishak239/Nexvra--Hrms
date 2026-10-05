@@ -9,7 +9,10 @@
  */
 import type { SyncEventType, WorkSessionState } from "./types";
 
-export type Phase = "DISABLED" | "NOT_CHECKED_IN" | "WORKING" | "ON_BREAK" | "CHECKED_OUT" | "OVERTIME";
+export type Phase = "DISABLED" | "NOT_CHECKED_IN" | "WORKING" | "ON_BREAK" | "IN_MEETING" | "CHECKED_OUT" | "OVERTIME";
+
+/** Where a Resume Work request stands after an automatic inactivity check-out. */
+export type ResumeState = "none" | "needed" | "pending" | "approved" | "rejected";
 
 export interface QueuedEvent {
   /** Client UUID - makes synchronisation idempotent. */
@@ -39,8 +42,28 @@ export interface SessionView {
   breaks: BreakView[];
   overtimeStart: string | null;
   completedOvertimeSeconds: number;
+  /** Start of the meeting pause in progress (working time paused). */
+  meetingStart: string | null;
+  /** Finished meeting pauses today, seconds. */
+  completedMeetingSeconds: number;
+  /** Closed non-working periods today, seconds. */
+  completedNonWorkingSeconds: number;
+  /** Start of the open non-working period (after an automatic inactivity check-out). */
+  nonWorkingStart: string | null;
+  resume: ResumeState;
   /** Queued events that changed the displayed state. */
   pendingEvents: number;
+}
+
+function resumeState(state: WorkSessionState | null | undefined): ResumeState {
+  const record = state?.record;
+  if (!record?.check_out || record.checkout_reason !== "INACTIVITY_TIMEOUT") return "none";
+  const status = state?.resume_request?.status;
+  if (status === "PENDING") return "pending";
+  if (status === "APPROVED") return "approved";
+  // A rejection is shown until a new request is sent; older (used/cancelled/expired) need a new one.
+  if (status === "REJECTED" && state?.resume_request && state.resume_request.checked_out_at === record.check_out) return "rejected";
+  return "needed";
 }
 
 const ms = (iso: string) => Date.parse(iso);
@@ -62,12 +85,18 @@ export function deriveSession(state: WorkSessionState | null | undefined, queued
     })),
     overtimeStart: state?.active_overtime?.started_at ?? null,
     completedOvertimeSeconds: (state?.overtime ?? []).reduce((sum, o) => sum + (o.duration_seconds ?? 0), 0),
+    meetingStart: record && !record.check_out ? (state?.active_pause?.started_at ?? null) : null,
+    completedMeetingSeconds: record?.total_meeting_seconds ?? 0,
+    completedNonWorkingSeconds: record?.total_non_working_seconds ?? 0,
+    nonWorkingStart: state?.open_non_working?.started_at ?? null,
+    resume: resumeState(state),
     pendingEvents: 0,
   };
   if (state && !state.self_attendance_enabled) view.phase = "DISABLED";
   else if (view.overtimeStart) view.phase = "OVERTIME";
   else if (view.checkOut) view.phase = "CHECKED_OUT";
   else if (view.breakStart) view.phase = "ON_BREAK";
+  else if (view.meetingStart) view.phase = "IN_MEETING";
   else if (view.checkIn) view.phase = "WORKING";
 
   for (const event of [...queued].sort((a, b) => ms(a.occurredAt) - ms(b.occurredAt))) {
@@ -108,12 +137,25 @@ export function totalBreakSeconds(view: SessionView, nowMs: number) {
   return view.completedBreakSeconds + currentBreakSeconds(view, nowMs);
 }
 
-/** Actual working time = session time - break time. */
+/** Meeting time today, including a meeting in progress. Never working time. */
+export function meetingSeconds(view: SessionView, nowMs: number) {
+  const running = view.meetingStart ? Math.max(0, Math.floor((nowMs - ms(view.meetingStart)) / 1000)) : 0;
+  return view.completedMeetingSeconds + running;
+}
+
+/** Non-working time today: closed periods plus the open one (automatic check-out until resumed). */
+export function nonWorkingSeconds(view: SessionView, nowMs: number) {
+  const open = view.nonWorkingStart ? Math.max(0, Math.floor((nowMs - ms(view.nonWorkingStart)) / 1000)) : 0;
+  return view.completedNonWorkingSeconds + open;
+}
+
+/** Actual working time = session time - breaks - meetings - non-working periods. */
 export function workedSeconds(view: SessionView, nowMs: number) {
   if (!view.checkIn) return 0;
   const end = view.checkOut ? ms(view.checkOut) : nowMs;
   const gross = Math.max(0, Math.floor((end - ms(view.checkIn)) / 1000));
-  return Math.max(0, gross - totalBreakSeconds(view, view.checkOut ? ms(view.checkOut) : nowMs));
+  const paused = totalBreakSeconds(view, end) + meetingSeconds(view, end) + view.completedNonWorkingSeconds;
+  return Math.max(0, gross - paused);
 }
 
 /** Overtime today (completed + running). Never part of worked time. */
@@ -144,5 +186,5 @@ export function clockOffset(serverTime: string, receivedAtMs: number) {
 
 /** True when the user left an unfinished session (used for "Active work session detected"). */
 export function hasActiveSession(view: SessionView) {
-  return view.phase === "WORKING" || view.phase === "ON_BREAK" || view.phase === "OVERTIME";
+  return view.phase === "WORKING" || view.phase === "ON_BREAK" || view.phase === "IN_MEETING" || view.phase === "OVERTIME";
 }

@@ -4,7 +4,7 @@ import { ArrowRight, Bell, CalendarDays, ClipboardCheck, ListTodo, MessageSquare
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { WorkSessionCard } from "@/components/attendance/WorkSessionCard";
-import { Badge, Card, CardHeader, PageHeader, StatCard, StatusBadge } from "@/components/ui/Display";
+import { Badge, Card, CardHeader, PageHeader, StatCard, StatusBadge, type StatAccent } from "@/components/ui/Display";
 import { EmptyState, ErrorState, Loading } from "@/components/ui/States";
 import { useAuth } from "@/lib/auth";
 import { fmtDate, fmtDays, fmtMoney, fmtPeriod, humanize } from "@/lib/format";
@@ -70,20 +70,23 @@ export default function DashboardPage() {
         </Link>
       ),
       icon: <ListTodo className="h-5 w-5" />,
+      accent: "tasks" as const,
     },
     data.unread_messages !== undefined && {
       label: "Unread messages",
       value: data.unread_messages,
       hint: <Link href="/messages" className="font-medium text-primary-fixed hover:underline">Open messages →</Link>,
       icon: <MessageSquare className="h-5 w-5" />,
+      accent: "messages" as const,
     },
     {
       label: "Unread notifications",
       value: data.unread_notifications,
       hint: <Link href="/notifications" className="font-medium text-primary-fixed hover:underline">Open inbox →</Link>,
       icon: <Bell className="h-5 w-5" />,
+      accent: "notifications" as const,
     },
-  ].filter(Boolean) as { label: string; value: ReactNode; hint: ReactNode; icon: ReactNode }[];
+  ].filter(Boolean) as { label: string; value: ReactNode; hint: ReactNode; icon: ReactNode; accent?: StatAccent }[];
 
   return (
     <>
@@ -92,7 +95,8 @@ export default function DashboardPage() {
         description={`${fmtDate(data.date)} · ${me?.role.name}`}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* One row when the width allows; cards wrap evenly (never narrower than 11.5rem) on smaller screens. */}
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,11.5rem),1fr))]" data-testid="summary-cards">
         {stats.slice(0, 8).map((s) => (
           <StatCard key={s.label} {...s} />
         ))}

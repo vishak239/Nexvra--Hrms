@@ -15,6 +15,8 @@ ENTITY_LINKS = {
     "attendance.OvertimeSession": "/attendance",
     "attendance.AttendanceRecord": "/attendance",
     "attendance.WorkFromHomeRequest": "/attendance?tab=wfh",
+    "attendance.Meeting": "/meetings",
+    "attendance.ResumeWorkRequest": "/attendance?tab=resume",
 }
 
 

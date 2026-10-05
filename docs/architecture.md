@@ -77,7 +77,7 @@ apps/<app>/
 | `accounts` | Custom `User` (email login), `Role`, `Permission`, auth endpoints, users & roles APIs, role seed migration |
 | `organization` | `Company`, `CompanySettings` (incl. daily break allowance), `Department`, `Designation`, `Holiday`, `Policy` (HR-written company policies) |
 | `employees` | `Employee` + role-aware serializers, photo endpoint |
-| `attendance` | `AttendanceRecord`, check-in/out with geofence + WFH mode (`services.py`, `geo.py`); `BreakSession` with the daily allowance, `OvertimeSession` workflow, `SyncEvent` offline sync (`sessions.py`); `WorkFromHomeRequest` (`wfh.py`); activity heartbeat + reconciliation (`activity.py`, `manage.py reconcile_attendance`) |
+| `attendance` | `AttendanceRecord`, check-in/out with geofence + WFH mode (`services.py`, `geo.py`); `BreakSession` with the daily allowance, `OvertimeSession` workflow, `SyncEvent` offline sync (`sessions.py`); `WorkFromHomeRequest` (`wfh.py`); activity heartbeat + reconciliation (`activity.py`, `manage.py reconcile_attendance`); `Meeting` / `MeetingPause` (`meetings.py`); `ResumeWorkRequest` / `NonWorkingPeriod` (`resume.py`, `services.check_in`). See [meetings-resume-activity.md](meetings-resume-activity.md) |
 | `leaves` | `LeaveType`, `LeaveBalance`, `LeaveRequest`, day counting, approvals, approval lock, `LeaveBalanceTransaction` ledger (deduct once on approval) |
 | `payroll` | `PayComponent`, `SalaryStructure(+Item)`, `PayrollRun`, `Payslip(+Item)` |
 | `documents` | `EmployeeDocument`, private storage, streaming download |
@@ -127,7 +127,8 @@ Principles:
 | Documents | `documents.view_own`, `documents.view_all`, `documents.manage` |
 | Reports | `reports.view_team`, `reports.view_all` |
 | Tasks | `tasks.view_team`, `tasks.view_all`, `tasks.manage` |
-| Attendance approvals | `wfh.approve`, `overtime.approve` |
+| Attendance approvals | `wfh.approve`, `overtime.approve`, `resume.approve` |
+| Meetings | `meetings.manage` |
 | Messages | `messages.use` |
 | Policies | `policies.manage` (reading published policies needs no permission) |
 
@@ -137,7 +138,7 @@ Principles:
 |---|---|
 | EMPLOYEE (10) | `attendance.self`, `leave.apply`, `payroll.view_own`, `documents.view_own`, `messages.use` |
 | MANAGER (20) | EMPLOYEE + `employees.view_team`, `attendance.view_team`, `leave.view_team`, `leave.approve_team`, `reports.view_team`, `tasks.view_team` |
-| HR_ADMIN (50) | MANAGER + `employees.view_all`, `employees.manage`, `attendance.view_all`, `attendance.manage`, `leave.view_all`, `leave.approve_all`, `leave.manage_types`, `leave.manage_balances`, `holidays.manage`, `departments.manage`, `designations.manage`, `payroll.view_all`, `payroll.manage`, `documents.view_all`, `documents.manage`, `reports.view_all`, `settings.manage`, `tasks.view_all`, `tasks.manage`, `policies.manage`, `wfh.approve`, `overtime.approve` |
+| HR_ADMIN (50) | MANAGER + `employees.view_all`, `employees.manage`, `attendance.view_all`, `attendance.manage`, `leave.view_all`, `leave.approve_all`, `leave.manage_types`, `leave.manage_balances`, `holidays.manage`, `departments.manage`, `designations.manage`, `payroll.view_all`, `payroll.manage`, `documents.view_all`, `documents.manage`, `reports.view_all`, `settings.manage`, `tasks.view_all`, `tasks.manage`, `policies.manage`, `wfh.approve`, `overtime.approve`, `meetings.manage`, `resume.approve` |
 | SUPER_ADMIN (100) | Everything, including `company.manage`, `users.*`, `roles.*`, `audit.view` |
 
 **Enforcement layers:**

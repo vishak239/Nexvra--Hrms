@@ -2,20 +2,25 @@
 
 /**
  * One shared work session for the whole app: the header actions, the attendance card and the
- * dashboard all read the same server state and use the same actions. It also runs the two
- * monitors while a session is open, on every page:
+ * dashboard all read the same server state and use the same actions. It also runs the monitors
+ * while a session is open, on every page:
  *
- * - activity: a privacy-safe heartbeat (seconds since the last interaction, never content)
- *   every `heartbeat_seconds`, and immediately when the inactivity limit is reached;
- * - location (office sessions with a configured workplace): readings go with the heartbeat so
- *   the server can apply the geofence. Errors are reported as a status, never as "left".
+ * - activity: a privacy-safe heartbeat (moments of interaction as "seconds ago", never content)
+ *   every `heartbeat_seconds`, and immediately when the inactivity limit is reached. Moments seen
+ *   while offline are kept and reported when the connection returns. Open tabs share activity and
+ *   only one of them sends each heartbeat. Activity is not watched during a meeting (working time
+ *   is paused) or outside a work session;
+ * - location (office sessions with a configured workplace): readings go with the heartbeat so the
+ *   server can apply the geofence. Errors are reported as a status, never as "left";
+ * - meetings and Resume Work: while a meeting pauses the session or a Resume Work request waits
+ *   for HR, the state is refreshed regularly so the change shows without a reload.
  *
- * The server decides everything (geofence, WFH permission, inactivity, break allowance,
- * overtime approval); the browser only reports and displays.
+ * The server decides everything (geofence, WFH permission, inactivity, break allowance, meetings,
+ * resume approval, overtime approval); the browser only reports and displays.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useToast } from "@/components/ui/Overlay";
-import { ActivityTracker } from "@/lib/activity";
+import { ActivityTracker, lastSharedBeat, markSharedBeat, pageTracker } from "@/lib/activity";
 import { ApiError, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useConnection } from "@/lib/connection";
@@ -27,6 +32,7 @@ import type { AttendanceMode, SyncEventType, WorkSessionState } from "@/lib/type
 import { clockOffset, deriveSession, type SessionView } from "@/lib/worksession";
 import { CheckoutGuard } from "./CheckoutGuard";
 import { OvertimeRequestModal } from "./OvertimeRequestModal";
+import { ResumeWorkModal } from "./ResumeWorkModal";
 import { WfhRequestModal } from "./WfhRequestModal";
 
 const ACTIONS: Record<SyncEventType, { path: string; done: string }> = {
@@ -38,11 +44,15 @@ const ACTIONS: Record<SyncEventType, { path: string; done: string }> = {
 
 const AUTO_CHECKOUT_TEXT: Record<string, string> = {
   GEO_FENCE_EXIT: "You were checked out automatically because you left the workplace area.",
-  INACTIVITY_TIMEOUT: "You were checked out automatically after a period without activity.",
+  INACTIVITY_TIMEOUT: "You were checked out automatically after a period without activity. Use Resume Work to continue.",
 };
 
 /** A location reading older than this is not sent as "current". */
 const FIX_MAX_AGE_MS = 120_000;
+/** Refresh interval while a meeting pauses the session or a Resume Work request is pending. */
+const WAITING_POLL_MS = 60_000;
+const WATCHDOG_MS = 30_000;
+const STATE_CHANNEL = "nexvra-worksession";
 
 export interface WorkSessionValue {
   enabled: boolean;
@@ -68,6 +78,8 @@ export interface WorkSessionValue {
   sessionAction: (type: SyncEventType) => Promise<void>;
   openOvertime: () => void;
   openWfh: () => void;
+  openResume: () => void;
+  cancelResume: (id: number) => Promise<void>;
   cancelOvertime: (id: number) => Promise<void>;
 }
 
@@ -106,25 +118,47 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
   const [guardOpen, setGuardOpen] = useState(false);
   const [overtimeOpen, setOvertimeOpen] = useState(false);
   const [wfhOpen, setWfhOpen] = useState(false);
+  const [resumeOpen, setResumeOpen] = useState(false);
   const [locationWanted, setLocationWanted] = useState(false);
   const [locStatus, setLocStatus] = useState<LocationStatus>("idle");
   const [fix, setFix] = useState<Fix | null>(null);
   const [systemIdleEnabled, setSystemIdleEnabled] = useState(false);
-  const tracker = useRef<ActivityTracker | null>(null);
   const fixRef = useRef<Fix | null>(null);
   const locStatusRef = useRef<LocationStatus>("idle");
+  const channel = useRef<BroadcastChannel | null>(null);
   fixRef.current = fix;
   locStatusRef.current = locStatus;
 
   const apply = useCallback(
-    (next: WorkSessionState, receivedAt = Date.now()) => {
+    (next: WorkSessionState, receivedAt = Date.now(), share = true) => {
       setState(next);
       setOffset(clockOffset(next.server_time, receivedAt));
       setStaleSince(null);
       queue?.saveSnapshot(next);
+      if (share) {
+        try {
+          channel.current?.postMessage({ state: next });
+        } catch {
+          // other tabs refresh on their own
+        }
+      }
     },
     [queue],
   );
+
+  // Other tabs share fresh server state (one tab sends the heartbeat for all of them).
+  useEffect(() => {
+    if (!enabled || typeof BroadcastChannel !== "function") return;
+    const ch = new BroadcastChannel(STATE_CHANNEL);
+    channel.current = ch;
+    ch.onmessage = (e: MessageEvent<{ state?: WorkSessionState }>) => {
+      if (e.data?.state) apply(e.data.state, Date.now(), false);
+    };
+    return () => {
+      ch.close();
+      channel.current = null;
+    };
+  }, [enabled, apply]);
 
   const load = useCallback(async () => {
     if (!enabled) return;
@@ -169,7 +203,9 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
   const watching =
     enabled &&
     geofenced &&
-    ((phase === "NOT_CHECKED_IN" && locationWanted) || ((phase === "WORKING" || phase === "ON_BREAK") && officeSession));
+    ((phase === "NOT_CHECKED_IN" && locationWanted) ||
+      (view.resume === "approved" && locationWanted) ||
+      ((phase === "WORKING" || phase === "ON_BREAK") && officeSession));
   useEffect(() => {
     if (!watching) return;
     return watchLocation(setFix, setLocStatus);
@@ -178,66 +214,107 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
   const requestLocation = useCallback(() => setLocationWanted(true), []);
 
   // --- activity heartbeat ---------------------------------------------------------------------
-  const monitoring = enabled && online && (phase === "WORKING" || phase === "ON_BREAK" || phase === "OVERTIME");
-  const heartbeatSeconds = state?.heartbeat_seconds ?? 120;
+  // Watched while working, on a break or in overtime - also offline, so the activity can be
+  // reported later. Not during a meeting (working time is paused) and not outside a session.
+  const monitoring = enabled && (phase === "WORKING" || phase === "ON_BREAK" || phase === "OVERTIME");
+  const heartbeatSeconds = state?.heartbeat_seconds ?? 60;
   const timeoutMinutes = state?.inactivity_timeout_minutes ?? null;
+  const inFlight = useRef(false);
   const reportedIdle = useRef(false);
 
-  const sendHeartbeat = useCallback(async () => {
-    const t = tracker.current;
-    if (!t) return;
-    const body: Record<string, unknown> = { idle_seconds: t.idleSeconds() };
+  // The latest values for the (stable) heartbeat loop, so a state change never restarts it.
+  const ctx = useRef({ apply, geofenced, officeSession, phase, reportUnreachable, toast, heartbeatSeconds });
+  ctx.current = { apply, geofenced, officeSession, phase, reportUnreachable, toast, heartbeatSeconds };
+
+  const sendHeartbeat = useCallback(async (force: boolean) => {
+    const t = pageTracker();
+    const c = ctx.current;
+    if (inFlight.current) return;
+    // Another tab of this browser delivered a heartbeat moments ago: it carried the shared activity.
+    const other = lastSharedBeat();
+    if (!force && Date.now() - other < (c.heartbeatSeconds - 5) * 1000) {
+      t.acknowledge(other - 5_000);
+      return;
+    }
+    const report = t.report();
+    const body: Record<string, unknown> = {
+      idle_seconds: report.idle_seconds,
+      activity: report.activity,
+      observed_seconds: report.observed_seconds,
+    };
     const current = fixRef.current;
-    if (geofenced && officeSession && phase === "WORKING") {
+    if (c.geofenced && c.officeSession && c.phase === "WORKING") {
       if (current && Date.now() - current.at < FIX_MAX_AGE_MS && locStatusRef.current === "ok") {
         Object.assign(body, { location_status: "ok", latitude: current.latitude, longitude: current.longitude, accuracy: current.accuracy });
       } else if (["denied", "unavailable", "timeout", "unsupported"].includes(locStatusRef.current)) {
         body.location_status = locStatusRef.current;
       }
     }
+    inFlight.current = true;
     try {
       const res = await api<{ changed: boolean; state: WorkSessionState }>("/api/attendance/heartbeat/", { body });
-      apply(res.state);
+      t.acknowledge(report.takenAt);
+      markSharedBeat(Date.now());
+      c.apply(res.state);
       if (res.changed) {
         setVersion((v) => v + 1);
         const reason = res.state.record?.checkout_reason;
-        if (reason && AUTO_CHECKOUT_TEXT[reason]) toast(AUTO_CHECKOUT_TEXT[reason], "error");
-        else if (!res.state.active_overtime && phase === "OVERTIME") toast("Overtime was stopped automatically after a period without activity.", "error");
+        if (reason && AUTO_CHECKOUT_TEXT[reason]) c.toast(AUTO_CHECKOUT_TEXT[reason], "error");
+        else if (!res.state.active_overtime && c.phase === "OVERTIME") c.toast("Overtime was stopped automatically after a period without activity.", "error");
       }
     } catch (e) {
-      if (UNREACHABLE_CODES.has(toApiError(e).code)) reportUnreachable();
+      // Not inactivity: the moments stay queued and go with the next successful heartbeat.
+      if (UNREACHABLE_CODES.has(toApiError(e).code)) c.reportUnreachable();
+    } finally {
+      inFlight.current = false;
     }
-  }, [apply, geofenced, officeSession, phase, reportUnreachable, toast]);
+  }, []);
 
   useEffect(() => {
     if (!monitoring) return;
-    if (!tracker.current) tracker.current = new ActivityTracker();
-    const t = tracker.current;
+    const t = pageTracker();
     t.start();
     reportedIdle.current = false;
     const offActivity = t.onActivity(() => {
       reportedIdle.current = false;
     });
-    void sendHeartbeat();
-    const beat = window.setInterval(() => void sendHeartbeat(), heartbeatSeconds * 1000);
+    // Device-wide activity (Idle Detection) comes back by itself after a reload when allowed.
+    void t.resumeSystemIdleDetection().then((ok) => setSystemIdleEnabled(ok || t.systemIdleEnabled));
+    return () => {
+      offActivity();
+      t.stop();
+      setSystemIdleEnabled(false);
+    };
+  }, [monitoring]);
+
+  useEffect(() => {
+    if (!monitoring) return;
+    void sendHeartbeat(true);
+    const beat = window.setInterval(() => void sendHeartbeat(false), heartbeatSeconds * 1000);
     // Report the moment the limit is reached instead of waiting for the next beat.
     const watchdog = window.setInterval(() => {
-      if (timeoutMinutes && !reportedIdle.current && t.idleSeconds() >= timeoutMinutes * 60) {
+      if (timeoutMinutes && !reportedIdle.current && pageTracker().idleSeconds() >= timeoutMinutes * 60) {
         reportedIdle.current = true;
-        void sendHeartbeat();
+        void sendHeartbeat(true);
       }
-    }, 15_000);
+    }, WATCHDOG_MS);
     return () => {
       window.clearInterval(beat);
       window.clearInterval(watchdog);
-      offActivity();
-      t.stop();
     };
   }, [monitoring, heartbeatSeconds, timeoutMinutes, sendHeartbeat]);
 
+  // Waiting on someone else (a running meeting, an HR decision): refresh regularly.
+  const waiting = enabled && online && (phase === "IN_MEETING" || view.resume === "pending");
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = window.setInterval(() => void load(), WAITING_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [waiting, load]);
+
   const enableSystemIdle = useCallback(async () => {
-    if (!tracker.current) tracker.current = new ActivityTracker();
-    const ok = await tracker.current.enableSystemIdleDetection();
+    const t = pageTracker();
+    const ok = await t.enableSystemIdleDetection();
     setSystemIdleEnabled(ok);
     toast(ok ? "Activity in other apps on this device now counts." : "Your browser did not allow it.", ok ? "success" : "error");
     return ok;
@@ -251,7 +328,7 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
       const id = newEventId();
       const occurredAt = new Date(Date.now() + offset).toISOString();
       setActionError(null);
-      tracker.current?.mark();
+      pageTracker().mark();
       if (!online || conn.pending.length > 0) {
         // Offline, or earlier offline actions still syncing: queue it so events stay in order.
         conn.enqueue(type, occurredAt, id);
@@ -300,8 +377,8 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
           Object.assign(body, { latitude: reading.latitude, longitude: reading.longitude, accuracy: reading.accuracy });
         }
         await api("/api/attendance/check-in/", { body });
-        tracker.current?.mark();
-        toast(mode === "WORK_FROM_HOME" ? "Checked in — working from home." : "Checked in.");
+        const resumed = view.resume === "approved";
+        toast(resumed ? "Checked in — working time continues." : mode === "WORK_FROM_HOME" ? "Checked in — working from home." : "Checked in.");
         await load();
         changed();
       } catch (e) {
@@ -314,12 +391,13 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
           );
         } else {
           setActionError(toApiError(e));
+          void load();
         }
       } finally {
         setBusy(null);
       }
     },
-    [geofenced, load, changed, toast],
+    [geofenced, load, changed, toast, view.resume],
   );
 
   const checkOut = useCallback(async () => {
@@ -372,6 +450,24 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
     [apply, changed, toast],
   );
 
+  const cancelResume = useCallback(
+    async (id: number) => {
+      setActionError(null);
+      setBusy("resume-cancel");
+      try {
+        const res = await api<{ state: WorkSessionState }>(`/api/attendance/resume-requests/${id}/cancel/`, { method: "POST" });
+        apply(res.state);
+        toast("Resume Work request cancelled.");
+        changed();
+      } catch (e) {
+        setActionError(toApiError(e));
+      } finally {
+        setBusy(null);
+      }
+    },
+    [apply, changed, toast],
+  );
+
   const value: WorkSessionValue = {
     enabled,
     state,
@@ -394,6 +490,8 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
     sessionAction,
     openOvertime: () => setOvertimeOpen(true),
     openWfh: () => setWfhOpen(true),
+    openResume: () => setResumeOpen(true),
+    cancelResume,
     cancelOvertime,
   };
 
@@ -426,6 +524,16 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
             onDone={() => {
               setWfhOpen(false);
               void load();
+              changed();
+            }}
+          />
+          <ResumeWorkModal
+            open={resumeOpen}
+            checkedOutAt={state?.record?.check_out ?? null}
+            onClose={() => setResumeOpen(false)}
+            onDone={(next) => {
+              apply(next);
+              setResumeOpen(false);
               changed();
             }}
           />

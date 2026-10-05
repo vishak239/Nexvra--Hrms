@@ -37,12 +37,14 @@ from apps.notifications.services import notify
 from apps.organization.models import CompanySettings
 from apps.tasks.models import Task
 
-from .errors import BreakAllowanceUsed
+from .errors import BreakAllowanceUsed, InMeeting
 from .models import (
     OVERTIME_ENDED,
     OVERTIME_OPEN,
     AttendanceRecord,
     BreakSession,
+    MeetingPause,
+    NonWorkingPeriod,
     OvertimeSession,
     OvertimeStatus,
     SessionSource,
@@ -126,6 +128,8 @@ def start_break(request, at=None, source=SessionSource.ONLINE):
         raise Conflict("A break cannot start before your check-in time.")
     if BreakSession.objects.filter(employee=employee, status=SessionStatus.ACTIVE).exists():
         raise Conflict("You are already on a break.")
+    if MeetingPause.objects.filter(employee=employee, status=SessionStatus.ACTIVE).exists():
+        raise InMeeting("A meeting is in progress — your working time is already paused, so no break is needed.")
     allowance = allowance_seconds(cs)
     if allowance is not None and record.total_break_seconds >= allowance:
         raise BreakAllowanceUsed(
@@ -557,6 +561,8 @@ def sync_batch(request, events):
 
 def today_state(user, now=None):
     """Everything the work-session UI needs, computed from server state."""
+    from .meetings import active_meeting_for
+    from .resume import latest_for
     from .wfh import request_for_day
 
     cs = CompanySettings.get_solo()
@@ -564,7 +570,8 @@ def today_state(user, now=None):
     day = _day(now, cs)
     employee = Employee.objects.filter(user=user).first()
     record = active_break = active_overtime = open_overtime = wfh = None
-    breaks = overtime = []
+    active_meeting = active_pause = open_non_working = resume_request = None
+    breaks = overtime = meeting_pauses = non_working = []
     if employee is not None:
         record = AttendanceRecord.objects.filter(employee=employee, date=day).first()
         breaks = list(BreakSession.objects.filter(attendance=record).order_by("started_at")) if record else []
@@ -581,6 +588,14 @@ def today_state(user, now=None):
             .first()
         )
         wfh = request_for_day(employee, day)
+        active_meeting = active_meeting_for(employee)
+        active_pause = MeetingPause.objects.filter(employee=employee, status=SessionStatus.ACTIVE).first()
+        if record is not None:
+            meeting_pauses = list(MeetingPause.objects.filter(attendance=record).select_related("meeting")
+                                  .order_by("started_at"))
+            non_working = list(NonWorkingPeriod.objects.filter(attendance=record).order_by("started_at"))
+            open_non_working = next((p for p in non_working if p.ended_at is None), None)
+        resume_request = latest_for(employee, day)
     used, remaining = break_usage(record, active_break, cs, now)
     return {
         "cs": cs,
@@ -595,4 +610,10 @@ def today_state(user, now=None):
         "active_overtime": active_overtime,
         "open_overtime": open_overtime,
         "wfh": wfh,
+        "active_meeting": active_meeting,
+        "active_pause": active_pause,
+        "meeting_pauses": meeting_pauses,
+        "non_working": non_working,
+        "open_non_working": open_non_working,
+        "resume_request": resume_request,
     }

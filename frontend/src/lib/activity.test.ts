@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
-import { ActivityTracker } from "./activity";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ActivityTracker, POINT_SPACING_MS, lastSharedBeat, markSharedBeat } from "./activity";
 import { checkInVerdict, haversineM } from "./geo";
 
 let clock = 0;
@@ -48,6 +48,127 @@ describe("activity tracker (privacy-safe)", () => {
     clock += 5 * 60_000;
     window.dispatchEvent(new Event("pointerdown"));
     expect(t.idleSeconds()).toBe(300);
+  });
+});
+
+describe("activity reports (offline-safe heartbeat)", () => {
+  it("counts text input, wheel / touchpad and window focus as activity, never their content", () => {
+    const t = tracker();
+    t.start();
+    for (const type of ["input", "wheel", "focus", "touchstart"]) {
+      clock += 60_000;
+      window.dispatchEvent(new Event(type));
+      expect(t.lastActivity).toBe(clock);
+    }
+    t.stop();
+  });
+
+  it("keeps the moments of activity until the server acknowledges them", () => {
+    const t = tracker();
+    t.start();
+    const start = clock;
+    clock += 1_000;
+    window.dispatchEvent(new Event("pointerdown"));
+    clock += 5_000; // within the 30 s spacing: not a new moment, but still the last activity
+    window.dispatchEvent(new Event("keydown"));
+    clock += POINT_SPACING_MS;
+    window.dispatchEvent(new Event("keydown"));
+    clock += 10_000;
+    const report = t.report();
+    expect(report.activity).toEqual([45, 10]); // seconds ago, relative: the device clock is not trusted
+    expect(report.idle_seconds).toBe(10);
+    expect(report.observed_seconds).toBe(Math.floor((clock - start) / 1000));
+    // A failed heartbeat keeps them; a successful one clears what it carried.
+    expect(t.report().activity).toHaveLength(2);
+    t.acknowledge(report.takenAt);
+    expect(t.report().activity).toEqual([]);
+    t.stop();
+  });
+
+  it("reports activity seen during a 40-minute network outage when the connection returns", () => {
+    const t = tracker();
+    t.start();
+    for (let minute = 1; minute <= 40; minute++) {
+      clock += 60_000;
+      window.dispatchEvent(new Event("keydown"));
+    }
+    const report = t.report();
+    expect(report.activity).toHaveLength(40);
+    expect(Math.max(...report.activity)).toBe(39 * 60);
+    expect(report.idle_seconds).toBe(0);
+    t.stop();
+  });
+
+  it("starts a new observation window after a pause (e.g. a meeting)", () => {
+    const t = tracker();
+    t.start();
+    clock += 60_000;
+    window.dispatchEvent(new Event("keydown"));
+    t.stop();
+    clock += 60 * 60_000;
+    window.dispatchEvent(new Event("keydown")); // not watching during the meeting
+    t.start();
+    const report = t.report();
+    expect(report.activity).toEqual([]);
+    expect(report.observed_seconds).toBe(0);
+    expect(t.lastActivity).toBeNull();
+    t.stop();
+  });
+
+  it("shares activity with the other open tabs", async () => {
+    if (typeof BroadcastChannel !== "function") return; // shared through storage events instead
+    const a = tracker();
+    const b = new ActivityTracker(() => clock);
+    a.start();
+    b.start();
+    clock += 60_000;
+    window.dispatchEvent(new Event("keydown")); // both trackers listen to this window...
+    const other = new BroadcastChannel("nexvra-activity");
+    clock += 60_000;
+    other.postMessage({ activity: clock }); // ...and another tab reports activity too
+    await new Promise((r) => setTimeout(r, 30));
+    expect(a.lastActivity).toBe(clock);
+    expect(b.lastActivity).toBe(clock);
+    other.close();
+    a.stop();
+    b.stop();
+  });
+
+  it("lets one tab send the heartbeat for all of them", () => {
+    window.localStorage.clear();
+    expect(lastSharedBeat()).toBe(0);
+    markSharedBeat(123_456);
+    expect(lastSharedBeat()).toBe(123_456);
+  });
+
+  it("restores device-wide detection after a reload only when it was allowed", async () => {
+    window.localStorage.clear();
+    const started: number[] = [];
+    class FakeDetector {
+      userState: "active" | "idle" | null = "active";
+      static requestPermission = async () => "granted" as const;
+      addEventListener() {}
+      async start() {
+        started.push(1);
+      }
+    }
+    vi.stubGlobal("IdleDetector", FakeDetector);
+    Object.defineProperty(navigator, "permissions", {
+      configurable: true,
+      value: { query: async () => ({ state: "granted" }) },
+    });
+    const t = tracker();
+    t.start();
+    expect(await t.resumeSystemIdleDetection()).toBe(false); // never turned on in this browser
+    expect(await t.enableSystemIdleDetection()).toBe(true);
+    t.stop();
+    expect(t.systemIdleEnabled).toBe(false);
+    const reloaded = new ActivityTracker(() => clock);
+    reloaded.start();
+    expect(await reloaded.resumeSystemIdleDetection()).toBe(true);
+    expect(started).toHaveLength(2);
+    reloaded.stop();
+    vi.unstubAllGlobals();
   });
 });
 

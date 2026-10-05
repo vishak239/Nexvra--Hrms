@@ -54,6 +54,8 @@
   --nx-warning: 122 89 0;
   --nx-warning-container: 255 244 204;
   --nx-warning-outline: 233 196 106;
+  --nx-info: 0 91 148;
+  --nx-notice: 138 75 0;
 }
 
 .dark {
@@ -108,4 +110,6 @@
   --nx-warning: 255 214 10;
   --nx-warning-container: 31 22 0;
   --nx-warning-outline: 71 52 0;
+  --nx-info: 124 196 255;
+  --nx-notice: 245 185 95;
 }

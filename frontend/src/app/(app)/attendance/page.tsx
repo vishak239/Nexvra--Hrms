@@ -4,7 +4,7 @@ import { CalendarCheck, Pencil, Plus, Trash2 } from "@/components/ui/icons";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { OvertimeTable } from "@/components/attendance/OvertimeTable";
-import { OvertimeRequestsPanel, WfhRequestsPanel } from "@/components/attendance/RequestPanels";
+import { OvertimeRequestsPanel, ResumeRequestsPanel, WfhRequestsPanel } from "@/components/attendance/RequestPanels";
 import { WorkSessionCard } from "@/components/attendance/WorkSessionCard";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, PageHeader, StatusBadge } from "@/components/ui/Display";
@@ -19,7 +19,7 @@ import { tryApi, useAction, useResource } from "@/lib/hooks";
 import type { AttendanceRecord, Department, Employee, EmployeeRef, OvertimeSession, Paginated } from "@/lib/types";
 import { BreakTotal } from "@/components/attendance/BreakTotal";
 
-type Tab = "mine" | "daily" | "records" | "wfh" | "overtime";
+type Tab = "mine" | "daily" | "records" | "wfh" | "overtime" | "resume";
 
 function monthStart() {
   return `${todayISO().slice(0, 8)}01`;
@@ -44,6 +44,8 @@ function RecordsTable({
         <Th>Check-in</Th>
         <Th>Check-out</Th>
         <Th>Breaks</Th>
+        <Th>Meetings</Th>
+        <Th>Non-working</Th>
         <Th>Worked</Th>
         <Th>Status</Th>
         <Th>Source</Th>
@@ -62,6 +64,8 @@ function RecordsTable({
             <Td>{fmtTime(r.check_in)}</Td>
             <Td>{fmtTime(r.check_out)}</Td>
             <Td><BreakTotal record={r} /></Td>
+            <Td>{r.meeting_minutes ? fmtMinutes(r.meeting_minutes) : "—"}</Td>
+            <Td>{r.non_working_minutes ? fmtMinutes(r.non_working_minutes) : "—"}</Td>
             <Td>{fmtMinutes(r.worked_minutes)}</Td>
             <Td>
               <div className="flex gap-1.5">
@@ -494,6 +498,7 @@ function AttendanceContent() {
     ...(hasTeam ? [{ value: "records" as Tab, label: "Records" }] : []),
     ...(hasSelf || can("wfh.approve") ? [{ value: "wfh" as Tab, label: "Work from home" }] : []),
     ...(hasSelf || hasTeam || can("overtime.approve") ? [{ value: "overtime" as Tab, label: "Overtime" }] : []),
+    ...(hasSelf || hasTeam || can("resume.approve") ? [{ value: "resume" as Tab, label: "Resume Work" }] : []),
   ];
   const requested = params.get("tab") as Tab | null;
   const [tab, setTab] = useState<Tab>(tabs.find((t) => t.value === requested)?.value ?? tabs[0]?.value ?? "mine");
@@ -501,13 +506,14 @@ function AttendanceContent() {
   if (tabs.length === 0) return <NoAccess />;
   return (
     <>
-      <PageHeader title="Attendance" description="Check-ins, breaks, work from home, overtime and attendance history." />
+      <PageHeader title="Attendance" description="Check-ins, breaks, meetings, work from home, overtime, Resume Work and attendance history." />
       {tabs.length > 1 && <Tabs tabs={tabs} value={tab} onChange={setTab} />}
       {tab === "mine" && me?.employee && <MyAttendance employeeId={me.employee.id} />}
       {tab === "daily" && <DailyStatus />}
       {tab === "records" && <AllRecords />}
       {tab === "wfh" && <WfhRequestsPanel />}
       {tab === "overtime" && <OvertimeRequestsPanel />}
+      {tab === "resume" && <ResumeRequestsPanel />}
     </>
   );
 }

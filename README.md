@@ -5,14 +5,15 @@ Internal Human Resource Management System for **Nexvra Solutions**. A standard H
 | Area | Status |
 |---|---|
 | Backend API (Django + DRF + PostgreSQL) | Implemented and tested: auth, RBAC, company/settings, departments, designations, holidays, employees, attendance, leave, payroll, documents, notifications, audit log, reports, dashboard |
-| Work sessions | Office check-in only within **20 m** of the workplace (server-verified geofence; automatic check-out on leaving); **work from home** with HR approval; **60-minute daily break allowance**; **30-minute inactivity** auto check-out (privacy-safe: timestamps only); overtime with a task/reason declaration, **HR approval** and inactivity auto-stop; offline mode with an idempotent sync queue; session recovery. Actions are in the top-right header. |
+| Work sessions | Office check-in only within **20 m** of the workplace (server-verified geofence; automatic check-out on leaving); **work from home** with HR approval; **60-minute daily break allowance**; **30-minute inactivity** auto check-out (privacy-safe: timestamps only; activity seen offline still counts, device-wide activity on Chrome/Edge with permission); **Resume Work** after an inactivity check-out (reason → HR/Admin approval → normal check-in again, gap recorded as non-working time); **meetings** (overall or selected employees) pause working time without a new check-in; overtime with a task/reason declaration, **HR approval** and inactivity auto-stop; offline mode with an idempotent sync queue; session recovery. Actions are in the top-right header. |
 | Tasks | HR assigns tasks by Employee ID **or** @username; employees respond and complete; unanswered tasks block checkout (Super Admin exempt) |
-| Messaging | Private 1:1 conversations with secure file sharing (PDF, Office, CSV, images) |
+| Messaging | Private 1:1 conversations with secure file sharing (PDF, Office, CSV, images); links in messages are clickable (safely) |
+| Alerts | Desktop (operating-system) popups with sound for new notifications and messages when the tab is in the background, with the user's browser permission; in-app toasts otherwise |
 | Leave | Approved leave is locked; the balance is deducted exactly once, on approval, with an audited ledger |
 | Look and feel | Stitch design system in **light and dark** themes (remembered per browser, follows the device by default) |
 | Operations | Environment-separated settings (development / staging / production guards), SMTP with diagnostics, verified database + file backups with restore, nginx/HTTPS + systemd deployment files |
 | Policies | HR writes company policies (drafts, publish, search, categories); everyone reads the published ones next to the rules the system enforces (working hours, grace time, daily break allowance, …) |
-| Frontend (Next.js + TypeScript + Tailwind) | Implemented: 26 role-aware screens covering sign-in, dashboard, employees, attendance, leave, holidays, policies, tasks, messages, payroll, payslips, documents, reports (with activity monitoring), notifications, settings, users & roles, and the audit log. Responsive with a mobile menu. |
+| Frontend (Next.js + TypeScript + Tailwind) | Implemented: 27 role-aware screens covering sign-in, dashboard, employees, attendance, meetings, leave, holidays, policies, tasks, messages, payroll, payslips, documents, reports (with activity monitoring), notifications, settings, users & roles, and the audit log. Responsive with a mobile menu. |
 | UI design | The official Stitch design (`stitch_nexvra_hrms_enterprise_platform/`, "Obsidian Kinetic": dark surfaces, electric-lime accent, Space Grotesk + Inter, Material Symbols). Its tokens are copied verbatim into `frontend/tailwind.config.ts`, and every screen uses the shared components in `frontend/src/components/ui/`. |
 | Official logo | `brand/nexvra-logo.svg`, as confirmed by the owner, used unmodified |
 | HR policies | None supplied. Every policy is **configurable** and starts empty (see `docs/requirements-analysis.md`) |
@@ -114,9 +115,9 @@ All configuration comes from environment variables. [`.env.example`](.env.exampl
 ## Tests
 
 ```bash
-cd backend && .venv/Scripts/python -m pytest       # 293 tests on PostgreSQL
-cd frontend && npm test && npm run typecheck        # 83 unit + component tests
-cd tests/e2e && E2E_PASSWORD="<demo-pw>" npx playwright test   # 58 tests (API + browser UI); see docs/testing.md
+cd backend && .venv/Scripts/python -m pytest       # 324 tests on PostgreSQL
+cd frontend && npm test && npm run typecheck        # 126 unit + component tests
+cd tests/e2e && E2E_PASSWORD="<demo-pw>" npx playwright test   # 65 tests (API + browser UI); see docs/testing.md
 ```
 
 See [docs/testing.md](docs/testing.md).
@@ -139,6 +140,7 @@ See [docs/testing.md](docs/testing.md).
 | [hrms-v1-scope.md](docs/hrms-v1-scope.md) | Must / should / later / excluded |
 | [architecture.md](docs/architecture.md) | Frontend, backend, auth, RBAC, files, audit, security |
 | [work-sessions-tasks-messaging.md](docs/work-sessions-tasks-messaging.md) | Breaks (+ daily allowance), overtime, tasks + checkout rule, leave lock & balance ledger, messaging & files, offline mode, monitoring, company policies |
+| [meetings-resume-activity.md](docs/meetings-resume-activity.md) | Meetings, Resume Work, the four time categories, activity detection (and its browser limits), desktop alerts, message links |
 | [database.md](docs/database.md) | Tables, constraints, migrations |
 | [api.md](docs/api.md) | Every endpoint with its permission |
 | [setup.md](docs/setup.md) | Installation and first-time configuration |

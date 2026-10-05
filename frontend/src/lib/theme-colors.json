@@ -48,5 +48,7 @@
   "outline-variant",
   "warning",
   "warning-container",
-  "warning-outline"
+  "warning-outline",
+  "info",
+  "notice"
 ]

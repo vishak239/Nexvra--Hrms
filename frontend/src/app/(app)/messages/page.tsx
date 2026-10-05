@@ -4,6 +4,7 @@ import { ArrowLeft, Download, FileText, MessageSquare, Paperclip, Search, Send, 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
+import { LinkifiedText } from "@/components/ui/LinkifiedText";
 import { Avatar, Card, PageHeader } from "@/components/ui/Display";
 import { useToast } from "@/components/ui/Overlay";
 import { Alert, EmptyState, ErrorState, Loading, NoAccess, Spinner } from "@/components/ui/States";
@@ -301,7 +302,7 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.is_mine ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[85%] rounded-xl px-3.5 py-2 text-sm sm:max-w-[70%] ${m.is_mine ? "bg-primary-container/15 text-primary ring-1 ring-inset ring-primary-container/25" : "bg-surface-container-high text-on-surface"}`}>
-              {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
+              {m.body && <p className="whitespace-pre-wrap break-words"><LinkifiedText text={m.body} /></p>}
               {m.attachments.length > 0 && (
                 <ul className="mt-1.5 space-y-1">
                   {m.attachments.map((a) => (

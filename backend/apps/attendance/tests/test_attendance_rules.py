@@ -358,7 +358,9 @@ def test_automatic_check_out_during_a_break(org, client_for):
     heartbeat(alice, at(11, 59))
     post(alice, "/api/attendance/breaks/start/", at(12))
     assert get(alice, "/api/attendance/today/", at(13, 29)).data["record"]["check_out"] is None
-    state = get(alice, "/api/attendance/today/", at(13, 30)).data
+    # The deadline (13:30) has passed, but nothing confirms it yet: a silent browser gets a grace.
+    assert get(alice, "/api/attendance/today/", at(13, 31)).data["record"]["check_out"] is None
+    state = heartbeat(alice, at(13, 31), idle=5520).data["state"]  # the open browser saw no activity
     rec = record(org)
     assert rec.check_out == at(13, 30) and rec.checkout_reason == "INACTIVITY_TIMEOUT"
     assert rec.total_break_seconds == 3600

@@ -35,6 +35,12 @@ class AttendanceRecord(TimeStampedModel):
     total_break_seconds = models.PositiveIntegerField(
         default=0, help_text="Sum of completed breaks; maintained by the break services, never sent by clients."
     )
+    total_meeting_seconds = models.PositiveIntegerField(
+        default=0, help_text="Sum of completed meeting pauses (working time paused for a meeting)."
+    )
+    total_non_working_seconds = models.PositiveIntegerField(
+        default=0, help_text="Sum of closed non-working periods (automatic check-out until resumed check-in)."
+    )
     mode = models.CharField(max_length=16, choices=Mode.choices, default=Mode.OFFICE)
     wfh_request = models.ForeignKey(
         "attendance.WorkFromHomeRequest", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
@@ -51,6 +57,9 @@ class AttendanceRecord(TimeStampedModel):
     check_out_distance_m = models.PositiveIntegerField(null=True, blank=True)
     # Activity heartbeat (privacy-safe: only a timestamp, never what the user did).
     last_activity_at = models.DateTimeField(null=True, blank=True)
+    last_heartbeat_at = models.DateTimeField(
+        null=True, blank=True, help_text="When the browser last reported (evidence that it was still watching)."
+    )
     location_issue = models.CharField(max_length=24, blank=True, help_text="Last location-monitoring problem.")
     location_issue_at = models.DateTimeField(null=True, blank=True)
     updated_by = models.ForeignKey(
@@ -91,10 +100,23 @@ class AttendanceRecord(TimeStampedModel):
         return self.total_break_seconds // 60
 
     @property
+    def meeting_minutes(self):
+        return self.total_meeting_seconds // 60
+
+    @property
+    def non_working_minutes(self):
+        return self.total_non_working_seconds // 60
+
+    @property
+    def paused_seconds(self):
+        """Time inside the session that is not work: breaks, meetings and non-working periods."""
+        return self.total_break_seconds + self.total_meeting_seconds + self.total_non_working_seconds
+
+    @property
     def worked_minutes(self):
-        """Actual working time = total session time - total break time (breaks are not work)."""
+        """Actual working time = session time - breaks - meetings - non-working periods."""
         if self.check_in and self.check_out:
-            seconds = (self.check_out - self.check_in).total_seconds() - self.total_break_seconds
+            seconds = (self.check_out - self.check_in).total_seconds() - self.paused_seconds
             return max(0, int(seconds // 60))
         return None
 
@@ -128,6 +150,7 @@ class BreakSession(TimeStampedModel):
         MANUAL = "MANUAL", "Ended by the employee"
         ALLOWANCE_EXHAUSTED = "ALLOWANCE_EXHAUSTED", "Daily break allowance used up"
         CHECKOUT = "CHECKOUT", "Ended at check-out"
+        MEETING = "MEETING", "Ended when a meeting started"
 
     status = models.CharField(max_length=10, choices=SessionStatus.choices, default=SessionStatus.ACTIVE)
     source = models.CharField(max_length=8, choices=SessionSource.choices, default=SessionSource.ONLINE)
@@ -341,3 +364,197 @@ class SyncEvent(models.Model):
 
     def __str__(self):
         return f"{self.user_id} {self.event_type} {self.status}"
+
+
+class Meeting(TimeStampedModel):
+    """A company meeting during which the working time of the people it affects is paused.
+
+    OVERALL affects every employee; SELECTED affects only its participants. Lifecycle
+    (server-controlled): SCHEDULED -> ACTIVE -> COMPLETED, or SCHEDULED -> CANCELLED. While a
+    meeting is ACTIVE, each affected employee with an open work session has one open
+    MeetingPause: the inactivity rule does not run during it and the time is recorded as
+    meeting time (never as working, break or non-working time)."""
+
+    class Kind(models.TextChoices):
+        OVERALL = "OVERALL", "Overall meeting"
+        SELECTED = "SELECTED", "Selected employee meeting"
+
+    class Status(models.TextChoices):
+        SCHEDULED = "SCHEDULED", "Scheduled"
+        ACTIVE = "ACTIVE", "Active"
+        COMPLETED = "COMPLETED", "Completed"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    class EndReason(models.TextChoices):
+        MANUAL = "MANUAL", "Ended by HR / Admin"
+        SCHEDULED_END = "SCHEDULED_END", "Reached its planned end time"
+
+    title = models.CharField(max_length=200)
+    agenda = models.TextField(blank=True)
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.SCHEDULED)
+    scheduled_start = models.DateTimeField(null=True, blank=True)
+    scheduled_end = models.DateTimeField(
+        null=True, blank=True, help_text="Optional. An active meeting ends automatically at this time."
+    )
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    end_reason = models.CharField(max_length=16, choices=EndReason.choices, blank=True)
+    participants = models.ManyToManyField("employees.Employee", blank=True, related_name="meetings")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    started_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    ended_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [models.Index(fields=["status", "kind"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["kind"],
+                condition=models.Q(status="ACTIVE", kind="OVERALL"),
+                name="meeting_one_active_overall",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    status__in=["SCHEDULED", "CANCELLED"], started_at__isnull=True, ended_at__isnull=True
+                )
+                | models.Q(status="ACTIVE", started_at__isnull=False, ended_at__isnull=True)
+                | models.Q(status="COMPLETED", started_at__isnull=False, ended_at__gte=models.F("started_at")),
+                name="meeting_status_matches_times",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(scheduled_end__isnull=True)
+                | models.Q(scheduled_start__isnull=True)
+                | models.Q(scheduled_end__gt=models.F("scheduled_start")),
+                name="meeting_scheduled_end_after_start",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.kind}, {self.status})"
+
+
+class MeetingPause(TimeStampedModel):
+    """The part of one employee's work session spent in a meeting (working time paused)."""
+
+    class EndReason(models.TextChoices):
+        MEETING_ENDED = "MEETING_ENDED", "Meeting ended"
+        CHECKOUT = "CHECKOUT", "Checked out during the meeting"
+        REMOVED = "REMOVED", "Removed from the meeting"
+
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name="pauses")
+    attendance = models.ForeignKey(AttendanceRecord, on_delete=models.CASCADE, related_name="meeting_pauses")
+    employee = models.ForeignKey("employees.Employee", on_delete=models.CASCADE, related_name="meeting_pauses")
+    started_at = models.DateTimeField()
+    ended_at = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=10, choices=SessionStatus.choices, default=SessionStatus.ACTIVE)
+    end_reason = models.CharField(max_length=16, choices=EndReason.choices, blank=True)
+
+    class Meta:
+        ordering = ["-started_at", "-id"]
+        indexes = [models.Index(fields=["employee", "started_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["employee"],
+                condition=models.Q(status=SessionStatus.ACTIVE),
+                name="meeting_pause_one_active_per_employee",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(ended_at__isnull=True) | models.Q(ended_at__gte=models.F("started_at")),
+                name="meeting_pause_end_after_start",
+            ),
+            models.CheckConstraint(condition=_status_matches_end(), name="meeting_pause_status_matches_end"),
+        ]
+
+    def __str__(self):
+        return f"{self.employee_id} meeting {self.meeting_id} {self.status}"
+
+
+class NonWorkingPeriod(TimeStampedModel):
+    """Time between an automatic inactivity check-out and the employee's approved, successful
+    re-check-in. Never working time and never break time. An open period (ended_at null)
+    means the employee has not resumed (yet)."""
+
+    class Reason(models.TextChoices):
+        INACTIVITY_TIMEOUT = "INACTIVITY_TIMEOUT", "Checked out for inactivity"
+
+    attendance = models.ForeignKey(AttendanceRecord, on_delete=models.CASCADE, related_name="non_working_periods")
+    employee = models.ForeignKey("employees.Employee", on_delete=models.CASCADE, related_name="non_working_periods")
+    started_at = models.DateTimeField()
+    ended_at = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    reason = models.CharField(max_length=20, choices=Reason.choices, default=Reason.INACTIVITY_TIMEOUT)
+    resume_request = models.ForeignKey(
+        "attendance.ResumeWorkRequest", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["-started_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["attendance"], condition=models.Q(ended_at__isnull=True), name="non_working_one_open_per_day"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(ended_at__isnull=True, duration_seconds__isnull=True)
+                | models.Q(ended_at__gte=models.F("started_at"), duration_seconds__isnull=False),
+                name="non_working_end_after_start",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.employee_id} non-working {self.started_at:%Y-%m-%d %H:%M}"
+
+
+class ResumeWorkRequest(TimeStampedModel):
+    """After an automatic inactivity check-out the employee asks to resume work; HR / Super
+    Admin decide. Approval does not check anyone in: it only allows the next check-in, which
+    still passes the geofence / work-from-home validation. Workflow (server-controlled):
+
+        PENDING -> APPROVED -> USED;  PENDING -> REJECTED;  PENDING/APPROVED -> CANCELLED | EXPIRED
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
+        USED = "USED", "Used (checked in again)"
+        CANCELLED = "CANCELLED", "Cancelled"
+        EXPIRED = "EXPIRED", "Expired"
+
+    OPEN = ("PENDING", "APPROVED")
+
+    employee = models.ForeignKey("employees.Employee", on_delete=models.CASCADE, related_name="resume_requests")
+    attendance = models.ForeignKey(AttendanceRecord, on_delete=models.CASCADE, related_name="resume_requests")
+    date = models.DateField()
+    reason = models.CharField(max_length=1000)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    checked_out_at = models.DateTimeField(help_text="The automatic check-out this request is about.")
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.CharField(max_length=500, blank=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        verbose_name = "resume-work request"
+        indexes = [models.Index(fields=["status", "date"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["employee"],
+                condition=models.Q(status__in=["PENDING", "APPROVED"]),
+                name="resume_one_open_request_per_employee",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.employee_id} resume {self.date} {self.status}"

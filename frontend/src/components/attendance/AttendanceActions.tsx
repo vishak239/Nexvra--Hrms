@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
-import { ChevronDown, Coffee, Home, Hourglass, LogIn, LogOut, MoreTime, Play, Square, Timer } from "@/components/ui/icons";
+import { ChevronDown, Coffee, Home, Hourglass, LogIn, LogOut, MoreTime, Play, RotateCcw, Square, Timer, Groups } from "@/components/ui/icons";
 import type { Phase } from "@/lib/worksession";
 import { useWorkSession, type WorkSessionValue } from "./WorkSessionProvider";
 
@@ -22,6 +22,7 @@ const PHASE_TEXT: Record<Phase, string> = {
   NOT_CHECKED_IN: "Not checked in",
   WORKING: "Working",
   ON_BREAK: "On break",
+  IN_MEETING: "In a meeting",
   CHECKED_OUT: "Checked out",
   OVERTIME: "Overtime running",
 };
@@ -93,6 +94,24 @@ export function attendanceActions(ws: WorkSessionValue): ActionItem[] {
       });
       items.push(wfhRequest);
       break;
+    case "IN_MEETING":
+      items.push({
+        key: "in-meeting",
+        label: "Meeting in progress",
+        icon: <Groups className="h-4 w-4" />,
+        onClick: () => undefined,
+        disabled: true,
+        title: "Working time is paused until HR / Admin ends the meeting. You do not need to check in again.",
+      });
+      items.push({
+        key: "check-out",
+        label: "Check out",
+        icon: <LogOut className="h-4 w-4" />,
+        busy: busy === "check-out",
+        disabled: !online || view.pendingEvents > 0,
+        onClick: ws.requestCheckOut,
+      });
+      break;
     case "ON_BREAK":
       items.push({
         key: "end-break",
@@ -104,6 +123,44 @@ export function attendanceActions(ws: WorkSessionValue): ActionItem[] {
       });
       break;
     case "CHECKED_OUT":
+      // After an automatic inactivity check-out: Resume Work instead of an unrestricted check-in.
+      if (view.resume === "needed" || view.resume === "rejected") {
+        items.push({
+          key: "resume",
+          label: "Resume Work",
+          icon: <RotateCcw className="h-4 w-4" />,
+          primary: true,
+          disabled: !online,
+          onClick: ws.openResume,
+        });
+      } else if (view.resume === "pending") {
+        items.push({ key: "resume-pending", label: "Waiting for approval", icon: <Hourglass className="h-4 w-4" />, onClick: () => undefined, disabled: true, title: "Waiting for HR/Admin approval." });
+      } else if (view.resume === "approved") {
+        items.push({
+          key: "check-in",
+          label: "Check in",
+          icon: <LogIn className="h-4 w-4" />,
+          primary: true,
+          busy: busy === "check-in",
+          disabled: !online || verdict.kind === "outside",
+          title: verdict.kind === "outside" ? "You are outside the workplace check-in area." : "Resume approved — check in to continue working.",
+          onClick: () => {
+            ws.requestLocation();
+            void ws.checkIn("OFFICE");
+          },
+        });
+        if (wfh?.status === "APPROVED") {
+          items.push({
+            key: "check-in-wfh",
+            label: "WFH check in",
+            icon: <Home className="h-4 w-4" />,
+            busy: busy === "check-in-wfh",
+            disabled: !online,
+            onClick: () => void ws.checkIn("WORK_FROM_HOME"),
+          });
+        }
+        break;
+      }
       if (ot?.status === "REQUESTED") {
         items.push({ key: "ot-pending", label: "Overtime pending", icon: <Hourglass className="h-4 w-4" />, onClick: () => undefined, disabled: true, title: "Waiting for HR to approve your overtime request." });
       } else if (ot?.status === "APPROVED") {
@@ -152,7 +209,13 @@ export function AttendanceActions() {
   const items = attendanceActions(ws);
   const phase = ws.view.phase;
   const dot =
-    phase === "WORKING" ? "bg-primary-container" : phase === "ON_BREAK" ? "bg-warning" : phase === "OVERTIME" ? "bg-primary-fixed" : "bg-outline";
+    phase === "WORKING"
+      ? "bg-primary-container"
+      : phase === "ON_BREAK" || phase === "IN_MEETING"
+        ? "bg-warning"
+        : phase === "OVERTIME"
+          ? "bg-primary-fixed"
+          : "bg-outline";
 
   return (
     <div className="flex items-center" data-testid="attendance-actions" data-phase={phase}>

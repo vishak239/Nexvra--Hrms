@@ -143,11 +143,15 @@ export interface AttendanceRecord {
   check_out: string | null;
   status: AttendanceStatus;
   is_late: boolean;
-  /** Actual working time: session minus breaks. */
+  /** Actual working time: session minus breaks, meetings and non-working periods. */
   worked_minutes: number | null;
   session_minutes: number | null;
   break_minutes: number;
   total_break_seconds: number;
+  meeting_minutes: number;
+  total_meeting_seconds: number;
+  non_working_minutes: number;
+  total_non_working_seconds: number;
   /** Break time beyond the daily allowance; null when no allowance is configured. */
   break_over_allowance_minutes: number | null;
   mode: AttendanceMode;
@@ -253,6 +257,85 @@ export interface WorkSessionState {
   active_overtime: OvertimeSession | null;
   blocking_tasks: number;
   checkout_exempt: boolean;
+  /** The running meeting that affects this employee (working time paused while `active_pause`). */
+  active_meeting: Meeting | null;
+  active_pause: MeetingPause | null;
+  meeting_pauses: MeetingPause[];
+  non_working: NonWorkingPeriod[];
+  /** Set after an automatic inactivity check-out until an approved re-check-in. */
+  open_non_working: NonWorkingPeriod | null;
+  resume_request: ResumeWorkRequest | null;
+  /** Full-day working time from company settings; null when not configured. */
+  required_work_seconds: number | null;
+}
+
+export type MeetingKind = "OVERALL" | "SELECTED";
+export type MeetingStatus = "SCHEDULED" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+
+export interface Meeting {
+  id: number;
+  title: string;
+  agenda: string;
+  kind: MeetingKind;
+  status: MeetingStatus;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  end_reason: "" | "MANUAL" | "SCHEDULED_END";
+  participants: EmployeeRef[];
+  participant_count: number;
+  created_by_name: string | null;
+  started_by_name: string | null;
+  ended_by_name: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MeetingPause {
+  id: number;
+  meeting: number;
+  meeting_title: string;
+  meeting_kind: MeetingKind;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  status: SessionStatus;
+  end_reason: "" | "MEETING_ENDED" | "CHECKOUT" | "REMOVED";
+}
+
+export interface NonWorkingPeriod {
+  id: number;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  reason: "INACTIVITY_TIMEOUT";
+  resume_request: number | null;
+}
+
+export type ResumeStatus = "PENDING" | "APPROVED" | "REJECTED" | "USED" | "CANCELLED" | "EXPIRED";
+
+export interface ResumeWorkRequest {
+  id: number;
+  employee: EmployeeRef;
+  date: string;
+  reason: string;
+  status: ResumeStatus;
+  checked_out_at: string;
+  decided_by_name: string | null;
+  decided_at: string | null;
+  decision_note: string;
+  used_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationUpdates {
+  server_time: string;
+  notifications: Notification[];
+  unread_notifications: number;
+  /** null when the user cannot use messages. */
+  unread_messages: number | null;
 }
 
 export type SyncEventType = "BREAK_START" | "BREAK_END" | "OVERTIME_START" | "OVERTIME_END";

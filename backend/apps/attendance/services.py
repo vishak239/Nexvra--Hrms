@@ -19,8 +19,16 @@ from apps.organization.models import CompanySettings, Holiday
 from apps.tasks.rules import assert_checkout_allowed
 
 from . import geo
-from .errors import LocationRequired, LocationTooImprecise, OutsideGeofence, WfhNotApproved
-from .models import AttendanceRecord
+from .errors import (
+    LocationRequired,
+    LocationTooImprecise,
+    OutsideGeofence,
+    ResumePending,
+    ResumeRequired,
+    WfhNotApproved,
+)
+from .meetings import close_open_pause_at_checkout
+from .models import AttendanceRecord, NonWorkingPeriod, OvertimeSession, OvertimeStatus, ResumeWorkRequest
 from .sessions import close_open_break_at_checkout
 
 # Derived (not stored) day statuses used by the daily view and reports.
@@ -91,17 +99,45 @@ def _coord(value):
     return None if value is None else Decimal(str(round(float(value), 6)))
 
 
+def _approved_resume(record):
+    """The approved Resume Work request that allows checking in again after an automatic
+    inactivity check-out. Without one, a checked-out day stays checked out."""
+    if record.check_out is None:
+        raise Conflict("You have already checked in today.")
+    if record.checkout_reason != AttendanceRecord.CheckoutReason.INACTIVITY_TIMEOUT:
+        raise Conflict("You have already checked in today.")
+    resume = (
+        ResumeWorkRequest.objects.select_for_update()
+        .filter(attendance=record, status__in=ResumeWorkRequest.OPEN)
+        .first()
+    )
+    if resume is None:
+        raise ResumeRequired()
+    if resume.status == ResumeWorkRequest.Status.PENDING:
+        raise ResumePending()
+    if OvertimeSession.objects.filter(employee=record.employee, status=OvertimeStatus.ACTIVE).exists():
+        raise Conflict("Stop your overtime before resuming normal work.")
+    return resume
+
+
 @transaction.atomic
 def check_in(request, mode=AttendanceRecord.Mode.OFFICE, latitude=None, longitude=None, accuracy=None):
     """Office check-in needs to pass the server-side geofence (when a workplace is configured).
-    Work-from-home check-in needs an APPROVED request for today; no location is collected."""
+    Work-from-home check-in needs an APPROVED request for today; no location is collected.
+
+    After an automatic inactivity check-out the same day, checking in again needs an approved
+    Resume Work request and still passes the same geofence / work-from-home validation. It
+    reopens the day's session: the gap becomes non-working time and a new working segment starts."""
+    from .meetings import pause_if_in_meeting
+
     cs = CompanySettings.get_solo()
     employee = _self_employee(request.user, cs)
     now = timezone.now()
     today = timezone.localtime(now, cs.tz).date()
     record = AttendanceRecord.objects.select_for_update().filter(employee=employee, date=today).first()
+    resume = None
     if record is not None and record.check_in is not None:
-        raise Conflict("You have already checked in today.")
+        resume = _approved_resume(record)
 
     wfh = None
     distance = None
@@ -114,12 +150,18 @@ def check_in(request, mode=AttendanceRecord.Mode.OFFICE, latitude=None, longitud
     else:
         distance = office_location_check(cs, latitude, longitude, accuracy)
 
+    if resume is not None:
+        record = _resume(request, record, resume, now, mode, wfh, distance, cs)
+        pause_if_in_meeting(record, now)
+        return record
+
     if record is None:
         record = AttendanceRecord(employee=employee, date=today, source=AttendanceRecord.Source.SELF)
     record.check_in = now
     record.mode = mode
     record.wfh_request = wfh
     record.last_activity_at = now
+    record.last_heartbeat_at = now
     if mode == AttendanceRecord.Mode.OFFICE and latitude is not None and longitude is not None:
         record.check_in_latitude, record.check_in_longitude = _coord(latitude), _coord(longitude)
         record.check_in_accuracy_m = None if accuracy is None else round(accuracy)
@@ -135,6 +177,45 @@ def check_in(request, mode=AttendanceRecord.Mode.OFFICE, latitude=None, longitud
         "ATTENDANCE_CHECK_IN",
         obj=record,
         metadata={"mode": mode, "distance_m": record.check_in_distance_m, "wfh_request": getattr(wfh, "pk", None)},
+    )
+    pause_if_in_meeting(record, now)
+    return record
+
+
+def _resume(request, record, resume, now, mode, wfh, distance, cs):
+    """Reopen the day's session after an approved Resume Work request (validation passed)."""
+    period = NonWorkingPeriod.objects.select_for_update().filter(attendance=record, ended_at__isnull=True).first()
+    if period is None:  # defensive: the gap is non-working time either way
+        period = NonWorkingPeriod(attendance=record, employee=record.employee, started_at=record.check_out)
+    period.ended_at = max(now, period.started_at)
+    period.duration_seconds = int((period.ended_at - period.started_at).total_seconds())
+    period.resume_request = resume
+    period.save()
+    previous_checkout = record.check_out
+    record.total_non_working_seconds += period.duration_seconds
+    record.check_out = None
+    record.checkout_reason = ""
+    record.check_out_latitude = record.check_out_longitude = record.check_out_distance_m = None
+    record.mode = mode
+    record.wfh_request = wfh
+    record.last_activity_at = now
+    record.last_heartbeat_at = now
+    record.status, _ = evaluate(record, cs)
+    record.save()
+    resume.status = ResumeWorkRequest.Status.USED
+    resume.used_at = now
+    resume.save(update_fields=["status", "used_at", "updated_at"])
+    audit.record(
+        request,
+        "ATTENDANCE_RESUMED",
+        obj=record,
+        metadata={
+            "mode": mode,
+            "distance_m": None if distance is None else round(distance),
+            "resume_request": resume.pk,
+            "previous_check_out": previous_checkout,
+            "non_working_seconds": period.duration_seconds,
+        },
     )
     return record
 
@@ -152,8 +233,9 @@ def check_out(request, latitude=None, longitude=None):
         raise Conflict("You have already checked out today.")
     # Task checkout protection (HR / Manager / Employee; Super Admin exempt). See apps/tasks/rules.py.
     assert_checkout_allowed(request.user)
-    # An open break ends at check-out; break time is excluded from worked time.
+    # An open break / meeting pause ends at check-out; neither counts as worked time.
     record = close_open_break_at_checkout(record, now, cs)
+    record = close_open_pause_at_checkout(record, now)
     record.check_out = now
     record.checkout_reason = AttendanceRecord.CheckoutReason.MANUAL
     if record.mode == AttendanceRecord.Mode.OFFICE and latitude is not None and longitude is not None:
@@ -177,6 +259,7 @@ def auto_checkout(record, at, reason, *, request=None, latitude=None, longitude=
     cs = cs or CompanySettings.get_solo()
     at = max(at, record.check_in)
     record = close_open_break_at_checkout(record, at, cs)
+    record = close_open_pause_at_checkout(record, at)
     record.check_out = at
     record.checkout_reason = reason
     if latitude is not None and longitude is not None:
@@ -185,6 +268,10 @@ def auto_checkout(record, at, reason, *, request=None, latitude=None, longitude=
         record.check_out_distance_m = round(distance)
     record.status, record.is_late = evaluate(record, cs)
     record.save()
+    if reason == AttendanceRecord.CheckoutReason.INACTIVITY_TIMEOUT:
+        # From here the employee is non-working until an approved Resume Work check-in.
+        if not NonWorkingPeriod.objects.filter(attendance=record, ended_at__isnull=True).exists():
+            NonWorkingPeriod.objects.create(attendance=record, employee=record.employee, started_at=at)
     audit.record(
         request,
         "ATTENDANCE_AUTO_CHECKOUT",
@@ -205,7 +292,12 @@ def auto_checkout(record, at, reason, *, request=None, latitude=None, longitude=
         [record.employee.user],
         Notification.Type.ATTENDANCE_AUTO_CHECKOUT,
         "You were checked out automatically",
-        f"Checked out at {timezone.localtime(at, cs.tz):%H:%M} because {why}.",
+        f"Checked out at {timezone.localtime(at, cs.tz):%H:%M} because {why}."
+        + (
+            " To continue working today, use Resume Work and give a reason; HR / Admin will review it."
+            if reason == AttendanceRecord.CheckoutReason.INACTIVITY_TIMEOUT
+            else ""
+        ),
         obj=record,
     )
     return True
