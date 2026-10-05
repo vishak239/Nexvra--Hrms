@@ -1,8 +1,12 @@
 # Nexvra HRMS backend (Django REST API) on Railway.
 #
-# Build context = this backend/ folder (Railway service Root Directory: backend,
-# config file path: /backend/railway.json). The Next.js frontend is a separate Railway
-# service (Root Directory: frontend) that forwards /api/* here through its BACKEND_URL.
+# Build context = this backend/ folder (Railway service Root Directory: backend). The Next.js
+# frontend is a separate Railway service (Root Directory: frontend) that forwards /api/* here
+# through its BACKEND_URL.
+#
+# Deploy settings live on the Railway service (Railway no longer reads railway.json):
+# pre-deploy command "python manage.py migrate --noinput", health check "/api/health/"
+# (timeout 120 s), restart on failure, volume mounted at /data.
 FROM python:3.11-slim
 
 # DJANGO_ENV=production makes settings.py refuse unsafe values (debug on, weak secret key,
