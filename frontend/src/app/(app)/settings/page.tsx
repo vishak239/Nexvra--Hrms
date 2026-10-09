@@ -5,7 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { RequirePermission } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, PageHeader } from "@/components/ui/Display";
-import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/ui/Field";
+import { CheckboxField, SelectField, TextAreaField, TextField, TimeField12 } from "@/components/ui/Field";
 import { ConfirmDialog, Modal, Tabs, useToast } from "@/components/ui/Overlay";
 import { Alert, EmptyState, ErrorState, FormError, Loading, SkeletonRows } from "@/components/ui/States";
 import { TBody, THead, Table, Td, Th } from "@/components/ui/Table";
@@ -212,8 +212,8 @@ function PoliciesTab() {
             </p>
           </fieldset>
           <div className="grid gap-5 sm:grid-cols-3">
-            <TextField label="Work start time" type="time" value={form.work_start_time} onChange={(e) => set("work_start_time", e.target.value)} error={f.work_start_time} disabled={!edit} />
-            <TextField label="Work end time" type="time" value={form.work_end_time} onChange={(e) => set("work_end_time", e.target.value)} error={f.work_end_time} disabled={!edit} />
+            <TimeField12 label="Work start time" value={form.work_start_time} onChange={(v) => set("work_start_time", v)} error={f.work_start_time} disabled={!edit} />
+            <TimeField12 label="Work end time" value={form.work_end_time} onChange={(v) => set("work_end_time", v)} error={f.work_end_time} disabled={!edit} />
             <TextField label="Late grace (minutes)" type="number" min="0" value={form.late_grace_minutes} onChange={(e) => set("late_grace_minutes", e.target.value)} error={f.late_grace_minutes} hint="Needs a start time." disabled={!edit} />
             <TextField label="Half-day minimum hours" type="number" step="0.25" min="0" value={form.half_day_min_hours} onChange={(e) => set("half_day_min_hours", e.target.value)} error={f.half_day_min_hours} disabled={!edit} />
             <TextField label="Full-day minimum hours" type="number" step="0.25" min="0" value={form.full_day_min_hours} onChange={(e) => set("full_day_min_hours", e.target.value)} error={f.full_day_min_hours} hint="Set both or neither." disabled={!edit} />

@@ -2,7 +2,7 @@
 
 import { Camera, Trash2 } from "@/components/ui/icons";
 import { useRef, useState, type ReactNode } from "react";
-import { Avatar, Badge, Card, CardHeader, DetailList, StatusBadge } from "@/components/ui/Display";
+import { Avatar, photoUrl, Badge, Card, CardHeader, DetailList, StatusBadge } from "@/components/ui/Display";
 import { useToast } from "@/components/ui/Overlay";
 import { api } from "@/lib/api";
 import { fmtDate, humanize } from "@/lib/format";
@@ -24,9 +24,9 @@ export function EmployeeProfile({
   const fileInput = useRef<HTMLInputElement>(null);
   const { run, pending } = useAction();
   const confidential = employee.phone !== undefined;
-  // Bumped after each upload/removal so the <img> refetches the private (no-store) photo.
+  // Bumped after each upload/removal so the <img> shows the new photo before the profile reloads.
   const [photoVersion, setPhotoVersion] = useState(0);
-  const photoUrl = employee.has_photo ? `/api/employees/${employee.id}/photo/?v=${photoVersion}` : null;
+  const photoSrc = photoUrl(employee.id, `${employee.photo_version ?? ""}.${photoVersion}`, employee.has_photo);
 
   async function upload(file: File) {
     const body = new FormData();
@@ -56,7 +56,7 @@ export function EmployeeProfile({
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <Avatar name={employee.full_name} src={photoUrl} size={72} />
+              <Avatar name={employee.full_name} src={photoSrc} size={72} />
               {canEditPhoto && (
                 <>
                   <button

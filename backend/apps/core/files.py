@@ -113,10 +113,12 @@ class RandomUploadPath:
         return isinstance(other, RandomUploadPath) and other.folder == self.folder
 
 
-def private_file_response(field_file, filename, content_type, inline=False):
+def private_file_response(field_file, filename, content_type, inline=False, cache_seconds=0):
+    """Streams a private file. `cache_seconds` lets the user's own browser cache it (never shared
+    caches); documents and attachments keep the default no-store."""
     response = FileResponse(
         field_file.open("rb"), as_attachment=not inline, filename=filename, content_type=content_type
     )
     response["X-Content-Type-Options"] = "nosniff"
-    response["Cache-Control"] = "private, no-store"
+    response["Cache-Control"] = f"private, max-age={cache_seconds}" if cache_seconds else "private, no-store"
     return response

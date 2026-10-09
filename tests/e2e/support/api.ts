@@ -29,6 +29,10 @@ export class Session {
     return this.ctx.post(url, { data, headers: { "X-CSRFToken": await this.csrf() } });
   }
 
+  async postFile(url: string, field: string, file: { name: string; mimeType: string; buffer: Buffer }) {
+    return this.ctx.post(url, { multipart: { [field]: file }, headers: { "X-CSRFToken": await this.csrf() } });
+  }
+
   async patch(url: string, data?: unknown) {
     return this.ctx.patch(url, { data, headers: { "X-CSRFToken": await this.csrf() } });
   }

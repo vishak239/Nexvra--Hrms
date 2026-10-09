@@ -105,6 +105,7 @@ class ChangePasswordView(APIView):
         user.save(update_fields=["password", "updated_at"])
         update_session_auth_hash(request, user)
         audit.record(request, "PASSWORD_CHANGED", obj=user)
+        services.notify_password_changed(user, by_admin=False)
         return Response({"detail": "Password changed."})
 
 
@@ -146,6 +147,7 @@ class PasswordResetConfirmView(APIView):
         user.set_password(ser.validated_data["new_password"])
         user.save(update_fields=["password", "updated_at"])
         audit.record(request, "PASSWORD_RESET", obj=user, actor=user)
+        services.notify_password_changed(user, by_admin=False)
         return Response({"detail": "Password has been reset. You can now log in."})
 
 
@@ -243,4 +245,5 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         changes = audit.diff(before, audit.snapshot(user, fields))
         if password:
             changes["password"] = "set"  # nosec B105 - audit marker, not a password
+            services.notify_password_changed(user, by_admin=True)
         audit.record(self.request, "USER_UPDATED", obj=user, changes=changes)

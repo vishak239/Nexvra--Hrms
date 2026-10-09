@@ -1,18 +1,20 @@
 "use client";
 
-import { ArrowLeft, Download, FileText, MessageSquare, Paperclip, Search, Send, X } from "@/components/ui/icons";
+import { ArrowLeft, Download, FileText, Groups, MessageSquare, Paperclip, Plus, Search, Send, X } from "@/components/ui/icons";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { CreateGroupModal, GroupMembersModal } from "@/components/messages/GroupDialogs";
+import { ReceiptMark } from "@/components/messages/ReceiptMark";
 import { Button } from "@/components/ui/Button";
 import { LinkifiedText } from "@/components/ui/LinkifiedText";
-import { Avatar, Card, PageHeader } from "@/components/ui/Display";
+import { Avatar, Card, PageHeader, photoUrl } from "@/components/ui/Display";
 import { useToast } from "@/components/ui/Overlay";
 import { Alert, EmptyState, ErrorState, Loading, NoAccess, Spinner } from "@/components/ui/States";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fmtBytes, fmtDateTime, fmtTime } from "@/lib/format";
 import { toApiError, useAction } from "@/lib/hooks";
-import type { ChatMessage, Conversation, Person } from "@/lib/types";
+import type { ChatMessage, Conversation, MessageReceipt, Person } from "@/lib/types";
 
 const ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg";
 const MAX_FILES = 5;
@@ -40,7 +42,19 @@ function personLine(p: Person) {
 }
 
 function photoOf(p: Person | null) {
-  return p?.has_photo && p.employee_id ? `/api/employees/${p.employee_id}/photo/` : null;
+  return photoUrl(p?.employee_id, p?.photo_version, !!p?.has_photo);
+}
+
+/** The conversation's picture: the other person's photo, or a group badge. */
+function ConversationAvatar({ c, size }: { c: Conversation; size: number }) {
+  if (c.kind === "GROUP") {
+    return (
+      <span style={{ width: size, height: size }} className="inline-flex shrink-0 items-center justify-center rounded-[50%] bg-surface-container-high text-info" aria-hidden="true">
+        <Groups className={size > 32 ? "h-5 w-5" : "h-4 w-4"} />
+      </span>
+    );
+  }
+  return <Avatar name={c.other?.full_name ?? "?"} src={photoOf(c.other)} size={size} />;
 }
 
 function PeopleSearch({ onPick }: { onPick: (p: Person) => void }) {
@@ -140,9 +154,12 @@ function ConversationList({
   return (
     <ul className="divide-y divide-surface-container-high/40" aria-label="Conversations">
       {conversations.map((c) => {
+        const who = c.last_message ? (c.last_message.is_mine ? "You: " : c.kind === "GROUP" && c.last_message.sender_name ? `${c.last_message.sender_name}: ` : "") : "";
         const preview = c.last_message
-          ? `${c.last_message.is_mine ? "You: " : ""}${c.last_message.body || (c.last_message.attachment_count ? `📎 ${c.last_message.attachment_count} file(s)` : "")}`
-          : "";
+          ? `${who}${c.last_message.body || (c.last_message.attachment_count ? `📎 ${c.last_message.attachment_count} file(s)` : "")}`
+          : c.kind === "GROUP"
+            ? `${c.member_count} members · no messages yet`
+            : "";
         return (
           <li key={c.id}>
             <button
@@ -150,10 +167,10 @@ function ConversationList({
               className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-container ${activeId === c.id ? "bg-surface-container-high" : ""}`}
               aria-current={activeId === c.id ? "true" : undefined}
             >
-              <Avatar name={c.other?.full_name ?? "?"} src={photoOf(c.other)} size={36} />
+              <ConversationAvatar c={c} size={36} />
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2">
-                  <span className={`truncate text-sm ${c.unread_count ? "font-semibold text-primary" : "font-medium text-on-surface"}`}>{c.other?.full_name ?? "Unknown"}</span>
+                  <span className={`truncate text-sm ${c.unread_count ? "font-semibold text-primary" : "font-medium text-on-surface"}`}>{c.name || c.other?.full_name || "Unknown"}</span>
                   <span className="shrink-0 text-[11px] text-outline">{c.last_message_at ? fmtTime(c.last_message_at) : ""}</span>
                 </span>
                 <span className="flex items-center justify-between gap-2">
@@ -173,8 +190,21 @@ function ConversationList({
   );
 }
 
-function Thread({ conversationId, onBack, onActivity }: { conversationId: number; onBack: () => void; onActivity: () => void }) {
+function Thread({
+  conversationId,
+  meId,
+  onBack,
+  onActivity,
+  onLeft,
+}: {
+  conversationId: number;
+  meId: number;
+  onBack: () => void;
+  onActivity: () => void;
+  onLeft: () => void;
+}) {
   const toast = useToast();
+  const [showMembers, setShowMembers] = useState(false);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -191,6 +221,8 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
   activity.current = onActivity;
 
   const markRead = useCallback(async () => {
+    // Seen means seen: only while the conversation is on screen.
+    if (document.visibilityState !== "visible") return;
     try {
       await api(`/api/messages/conversations/${conversationId}/read/`, { method: "POST" });
       activity.current();
@@ -238,7 +270,23 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
     }
   }, [conversationId, lastId, markRead]);
 
-  useVisiblePolling(fetchNew, THREAD_POLL_MS, !loading && !error);
+  const refreshReceipts = useCallback(async () => {
+    try {
+      const r = await api<{ receipts: Record<string, MessageReceipt> }>(`/api/messages/conversations/${conversationId}/receipts/`);
+      setMessages((all) => all.map((m) => (m.is_mine && r.receipts[String(m.id)] ? { ...m, receipt: r.receipts[String(m.id)] } : m)));
+    } catch {
+      // transient; the next poll retries
+    }
+  }, [conversationId]);
+
+  useVisiblePolling(
+    () => {
+      void fetchNew();
+      void refreshReceipts();
+    },
+    THREAD_POLL_MS,
+    !loading && !error,
+  );
 
   async function loadOlder() {
     if (!messages.length) return;
@@ -276,6 +324,8 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
   if (loading) return <Loading />;
   if (error) return <ErrorState error={error} />;
   const other = conversation?.other ?? null;
+  const isGroup = conversation?.kind === "GROUP";
+  const members = isGroup ? (conversation?.members ?? []) : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -283,12 +333,37 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
         <button onClick={onBack} className="rounded-md p-1 text-on-surface-variant hover:bg-surface-container-high lg:hidden" aria-label="Back to conversations">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <Avatar name={other?.full_name ?? "?"} src={photoOf(other)} size={36} />
-        <div className="min-w-0">
-          <h2 className="truncate text-sm font-semibold text-primary">{other?.full_name ?? "Conversation"}</h2>
-          {other && <p className="truncate text-xs text-on-surface-variant">{personLine(other)}</p>}
+        {conversation && <ConversationAvatar c={conversation} size={36} />}
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-sm font-semibold text-primary">{conversation?.name || other?.full_name || "Conversation"}</h2>
+          {isGroup ? (
+            <p className="truncate text-xs text-on-surface-variant">{conversation?.members.map((m) => (m.user_id === meId ? "You" : m.full_name.split(" ")[0])).join(", ")}</p>
+          ) : (
+            other && <p className="truncate text-xs text-on-surface-variant">{personLine(other)}</p>
+          )}
         </div>
+        {isGroup && conversation && (
+          <Button size="sm" variant="secondary" icon={<Groups className="h-4 w-4" />} onClick={() => setShowMembers(true)} aria-label={`${conversation.member_count} members`}>
+            {conversation.member_count}
+          </Button>
+        )}
       </div>
+      {isGroup && conversation && (
+        <GroupMembersModal
+          open={showMembers}
+          conversation={conversation}
+          meId={meId}
+          onClose={() => setShowMembers(false)}
+          onChanged={(c) => {
+            setConversation(c);
+            activity.current();
+          }}
+          onLeft={() => {
+            setShowMembers(false);
+            onLeft();
+          }}
+        />
+      )}
 
       <div className="flex-1 space-y-3 overflow-y-auto bg-surface-container/60 px-4 py-4" aria-label="Messages" role="log">
         {hasMore && (
@@ -300,8 +375,10 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
         )}
         {!messages.length && <p className="py-10 text-center text-sm text-on-surface-variant">No messages yet. Say hello 👋</p>}
         {messages.map((m) => (
-          <div key={m.id} className={`flex ${m.is_mine ? "justify-end" : "justify-start"}`}>
+          <div key={m.id} className={`flex items-end gap-2 ${m.is_mine ? "justify-end" : "justify-start"}`}>
+            {isGroup && !m.is_mine && <Avatar name={m.sender?.full_name ?? "?"} src={photoOf(m.sender)} size={28} />}
             <div className={`max-w-[85%] rounded-xl px-3.5 py-2 text-sm sm:max-w-[70%] ${m.is_mine ? "bg-primary-container/15 text-primary ring-1 ring-inset ring-primary-container/25" : "bg-surface-container-high text-on-surface"}`}>
+              {isGroup && !m.is_mine && <p className="mb-0.5 text-xs font-semibold text-info">{m.sender?.full_name ?? "Former member"}</p>}
               {m.body && <p className="whitespace-pre-wrap break-words"><LinkifiedText text={m.body} /></p>}
               {m.attachments.length > 0 && (
                 <ul className="mt-1.5 space-y-1">
@@ -322,7 +399,10 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
                   ))}
                 </ul>
               )}
-              <p className={`mt-1 text-[10px] ${m.is_mine ? "text-outline" : "text-outline"}`}>{fmtDateTime(m.created_at)}</p>
+              <p className="mt-1 flex items-center justify-end gap-1.5 text-[10px] text-outline">
+                {fmtDateTime(m.created_at)}
+                {m.is_mine && <ReceiptMark receipt={m.receipt} members={members} />}
+              </p>
             </div>
           </div>
         ))}
@@ -392,7 +472,8 @@ function Thread({ conversationId, onBack, onActivity }: { conversationId: number
 }
 
 function MessagesContent() {
-  const { can } = useAuth();
+  const { can, me } = useAuth();
+  const [creating, setCreating] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -430,10 +511,27 @@ function MessagesContent() {
     }
   }
 
-  if (!can("messages.use")) return <NoAccess />;
+  if (!can("messages.use") || !me) return <NoAccess />;
   return (
     <>
-      <PageHeader title="Messages" description="Private one-to-one conversations. Only the two participants can read them." />
+      <PageHeader
+        title="Messages"
+        description="Private conversations and groups. Only members can read them."
+        actions={
+          <Button icon={<Plus className="h-4 w-4" />} onClick={() => setCreating(true)}>
+            Create Group
+          </Button>
+        }
+      />
+      <CreateGroupModal
+        open={creating}
+        onClose={() => setCreating(false)}
+        onCreated={(c) => {
+          setCreating(false);
+          void loadList();
+          open(c.id);
+        }}
+      />
       <Card className="overflow-hidden">
         <div className="grid h-[calc(100vh-14rem)] min-h-[28rem] lg:grid-cols-[20rem_1fr]">
           <aside className={`min-h-0 flex-col border-surface-container-high/40 lg:flex lg:border-r ${activeId ? "hidden" : "flex"}`}>
@@ -450,10 +548,20 @@ function MessagesContent() {
           </aside>
           <section className={`min-h-0 ${activeId ? "flex flex-col" : "hidden lg:flex lg:flex-col"}`}>
             {activeId ? (
-              <Thread key={activeId} conversationId={activeId} onBack={() => open(null)} onActivity={() => void loadList()} />
+              <Thread
+                key={activeId}
+                conversationId={activeId}
+                meId={me.id}
+                onBack={() => open(null)}
+                onActivity={() => void loadList()}
+                onLeft={() => {
+                  open(null);
+                  void loadList();
+                }}
+              />
             ) : (
               <div className="flex h-full items-center justify-center">
-                <EmptyState icon={<MessageSquare className="h-5 w-5" />} title="Select a conversation" description="Or find a colleague by @username, Employee ID or name." />
+                <EmptyState icon={<MessageSquare className="h-5 w-5" />} title="Select a conversation" description="Or find a colleague by @username, Employee ID or name, or create a group." />
               </div>
             )}
           </section>

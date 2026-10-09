@@ -18,6 +18,9 @@ from .serializers import (
     PhotoUploadSerializer,
 )
 
+# Avatars are requested with ?v=<photo_version>, so a long private cache is safe.
+PHOTO_CACHE_SECONDS = 60 * 60 * 24
+
 
 class EmployeeViewSet(
     mixins.ListModelMixin,
@@ -88,14 +91,32 @@ class EmployeeViewSet(
             employee = services.self_update(request, employee, ser.validated_data)
         return self._read(employee)
 
+    def _photo_owner(self, pk):
+        """Profile photos are shown to every signed-in colleague (messages, groups, directory), unlike
+        the rest of the employee record, which stays scoped. Former employees' photos remain visible
+        only to those who can see their record."""
+        try:
+            return self.get_object()
+        except Http404:
+            if not str(pk).isdigit():
+                raise
+            employee = Employee.objects.exclude(employment_status=Employee.Status.EXITED).filter(pk=int(pk)).first()
+            if employee is None:
+                raise
+            return employee
+
     @action(detail=True, methods=["get", "post", "delete"], parser_classes=[MultiPartParser, FormParser])
     def photo(self, request, pk=None):
-        employee = self.get_object()
         if request.method == "GET":
+            employee = self._photo_owner(pk)
             if not employee.photo:
                 raise Http404
             content_type = "image/png" if employee.photo.name.lower().endswith(".png") else "image/jpeg"
-            return private_file_response(employee.photo, f"{employee.employee_code}-photo", content_type, inline=True)
+            name = f"{employee.employee_code}-photo"
+            return private_file_response(
+                employee.photo, name, content_type, inline=True, cache_seconds=PHOTO_CACHE_SECONDS
+            )
+        employee = self.get_object()
 
         # Changing a photo: the employee themselves, or HR who outranks them.
         if employee.user_id != request.user.pk:
@@ -120,4 +141,4 @@ class EmployeeViewSet(
         employee.photo.save(upload.name, upload, save=False)
         employee.save(update_fields=["photo", "updated_at"])
         audit.record(request, "EMPLOYEE_PHOTO_UPDATED", obj=employee)
-        return Response({"has_photo": True})
+        return Response({"has_photo": True, "photo_version": employee.photo_version})

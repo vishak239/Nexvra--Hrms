@@ -59,7 +59,7 @@ describe("Policies page", () => {
     const allowance = (await screen.findByText("Daily break allowance")).parentElement!;
     expect(within(allowance).getByText("60 min")).toBeTruthy();
     expect(screen.getByText("Mon – Fri")).toBeTruthy();
-    expect(screen.getByText("09:00 – 18:00")).toBeTruthy();
+    expect(screen.getByText("9:00 AM – 6:00 PM")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "New policy" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Edit/ })).toBeNull();
     expect(screen.queryByLabelText("Status")).toBeNull();

@@ -1,5 +1,6 @@
 "use client";
 
+import { addDaysISO } from "@/lib/format";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { TextAreaField, TextField } from "@/components/ui/Field";
@@ -8,11 +9,7 @@ import { FormError } from "@/components/ui/States";
 import { api } from "@/lib/api";
 import { useAction } from "@/lib/hooks";
 
-function nextDay(iso: string) {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() + 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+const nextDay = (iso: string) => addDaysISO(iso, 1);
 
 /** Ask HR for permission to work from home on a date. HR or a Super Admin decides. */
 export function WfhRequestModal({

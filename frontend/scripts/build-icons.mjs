@@ -36,6 +36,8 @@ const ICONS = {
   FileText: "description",
   FolderShared: "folder_shared",
   Groups: "groups",
+  Videocam: "videocam",
+  Campaign: "campaign",
   Gavel: "gavel",
   History: "history",
   Inbox: "inbox",

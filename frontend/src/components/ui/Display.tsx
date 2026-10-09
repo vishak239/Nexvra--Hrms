@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { PageTrail } from "@/components/layout/PageTrail";
-import { humanize, initials } from "@/lib/format";
+import { humanize } from "@/lib/format";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <section className={`rounded-xl bg-surface-container-low ${className}`}>{children}</section>;
@@ -104,22 +104,7 @@ export function StatusBadge({ status }: { status: string }) {
   return <Badge tone={STATUS_TONES[status] ?? "neutral"}>{humanize(status)}</Badge>;
 }
 
-export function Avatar({ name, src, size = 36 }: { name: string; src?: string | null; size?: number }) {
-  const style = { width: size, height: size };
-  if (src) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt="" style={style} className="shrink-0 rounded-[50%] bg-surface-container object-cover" />;
-  }
-  return (
-    <span
-      style={{ ...style, fontSize: Math.max(11, size * 0.36) }}
-      className="inline-flex shrink-0 items-center justify-center rounded-[50%] bg-surface-container-high font-semibold text-primary-fixed"
-      aria-hidden="true"
-    >
-      {initials(name) || "?"}
-    </span>
-  );
-}
+export { Avatar, photoUrl } from "./Avatar";
 
 /** Figure colours for summary cards; each works in light and dark (theme roles). */
 export type StatAccent = "default" | "tasks" | "messages" | "notifications";

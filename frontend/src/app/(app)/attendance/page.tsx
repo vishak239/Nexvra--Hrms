@@ -8,13 +8,13 @@ import { OvertimeRequestsPanel, ResumeRequestsPanel, WfhRequestsPanel } from "@/
 import { WorkSessionCard } from "@/components/attendance/WorkSessionCard";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, PageHeader, StatusBadge } from "@/components/ui/Display";
-import { FilterSelect, SelectField, TextField } from "@/components/ui/Field";
+import { FilterSelect, SelectField, TextField, TimeField12 } from "@/components/ui/Field";
 import { ConfirmDialog, Modal, Tabs, useToast } from "@/components/ui/Overlay";
 import { EmptyState, ErrorState, FormError, Loading, NoAccess, SkeletonRows } from "@/components/ui/States";
 import { PAGE_SIZE, Pagination, TBody, THead, Table, Td, Th } from "@/components/ui/Table";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fmtDate, fmtMinutes, fmtTime, humanize, todayISO } from "@/lib/format";
+import { fmtDate, fmtMinutes, fmtTime, humanize, isoToIstTime, istToISO, todayISO } from "@/lib/format";
 import { tryApi, useAction, useResource } from "@/lib/hooks";
 import type { AttendanceRecord, Department, Employee, EmployeeRef, OvertimeSession, Paginated } from "@/lib/types";
 import { BreakTotal } from "@/components/attendance/BreakTotal";
@@ -259,14 +259,9 @@ function DailyStatus() {
   );
 }
 
-function toISO(date: string, time: string) {
-  return time ? new Date(`${date}T${time}`).toISOString() : null;
-}
-function toLocalTime(iso: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-}
+// Times are entered and shown as India time, whatever the browser's timezone.
+const toISO = istToISO;
+const toLocalTime = isoToIstTime;
 
 function RecordModal({
   open,
@@ -361,8 +356,8 @@ function RecordModal({
           </>
         )}
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField label="Check-in" type="time" value={form.check_in} onChange={(e) => setForm({ ...form, check_in: e.target.value })} error={f.check_in} />
-          <TextField label="Check-out" type="time" value={form.check_out} onChange={(e) => setForm({ ...form, check_out: e.target.value })} error={f.check_out} />
+          <TimeField12 label="Check-in" value={form.check_in} onChange={(v) => setForm({ ...form, check_in: v })} error={f.check_in} />
+          <TimeField12 label="Check-out" value={form.check_out} onChange={(v) => setForm({ ...form, check_out: v })} error={f.check_out} />
         </div>
         <SelectField
           label="Status"

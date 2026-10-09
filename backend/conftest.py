@@ -36,6 +36,12 @@ def _rbac_seeded(request):
 @pytest.fixture(autouse=True)
 def _test_env(settings, tmp_path):
     settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+    # Tests freeze the clock at dates in the past and jump it by hours; session lifetime has its
+    # own tests (apps/core/tests/test_sessions.py), so it never interferes elsewhere.
+    settings.SESSION_COOKIE_AGE = 60 * 60 * 24 * 365 * 10
+    # The suite writes wall-clock times in UTC (`at(9)` means 09:00 company time). Production runs
+    # in Asia/Kolkata; the IST date boundary has dedicated tests that set it explicitly.
+    settings.TIME_ZONE = "UTC"
     settings.STORAGES = {
         **settings.STORAGES,
         "default": {

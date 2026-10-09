@@ -11,6 +11,7 @@ from rest_framework.exceptions import PermissionDenied
 from apps.audit import services as audit
 from apps.core.exceptions import Conflict
 from apps.core.permissions import scope_queryset
+from apps.core.timefmt import fmt_time
 from apps.employees.models import Employee
 from apps.leaves.models import LeaveRequest
 from apps.notifications.models import Notification
@@ -292,7 +293,7 @@ def auto_checkout(record, at, reason, *, request=None, latitude=None, longitude=
         [record.employee.user],
         Notification.Type.ATTENDANCE_AUTO_CHECKOUT,
         "You were checked out automatically",
-        f"Checked out at {timezone.localtime(at, cs.tz):%H:%M} because {why}."
+        f"Checked out at {fmt_time(at, cs.tz)} because {why}."
         + (
             " To continue working today, use Resume Work and give a reason; HR / Admin will review it."
             if reason == AttendanceRecord.CheckoutReason.INACTIVITY_TIMEOUT

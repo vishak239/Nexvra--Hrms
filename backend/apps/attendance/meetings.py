@@ -25,6 +25,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.audit import services as audit
 from apps.core.exceptions import Conflict
+from apps.core.timefmt import fmt_day_time, fmt_time
 from apps.employees.models import Employee
 from apps.notifications.models import Notification
 from apps.notifications.services import notify
@@ -49,7 +50,7 @@ def _seconds(start, end):
 
 
 def _fmt(at, cs=None):
-    return timezone.localtime(at, (cs or CompanySettings.get_solo()).tz).strftime("%H:%M")
+    return fmt_time(at, (cs or CompanySettings.get_solo()).tz)
 
 
 def affected_employees(meeting):
@@ -173,7 +174,7 @@ def create_meeting(request, *, title, agenda, kind, participants, scheduled_star
     audit.record(request, "MEETING_CREATED", obj=meeting,
                  metadata={"kind": kind, "participants": [p.pk for p in participants]})
     tz = CompanySettings.get_solo().tz
-    when = f" at {timezone.localtime(scheduled_start, tz):%d %b %H:%M}" if scheduled_start else ""
+    when = f" at {fmt_day_time(scheduled_start, tz)}" if scheduled_start else ""
     notify(
         [u for u in _users(affected_employees(meeting)) if u.pk != request.user.pk],
         Notification.Type.MEETING_SCHEDULED,

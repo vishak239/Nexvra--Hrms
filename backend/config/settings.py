@@ -69,6 +69,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.core.middleware.SlidingSessionMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -106,7 +107,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = env("TIME_ZONE", default="UTC")
+# India Standard Time (Kanniyakumari / Nagercoil, Tamil Nadu). Storage stays timezone-aware
+# (USE_TZ): only display and "which calendar day is it" use this zone.
+TIME_ZONE = env("TIME_ZONE", default="Asia/Kolkata")
 USE_I18N = True
 USE_TZ = True
 
@@ -138,7 +141,10 @@ SILENCED_SYSTEM_CHECKS = ["drf_spectacular.W001", "drf_spectacular.W002"]
 # --- Sessions / CSRF / security headers ---------------------------------------
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
+# Idle limit: real use restarts it (apps.core.middleware.SlidingSessionMiddleware), so people are
+# never signed out in the middle of a working day; an unattended browser signs out after 8 hours.
 SESSION_COOKIE_AGE = env.int("SESSION_COOKIE_AGE", default=60 * 60 * 8)
+SESSION_RENEW_SECONDS = env.int("SESSION_RENEW_SECONDS", default=5 * 60)
 SESSION_COOKIE_NAME = "nexvra_session"
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False  # the SPA must read it to send X-CSRFToken

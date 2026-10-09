@@ -11,7 +11,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/States";
 import { TBody, THead, Table, Td, Th } from "@/components/ui/Table";
 import { buttonClass } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth";
-import { fmtDays, fmtMoney, fmtPeriod, humanize, todayISO } from "@/lib/format";
+import { fmtDays, fmtMoney, fmtPeriod, humanize, istParts, todayISO } from "@/lib/format";
 import { useResource } from "@/lib/hooks";
 import type { Department, Paginated, PayrollRun } from "@/lib/types";
 
@@ -180,7 +180,7 @@ function AttendanceSummary() {
 }
 
 function LeaveSummary() {
-  const thisYear = new Date().getFullYear();
+  const thisYear = istParts().year;
   const [year, setYear] = useState(String(thisYear));
   const { data, error, loading, reload } = useResource<{
     by_type: { leave_type: string; requests: Record<string, number>; approved_days: string }[];

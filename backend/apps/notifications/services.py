@@ -1,3 +1,5 @@
+import datetime
+
 from django.conf import settings
 from django.utils import timezone
 
@@ -27,13 +29,28 @@ def link_for(notification):
     return template.format(id=notification.entity_id)
 
 
+# The same event raised twice within this window (a retried request, a double click) produces a
+# single notification.
+DUPLICATE_WINDOW = datetime.timedelta(minutes=2)
+
+
 def notify(recipients, type, title, message="", obj=None, email=False):
     """Create one in-app notification per distinct, active recipient. With `email=True` the
-    same text is also emailed (used for important HR decisions, not for routine events)."""
+    same text is also emailed (used for important HR decisions, not for routine events).
+    An identical unread notification created moments ago is not repeated."""
+    entity_type = obj._meta.label if obj is not None else ""
+    entity_id = str(obj.pk) if obj is not None else ""
+    candidates = {u.pk: u for u in recipients if u is not None and u.is_active}
+    duplicates = set(
+        Notification.objects.filter(
+            recipient_id__in=list(candidates), type=type, title=title, entity_type=entity_type,
+            entity_id=entity_id, is_read=False, created_at__gte=timezone.now() - DUPLICATE_WINDOW,
+        ).values_list("recipient_id", flat=True)
+    )
     seen = set()
     rows = []
     for user in recipients:
-        if user is None or user.pk in seen or not user.is_active:
+        if user is None or user.pk in seen or not user.is_active or user.pk in duplicates:
             continue
         seen.add(user.pk)
         rows.append(
@@ -42,8 +59,8 @@ def notify(recipients, type, title, message="", obj=None, email=False):
                 type=type,
                 title=title,
                 message=message,
-                entity_type=obj._meta.label if obj is not None else "",
-                entity_id=str(obj.pk) if obj is not None else "",
+                entity_type=entity_type,
+                entity_id=entity_id,
             )
         )
     Notification.objects.bulk_create(rows)
@@ -77,7 +94,8 @@ def notify_collapsed(recipient, type, title, message, obj):
         .first()
     )
     if existing is None:
-        return notify([recipient], type, title, message, obj=obj)[0]
+        rows = notify([recipient], type, title, message, obj=obj)
+        return rows[0] if rows else None
     existing.title = title
     existing.message = message
     existing.created_at = timezone.now()

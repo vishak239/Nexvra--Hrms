@@ -59,6 +59,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     designation = serializers.SerializerMethodField()
     manager = serializers.SerializerMethodField()
     has_photo = serializers.SerializerMethodField()
+    photo_version = serializers.CharField(read_only=True)
 
     class Meta:
         model = Employee
@@ -77,6 +78,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "employment_status",
             "joining_date",
             "has_photo",
+            "photo_version",
             *CONFIDENTIAL_FIELDS,
         ]
         read_only_fields = fields

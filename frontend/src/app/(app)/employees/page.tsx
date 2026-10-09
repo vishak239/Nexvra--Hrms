@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RequirePermission } from "@/components/layout/AppShell";
 import { ButtonLink } from "@/components/ui/Button";
-import { Avatar, Card, PageHeader, StatusBadge } from "@/components/ui/Display";
+import { Avatar, photoUrl, Card, PageHeader, StatusBadge } from "@/components/ui/Display";
 import { FilterSelect, SearchInput } from "@/components/ui/Field";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/States";
 import { PAGE_SIZE, Pagination, TBody, THead, Table, Td, Th } from "@/components/ui/Table";
@@ -101,7 +101,7 @@ function EmployeesList() {
                   >
                     <Td>
                       <div className="flex items-center gap-3">
-                        <Avatar name={e.full_name} src={e.has_photo ? `/api/employees/${e.id}/photo/` : null} size={32} />
+                        <Avatar name={e.full_name} src={photoUrl(e.id, e.photo_version, e.has_photo)} size={32} />
                         <div>
                           <Link
                             href={`/employees/${e.id}`}

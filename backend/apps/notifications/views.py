@@ -42,8 +42,9 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         fresh = unread.filter(created_at__gt=since, created_at__lte=now)[:UPDATES_LIMIT] if since else []
         messages = None
         if request.user.has_permission("messages.use"):
-            from apps.messaging.services import unread_total
+            from apps.messaging.services import mark_delivered, unread_total
 
+            mark_delivered(request.user)  # the app is open: new messages reached this person
             messages = unread_total(request.user)
         return Response(
             {

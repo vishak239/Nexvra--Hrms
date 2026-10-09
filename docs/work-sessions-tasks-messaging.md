@@ -247,7 +247,9 @@ PENDING ──cancel───► CANCELLED      (applicant only)
 ## 6. Private messaging and file sharing
 
 - Find a colleague by **@username**, **Employee ID** or **name**. The people directory returns only a minimal card: name, username, Employee ID, designation and department.
-- Conversations are one-to-one; there is one per pair of people. Messages are paginated, newest page first, with "Load earlier messages".
+- Conversations are one-to-one (one per pair of people) or **groups**. Messages are paginated, newest page first, with "Load earlier messages".
+- **Groups** (Messages → **Create Group**): a name (2–80 characters) and at least 2 colleagues, chosen from the directory with their photos and reviewed before creating; at most 50 members. The creator is the owner and can rename the group and add or remove members; anyone can leave (a leaving owner hands the group to the longest-standing member). New members see the history, but earlier messages are not unread for them. Removed members lose access to the conversation and its files. Members are told when they are added.
+- **Read receipts** on your own messages: one tick = sent, two ticks = delivered (the recipient's app picked it up, through its background notification check or opening Messages), the Nexvra mark (lime disc with the brand "N") = seen (the recipient had the conversation open in a visible tab). In groups the mark appears once every member who was in the group when the message was sent has seen it; before that it shows "1/3" and the names of those who have. Receipts come from two per-member watermarks (`last_delivered_message_id`, `last_read_message_id`), never one row per message; marking delivery is a single UPDATE that only writes rows that change. Receipts never contain message text and are only visible to members.
 - You get unread counts per conversation and in total (the header shows a Messages badge), and the conversation is marked read when you open it.
 - Access is strictly participant-only. Everything is filtered on "you are a participant", so any other conversation or attachment id returns `404`, including for HR and Super Admin. There is deliberately no administrative read access, and message contents are never written to the audit log.
 - Attachments:
@@ -258,7 +260,7 @@ PENDING ──cancel───► CANCELLED      (applicant only)
     - CSV/TXT must be text with no binary bytes.
   - **Storage:** private storage (`PRIVATE_MEDIA_ROOT/message_files/`) under a random name. The original filename, type, size and uploader are kept as metadata.
   - **Download:** only through `GET /api/messages/attachments/{id}/download/`, after the participant check. Responses carry `Cache-Control: private, no-store` and `nosniff`.
-- Notifications: "New message from …" or "… sent you N files". While unread, one notification per conversation is refreshed instead of a new one per message.
+- Notifications: "New message from …", "New message in <group> from …" or "… sent you N files". While unread, one notification per conversation is refreshed instead of a new one per message. Profile photos appear in the directory, conversation list, group member lists and next to group messages.
 - Updates: an open conversation checks for new messages every 10 seconds, and the conversation list every 30 seconds, **only while the tab is visible**. Unread badges refresh on navigation and when the window regains focus. There is no WebSocket server in this release.
 
 ## 7. Work-session persistence and offline mode

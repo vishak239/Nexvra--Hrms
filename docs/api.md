@@ -72,7 +72,7 @@ Policy categories: `WORKING_HOURS`, `ATTENDANCE`, `BREAKS`, `LEAVE`, `HOLIDAYS`,
 | PATCH/PUT | `{id}/` | `employees.manage` | Same fields (no `initial_password`); `is_active` allowed. Escalation guards apply. `EXITED` requires `exit_date`. |
 | DELETE | `{id}/` | — | 405: employees are never deleted (set `EXITED`) |
 | GET/PATCH | `me/` | — | Self-service PATCH limited to `phone`, `address`, `emergency_contact_name/phone/relation` |
-| GET/POST/DELETE | `{id}/photo/` | scoped; change = self or HR outranking them | Multipart `photo` (png/jpg, validated). GET streams privately. |
+| GET/POST/DELETE | `{id}/photo/` | GET: any signed-in user for current employees (former employees: record scope); change = self or HR outranking them | Multipart `photo` (png/jpg, validated). GET streams privately with `Cache-Control: private, max-age=86400`; request it as `?v=<photo_version>` (in employee, `/me` and directory cards), which changes with every new photo. Documents and attachments stay `no-store`. |
 
 ## Attendance — `/api/attendance/`
 
@@ -166,16 +166,20 @@ Categories: `OFFER_LETTER, APPOINTMENT_LETTER, CERTIFICATE, ID_DOCUMENT, PAYSLIP
 | POST | `{id}/start/`, `{id}/respond/` `{message}`, `{id}/complete/` `{message?}` | — (assignee only, else 403) | Completing a `requires_response` task needs a response first |
 | GET | `blocking/` | — | Your tasks that currently block checkout: `{exempt, count, results}` |
 
-## Messages — `/api/messages/` (`messages.use`, participants only)
+## Messages — `/api/messages/` (`messages.use`, members only)
 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `people/?q=` | Directory search by @username, Employee ID or name (minimal card, max 20) |
-| GET / POST | `conversations/` | List (paginated by `page`, 30 per page) with `other`, `unread_count`, `last_message` · POST `{user_id}` gets or creates the 1:1 conversation (201 / 200) |
-| GET | `conversations/{id}/` | 404 unless you are a participant |
-| GET | `conversations/{id}/messages/?before=&after=` | 30 per page, oldest → newest, `has_more` |
+| GET / POST | `conversations/` | List (paginated by `page`, 30 per page) with `kind` (DIRECT/GROUP), `name`, `other`, `members`, `member_count`, `my_role`, `unread_count`, `last_message` (incl. `sender_name`); marks new messages delivered · POST `{user_id}` gets or creates the 1:1 conversation (201 / 200) |
+| POST | `groups/` | `{name (2–80), user_ids[] (≥ 2 colleagues, ≤ 50 members incl. you)}` → 201 conversation; you are the owner |
+| GET / PATCH | `conversations/{id}/` | 404 unless you are a member · PATCH `{name}` renames a group (owner) |
+| POST | `conversations/{id}/members/` | `{user_ids[]}` adds group members (owner) |
+| DELETE | `conversations/{id}/members/{user_id}/` | Owner removes a member (200 + conversation), or you leave (204) |
+| GET | `conversations/{id}/messages/?before=&after=` | 30 per page, oldest → newest, `has_more`; each message has `sender` (card) and, on your own messages, `receipt {status: sent\|delivered\|seen, recipient_count, delivered_count, read_count, seen_by[] (groups)}` |
+| GET | `conversations/{id}/receipts/` | Receipts of your latest 50 messages (no contents), for live updates |
 | POST | `conversations/{id}/messages/` | Multipart `body` + up to 5 `files` (pdf, doc, docx, xls, xlsx, csv, txt, png, jpg, jpeg; content-checked) |
-| POST | `conversations/{id}/read/` | Marks the conversation (and its message notifications) read |
+| POST | `conversations/{id}/read/` | Marks the conversation seen (and its message notifications read) |
 | GET | `unread-count/` | Total unread messages |
 | GET | `attachments/{id}/download/` | Private download; 404 for non-participants |
 
@@ -183,7 +187,7 @@ Categories: `OFFER_LETTER, APPOINTMENT_LETTER, CERTIFICATE, ID_DOCUMENT, PAYSLIP
 
 `GET` list (filters `is_read`, `type`) · `GET unread-count/` · `GET updates/?since=<server_time>` → `{server_time, notifications[] (unread, created or refreshed after since, ≤ 20), unread_notifications, unread_messages|null}` (desktop alerts and header badges; without `since` only the counts) · `POST {id}/mark-read/` · `POST mark-all-read/`. Each notification has a `link` to the related screen.
 
-Types: `LEAVE_SUBMITTED, LEAVE_APPROVED, LEAVE_REJECTED, LEAVE_CANCELLED, PAYSLIP_PUBLISHED, DOCUMENT_SHARED, TASK_ASSIGNED, TASK_REMINDER, TASK_RESPONSE, TASK_COMPLETED, TASK_CANCELLED, MESSAGE_RECEIVED, FILE_RECEIVED, OVERTIME_STARTED, OVERTIME_COMPLETED, SYNC_STATUS, WFH_*, OVERTIME_*, ATTENDANCE_AUTO_CHECKOUT, MEETING_SCHEDULED, MEETING_STARTED, MEETING_ENDED, MEETING_CANCELLED, RESUME_REQUESTED, RESUME_APPROVED, RESUME_REJECTED, GENERAL`.
+Types: `LEAVE_SUBMITTED, LEAVE_APPROVED, LEAVE_REJECTED, LEAVE_CANCELLED, PAYSLIP_PUBLISHED, DOCUMENT_SHARED, TASK_ASSIGNED, TASK_REMINDER, TASK_RESPONSE, TASK_COMPLETED, TASK_CANCELLED, MESSAGE_RECEIVED, GROUP_MESSAGE_RECEIVED, GROUP_ADDED, FILE_RECEIVED, OVERTIME_STARTED, OVERTIME_COMPLETED, SYNC_STATUS, WFH_*, OVERTIME_*, ATTENDANCE_AUTO_CHECKOUT, BREAK_AUTO_ENDED, PASSWORD_CHANGED, MEETING_SCHEDULED, MEETING_STARTED, MEETING_ENDED, MEETING_CANCELLED, RESUME_REQUESTED, RESUME_APPROVED, RESUME_REJECTED, GENERAL`. Each type has a category icon in the app (`frontend/src/lib/notifications.ts`, `components/notifications/NotificationIcon.tsx`). An identical unread notification raised again within 2 minutes is not repeated.
 
 ## Reports & dashboard
 

@@ -17,6 +17,7 @@ export interface Me {
     department: string | null;
     designation: string | null;
     has_photo: boolean;
+    photo_version?: string | null;
   } | null;
 }
 
@@ -61,6 +62,7 @@ export interface Employee {
   employment_status: EmploymentStatus;
   joining_date: string;
   has_photo: boolean;
+  photo_version?: string | null;
   // confidential (self / HR only)
   phone?: string;
   address?: string;
@@ -411,21 +413,47 @@ export interface Person {
   designation: string | null;
   department: string | null;
   has_photo: boolean;
+  photo_version?: string | null;
+}
+
+export type ConversationKind = "DIRECT" | "GROUP";
+
+export interface GroupMember extends Person {
+  role: "OWNER" | "MEMBER";
 }
 
 export interface Conversation {
   id: number;
+  kind: ConversationKind;
+  /** Group name, or the other person's name for a direct conversation. */
+  name: string;
   other: Person | null;
+  members: GroupMember[];
+  member_count: number;
+  my_role: "OWNER" | "MEMBER" | null;
   unread_count: number;
   last_message_at: string | null;
   last_message: {
     id: number;
     body: string;
     is_mine: boolean;
+    sender_name: string;
     attachment_count: number;
     created_at: string;
   } | null;
   created_at: string;
+}
+
+export type ReceiptStatus = "sent" | "delivered" | "seen";
+
+/** Delivery state of one of your own messages (no contents). */
+export interface MessageReceipt {
+  status: ReceiptStatus;
+  recipient_count: number;
+  delivered_count: number;
+  read_count: number;
+  /** Group messages: user ids of members who have seen it. */
+  seen_by: number[];
 }
 
 export interface MessageAttachment {
@@ -441,10 +469,13 @@ export interface ChatMessage {
   id: number;
   conversation: number;
   sender_id: number | null;
+  sender: Person | null;
   body: string;
   attachments: MessageAttachment[];
   created_at: string;
   is_mine: boolean;
+  /** Only on your own messages. */
+  receipt: MessageReceipt | null;
 }
 
 export interface LeaveType {

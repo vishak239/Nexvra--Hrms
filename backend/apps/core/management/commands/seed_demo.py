@@ -9,6 +9,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.accounts.models import Role, User
 from apps.employees.models import Employee
@@ -100,7 +101,7 @@ class Command(BaseCommand):
             code="DEMO-UL", defaults={"name": "Demo Unpaid Leave", "is_paid": False,
                                       "description": "Demo only. Balance not tracked."}
         )
-        today = datetime.date.today()
+        today = timezone.localdate()
         for emp in employees.values():
             for year in (today.year, today.year + 1):
                 LeaveBalance.objects.get_or_create(

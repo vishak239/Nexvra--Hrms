@@ -47,7 +47,10 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.audit import services as audit
+from apps.core.timefmt import fmt_time
 from apps.employees.models import Employee
+from apps.notifications.models import Notification
+from apps.notifications.services import notify
 from apps.organization.models import CompanySettings
 
 from . import geo
@@ -142,6 +145,14 @@ def reconcile_employee(employee, now=None, cs=None, request=None):
                     obj=active_break,
                     metadata={"reason": active_break.end_reason, "duration_seconds": active_break.duration_seconds},
                     actor=None,
+                )
+                notify(
+                    [employee.user],
+                    Notification.Type.BREAK_AUTO_ENDED,
+                    "Your break ended automatically",
+                    f"Your {cs.break_allowance_minutes}-minute daily break allowance was used up at "
+                    f"{fmt_time(end, cs.tz)}. Working time continues.",
+                    obj=record,
                 )
                 done["break_ended"] = True
         deadline = inactivity_deadline(record, cs)

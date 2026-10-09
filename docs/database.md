@@ -102,8 +102,8 @@ Payslip totals and item names are deliberate snapshots, so a finalized payslip n
 ### messaging
 | Model | Key fields | Constraints |
 |---|---|---|
-| `Conversation` | `pair_key` ("low:high" user ids), `created_by`, `last_message_at`, timestamps | `pair_key` unique (one 1:1 conversation per pair) |
-| `ConversationParticipant` | `conversation`, `user`, `last_read_message_id` (read watermark) | unique (`conversation`, `user`); index (`user`, `conversation`) |
+| `Conversation` | `kind` (DIRECT/GROUP), `name` (groups), `pair_key` ("low:high" user ids, DIRECT only), `created_by`, `last_message_at`, timestamps | `pair_key` unique (one 1:1 conversation per pair); `CHECK` DIRECT ⇔ pair key set |
+| `ConversationParticipant` | `conversation`, `user`, `role` (OWNER/MEMBER), `last_read_message_id` (seen watermark), `last_delivered_message_id` (delivery watermark), `joined_at` | unique (`conversation`, `user`); index (`user`, `conversation`) |
 | `Message` | `conversation`, `sender` (SET_NULL), `body`, `created_at` | index (`conversation`, `id`) |
 | `MessageAttachment` | `message`, `uploaded_by`, `file` (random name, private storage `message_files/`), `original_filename`, `content_type`, `size`, `created_at` | — |
 
@@ -116,6 +116,8 @@ Payslip totals and item names are deliberate snapshots, so a finalized payslip n
 Migrations added on 2026-10-03 (second set): `organization.0004_geofence_inactivity_overtime_settings` (workplace coordinates, radius 20, accuracy 100, inactivity 30, overtime approval; both-or-neither coordinate constraint), `organization.0005_owner_break_policy_60` (data: empty break allowance → 60), `attendance.0004_geofence_wfh_overtime_workflow` (fields above, `WorkFromHomeRequest`, overtime states; existing ACTIVE/COMPLETED rows stay valid), `notifications.0003_wfh_overtime_autocheckout_types`, `accounts.0006_sync_rbac_wfh_overtime` (`wfh.approve`, `overtime.approve` for HR Admin). All are additive; no data is deleted.
 
 Migrations added on 2026-10-05 (release 4): `attendance.0005_meetings_resume_work_activity` (`AttendanceRecord.total_meeting_seconds`, `total_non_working_seconds`, `last_heartbeat_at`, all defaulting to 0 / null; `BreakSession.end_reason` MEETING; new tables `Meeting`, `MeetingPause`, `NonWorkingPeriod`, `ResumeWorkRequest`), `notifications.0004_meeting_resume_types` (choices only), `accounts.0008_sync_rbac_meetings_resume` (`meetings.manage`, `resume.approve` for HR Admin). All additive; existing rows keep their worked time (the new totals are 0).
+
+Migrations added on 2026-10-09 (release 5): `messaging.0002_groups_and_read_receipts` (`Conversation.kind`/`name`, `pair_key` nullable for groups with a kind check, `ConversationParticipant.role` and `last_delivered_message_id`, backfilled from the read watermark), `notifications.0005_group_security_break_types` (choices only). Additive; existing conversations become DIRECT.
 
 Migrations added on 2026-10-03 (first set): `organization.0003_break_allowance_and_policies` (new nullable column + `Policy` table; no data changes) and `accounts.0005_sync_rbac_policies` (adds the `policies.manage` permission to HR Admin and Super Admin).
 

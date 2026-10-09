@@ -68,3 +68,16 @@ def users_with_permission(code):
     return User.objects.filter(is_active=True).filter(
         Q(role__permissions__codename=code) | Q(role__code=SUPER_ADMIN)
     ).distinct()
+
+
+def notify_password_changed(user, by_admin):
+    """Security notice to the account owner (never contains the password)."""
+    from apps.notifications.models import Notification
+    from apps.notifications.services import notify
+
+    notify(
+        [user],
+        Notification.Type.PASSWORD_CHANGED,
+        "Your password was changed" + (" by an administrator" if by_admin else ""),
+        "If you did not expect this, contact HR or your administrator right away.",
+    )

@@ -18,7 +18,7 @@ export type DesktopPermission = "granted" | "denied" | "default" | "unsupported"
 
 export const MAX_POPUPS = 3;
 const LEDGER_SIZE = 200;
-const MESSAGE_TYPES = new Set(["MESSAGE_RECEIVED", "FILE_RECEIVED"]);
+const MESSAGE_TYPES = new Set(["MESSAGE_RECEIVED", "GROUP_MESSAGE_RECEIVED", "GROUP_ADDED", "FILE_RECEIVED"]);
 
 /** Where a notification takes the user (the server supplies `link` for most types). */
 export function notificationLink(n: Pick<AppNotification, "type" | "link" | "entity_id">): string | null {
@@ -28,7 +28,73 @@ export function notificationLink(n: Pick<AppNotification, "type" | "link" | "ent
   if (n.type.startsWith("LEAVE_")) return "/leave";
   if (n.type === "PAYSLIP_PUBLISHED" && n.entity_id) return `/payslips/${n.entity_id}`;
   if (n.type === "DOCUMENT_SHARED") return "/documents";
+  if (n.type === "PASSWORD_CHANGED") return "/change-password";
+  if (n.type.startsWith("MEETING_")) return "/meetings";
   return null;
+}
+
+/** What a notification is about; each category has its own icon (components/notifications). */
+export type NotificationCategory =
+  | "message"
+  | "group"
+  | "file"
+  | "meeting"
+  | "leave"
+  | "attendance"
+  | "wfh"
+  | "task"
+  | "overtime"
+  | "break"
+  | "resume"
+  | "document"
+  | "payslip"
+  | "security"
+  | "account"
+  | "sync"
+  | "general";
+
+/** Every notification type the backend sends (apps/notifications/models.py). */
+export const NOTIFICATION_CATEGORY: Record<string, NotificationCategory> = {
+  MESSAGE_RECEIVED: "message",
+  GROUP_MESSAGE_RECEIVED: "group",
+  GROUP_ADDED: "group",
+  FILE_RECEIVED: "file",
+  MEETING_SCHEDULED: "meeting",
+  MEETING_STARTED: "meeting",
+  MEETING_ENDED: "meeting",
+  MEETING_CANCELLED: "meeting",
+  LEAVE_SUBMITTED: "leave",
+  LEAVE_APPROVED: "leave",
+  LEAVE_REJECTED: "leave",
+  LEAVE_CANCELLED: "leave",
+  ATTENDANCE_AUTO_CHECKOUT: "attendance",
+  WFH_REQUESTED: "wfh",
+  WFH_APPROVED: "wfh",
+  WFH_REJECTED: "wfh",
+  TASK_ASSIGNED: "task",
+  TASK_REMINDER: "task",
+  TASK_RESPONSE: "task",
+  TASK_COMPLETED: "task",
+  TASK_CANCELLED: "task",
+  OVERTIME_REQUESTED: "overtime",
+  OVERTIME_APPROVED: "overtime",
+  OVERTIME_REJECTED: "overtime",
+  OVERTIME_STARTED: "overtime",
+  OVERTIME_COMPLETED: "overtime",
+  OVERTIME_AUTO_STOPPED: "overtime",
+  BREAK_AUTO_ENDED: "break",
+  RESUME_REQUESTED: "resume",
+  RESUME_APPROVED: "resume",
+  RESUME_REJECTED: "resume",
+  DOCUMENT_SHARED: "document",
+  PAYSLIP_PUBLISHED: "payslip",
+  PASSWORD_CHANGED: "security",
+  SYNC_STATUS: "sync",
+  GENERAL: "general",
+};
+
+export function notificationCategory(type: string): NotificationCategory {
+  return NOTIFICATION_CATEGORY[type] ?? "general";
 }
 
 export function isMessageAlert(n: Pick<AppNotification, "type">) {

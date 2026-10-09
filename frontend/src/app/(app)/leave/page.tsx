@@ -13,7 +13,7 @@ import { Alert, EmptyState, ErrorState, FormError, Loading, NoAccess, SkeletonRo
 import { PAGE_SIZE, Pagination, TBody, THead, Table, Td, Th } from "@/components/ui/Table";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fmtDate, fmtDays, humanize, todayISO } from "@/lib/format";
+import { fmtDate, fmtDays, humanize, istParts, todayISO } from "@/lib/format";
 import { tryApi, useAction, useResource } from "@/lib/hooks";
 import type { Employee, LeaveBalance, LeaveRequest, LeaveType, MyBalance, Paginated } from "@/lib/types";
 
@@ -438,7 +438,7 @@ function AllRequests() {
 
 function Balances() {
   const toast = useToast();
-  const year = new Date().getFullYear();
+  const year = istParts().year;
   const [filterYear, setFilterYear] = useState(String(year));
   const [page, setPage] = useState(1);
   const [allocating, setAllocating] = useState(false);

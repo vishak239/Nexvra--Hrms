@@ -72,6 +72,7 @@ class MeSerializer(serializers.ModelSerializer):
             "department": emp.department.name if emp.department else None,
             "designation": emp.designation.name if emp.designation else None,
             "has_photo": bool(emp.photo),
+            "photo_version": emp.photo_version,
         }
 
 

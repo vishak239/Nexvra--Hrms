@@ -3,14 +3,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, PageHeader, StatusBadge } from "@/components/ui/Display";
-import { SearchInput, SelectField, TextAreaField, TextField } from "@/components/ui/Field";
+import { SearchInput, SelectField, TextAreaField, TextField, TimeField12 } from "@/components/ui/Field";
 import { Groups, Pencil, Play, Plus, Square, X } from "@/components/ui/icons";
 import { ConfirmDialog, Modal, Tabs, useToast } from "@/components/ui/Overlay";
 import { EmptyState, ErrorState, FormError, SkeletonRows } from "@/components/ui/States";
 import { PAGE_SIZE, Pagination, TBody, THead, Table, Td, Th } from "@/components/ui/Table";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fmtDateTime } from "@/lib/format";
+import { fmtDateTime, isoToIstTime, istDateKey, istToISO } from "@/lib/format";
 import { useAction, useResource } from "@/lib/hooks";
 import type { Employee, EmployeeRef, Meeting, MeetingKind, Paginated } from "@/lib/types";
 import { fmtDuration } from "@/lib/worksession";
@@ -31,14 +31,13 @@ function who(m: Meeting) {
   return m.kind === "OVERALL" ? "Everyone" : `${m.participant_count} ${m.participant_count === 1 ? "person" : "people"}`;
 }
 
-/** "2026-10-05T10:30" for <input type="datetime-local"> in the user's time zone. */
-function toLocalInput(iso: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** A planned time is edited as an India date + 24-hour "HH:MM" (shown on a 12-hour picker). */
+interface PlannedTime {
+  date: string;
+  time: string;
 }
-const fromLocalInput = (value: string) => (value ? new Date(value).toISOString() : null);
+const toPlanned = (iso: string | null): PlannedTime => (iso ? { date: istDateKey(iso), time: isoToIstTime(iso) } : { date: "", time: "" });
+const fromPlanned = (v: PlannedTime) => (v.date && v.time ? istToISO(v.date, v.time) : null);
 
 function ParticipantPicker({ selected, onChange }: { selected: EmployeeRef[]; onChange: (people: EmployeeRef[]) => void }) {
   const [search, setSearch] = useState("");
@@ -95,8 +94,8 @@ function MeetingModal({ open, meeting, onClose, onSaved }: { open: boolean; meet
   const [agenda, setAgenda] = useState("");
   const [kind, setKind] = useState<MeetingKind>("OVERALL");
   const [people, setPeople] = useState<EmployeeRef[]>([]);
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  const [start, setStart] = useState<PlannedTime>({ date: "", time: "" });
+  const [end, setEnd] = useState<PlannedTime>({ date: "", time: "" });
 
   useEffect(() => {
     if (!open) return;
@@ -105,8 +104,8 @@ function MeetingModal({ open, meeting, onClose, onSaved }: { open: boolean; meet
     setAgenda(meeting?.agenda ?? "");
     setKind(meeting?.kind ?? "OVERALL");
     setPeople(meeting?.participants ?? []);
-    setStart(toLocalInput(meeting?.scheduled_start ?? null));
-    setEnd(toLocalInput(meeting?.scheduled_end ?? null));
+    setStart(toPlanned(meeting?.scheduled_start ?? null));
+    setEnd(toPlanned(meeting?.scheduled_end ?? null));
   }, [open, meeting, setError]);
 
   const running = meeting?.status === "ACTIVE";
@@ -116,8 +115,8 @@ function MeetingModal({ open, meeting, onClose, onSaved }: { open: boolean; meet
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!valid || pending) return;
-    const body: Record<string, unknown> = { title, agenda, scheduled_end: fromLocalInput(end) };
-    if (!running) body.scheduled_start = fromLocalInput(start);
+    const body: Record<string, unknown> = { title, agenda, scheduled_end: fromPlanned(end) };
+    if (!running) body.scheduled_start = fromPlanned(start);
     if (!meeting) body.kind = kind;
     if (kind === "SELECTED") body.participant_ids = people.map((p) => p.id);
     const ok = await run(() =>
@@ -161,8 +160,10 @@ function MeetingModal({ open, meeting, onClose, onSaved }: { open: boolean; meet
           </>
         )}
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField label="Planned start" type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} disabled={running} hint="Optional. You start it with Start." error={f.scheduled_start} />
-          <TextField label="Planned end" type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} hint="Optional. A running meeting ends by itself then." error={f.scheduled_end} />
+          <TextField label="Planned start date" type="date" value={start.date} onChange={(e) => setStart({ ...start, date: e.target.value })} disabled={running} error={f.scheduled_start} />
+          <TimeField12 label="Planned start time" value={start.time} onChange={(v) => setStart({ ...start, time: v })} disabled={running} hint="Optional (India time). You start it with Start." />
+          <TextField label="Planned end date" type="date" value={end.date} onChange={(e) => setEnd({ ...end, date: e.target.value })} error={f.scheduled_end} />
+          <TimeField12 label="Planned end time" value={end.time} onChange={(v) => setEnd({ ...end, time: v })} hint="Optional. A running meeting ends by itself then." />
         </div>
       </form>
     </Modal>

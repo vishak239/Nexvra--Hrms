@@ -44,9 +44,10 @@ def test_find_people_by_username_employee_id_and_name(org, client_for):
         assert bob.user_id in found, q
     results = alice.get("/api/messages/people/", {"q": ""}).data["results"]
     assert org["alice"].user_id not in {p["user_id"] for p in results}  # never yourself
-    assert set(results[0]) == {
-        "user_id", "full_name", "username", "employee_id", "employee_code", "designation", "department", "has_photo"
-    }  # a minimal card, no confidential fields
+    assert set(results[0]) == {  # a minimal card, no confidential fields
+        "user_id", "full_name", "username", "employee_id", "employee_code", "designation", "department",
+        "has_photo", "photo_version",
+    }
 
 
 def test_conversation_send_receive_unread_and_read(org, client_for):

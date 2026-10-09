@@ -10,17 +10,16 @@ import { EmptyState, ErrorState, FormError, SkeletonRows } from "@/components/ui
 import { TBody, THead, Table, Td, Th } from "@/components/ui/Table";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtWeekday, istParts } from "@/lib/format";
 import { tryApi, useAction, useResource } from "@/lib/hooks";
 import type { Holiday } from "@/lib/types";
 
-const WEEKDAY = new Intl.DateTimeFormat("en-GB", { weekday: "long" });
 
 export default function HolidaysPage() {
   const { can } = useAuth();
   const toast = useToast();
   const manage = can("holidays.manage");
-  const thisYear = new Date().getFullYear();
+  const thisYear = istParts().year;
   const [year, setYear] = useState(String(thisYear));
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<Holiday | null>(null);
@@ -93,7 +92,7 @@ export default function HolidaysPage() {
               {data.map((h) => (
                 <tr key={h.id}>
                   <Td className="font-medium text-primary">{fmtDate(h.date)}</Td>
-                  <Td>{WEEKDAY.format(new Date(`${h.date}T00:00:00`))}</Td>
+                  <Td>{fmtWeekday(h.date)}</Td>
                   <Td>{h.name}</Td>
                   <Td>{h.is_optional ? <Badge>Optional</Badge> : <Badge tone="lime">Company holiday</Badge>}</Td>
                   {manage && (

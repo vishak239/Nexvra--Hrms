@@ -19,6 +19,7 @@ from rest_framework.exceptions import PermissionDenied
 from apps.accounts.services import users_with_permission
 from apps.audit import services as audit
 from apps.core.exceptions import Conflict
+from apps.core.timefmt import fmt_time
 from apps.notifications.models import Notification
 from apps.notifications.services import notify
 from apps.organization.models import CompanySettings
@@ -69,7 +70,7 @@ def create_request(request, *, reason):
         [u for u in users_with_permission("resume.approve") if u.pk != request.user.pk],
         Notification.Type.RESUME_REQUESTED,
         f"{employee.user.full_name} asks to resume work",
-        f"Checked out automatically at {timezone.localtime(record.check_out, cs.tz):%H:%M}. Reason: {reason[:300]}",
+        f"Checked out automatically at {fmt_time(record.check_out, cs.tz)}. Reason: {reason[:300]}",
         obj=obj,
     )
     return obj

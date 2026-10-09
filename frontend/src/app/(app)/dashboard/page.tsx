@@ -7,12 +7,12 @@ import { WorkSessionCard } from "@/components/attendance/WorkSessionCard";
 import { Badge, Card, CardHeader, PageHeader, StatCard, StatusBadge, type StatAccent } from "@/components/ui/Display";
 import { EmptyState, ErrorState, Loading } from "@/components/ui/States";
 import { useAuth } from "@/lib/auth";
-import { fmtDate, fmtDays, fmtMoney, fmtPeriod, humanize } from "@/lib/format";
+import { fmtDate, fmtDays, fmtMoney, fmtPeriod, humanize, istParts } from "@/lib/format";
 import { useResource } from "@/lib/hooks";
 import type { Dashboard, DayStatus } from "@/lib/types";
 
 function greeting() {
-  const h = new Date().getHours();
+  const h = istParts().hour;
   return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 

@@ -5,15 +5,29 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { DesktopAlertsControl, useNotificationCenter } from "@/components/layout/NotificationCenter";
+import { NotificationIcon } from "@/components/notifications/NotificationIcon";
 import { Card, PageHeader } from "@/components/ui/Display";
 import { Tabs, useToast } from "@/components/ui/Overlay";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/States";
 import { PAGE_SIZE, Pagination } from "@/components/ui/Table";
 import { api } from "@/lib/api";
-import { fmtDateTime } from "@/lib/format";
+import { addDaysISO, fmtDate, fmtTime, istDateKey, todayISO } from "@/lib/format";
 import { tryApi, useResource } from "@/lib/hooks";
 import { notificationLink as linkFor } from "@/lib/notifications";
 import type { Notification, Paginated } from "@/lib/types";
+
+/** Newest first, in India calendar days: "Today", "Yesterday", then the date. */
+function groupByDay(items: Notification[]): [string, Notification[]][] {
+  const today = todayISO();
+  const yesterday = addDaysISO(today, -1);
+  const groups = new Map<string, Notification[]>();
+  for (const n of items) {
+    const key = istDateKey(n.created_at);
+    const label = key === today ? "Today" : key === yesterday ? "Yesterday" : fmtDate(key);
+    groups.set(label, [...(groups.get(label) ?? []), n]);
+  }
+  return [...groups.entries()];
+}
 
 export default function NotificationsPage() {
   const toast = useToast();
@@ -75,35 +89,43 @@ export default function NotificationsPage() {
           <EmptyState icon={<Bell className="h-5 w-5" />} title={filter === "unread" ? "No unread notifications" : "No notifications yet"} />
         ) : (
           <>
-            <ul className="divide-y divide-surface-container-high/40">
-              {data.results.map((n) => {
-                const href = linkFor(n);
-                const body = (
-                  <div className="flex items-start gap-3">
-                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.is_read ? "bg-transparent" : "bg-primary-container ring-2 ring-primary-container/30"}`} aria-hidden="true" />
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-sm ${n.is_read ? "text-on-surface" : "font-semibold text-primary"}`}>{n.title}</p>
-                      {n.message && <p className="mt-0.5 text-sm text-on-surface-variant">{n.message}</p>}
-                      <p className="mt-1 text-xs text-outline">{fmtDateTime(n.created_at)}</p>
-                    </div>
-                    {!n.is_read && <span className="sr-only">Unread</span>}
-                  </div>
-                );
-                return (
-                  <li key={n.id} className="px-5 py-4 hover:bg-surface-container">
-                    {href ? (
-                      <Link href={href} onClick={() => void markRead(n)} className="block">
-                        {body}
-                      </Link>
-                    ) : (
-                      <button onClick={() => void markRead(n)} className="block w-full text-left">
-                        {body}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            {groupByDay(data.results).map(([day, items]) => (
+              <section key={day} aria-label={day}>
+                <h2 className="bg-surface-container-low px-5 py-2 font-label-sm text-label-sm uppercase text-on-surface-variant">{day}</h2>
+                <ul className="divide-y divide-surface-container-high/40">
+                  {items.map((n) => {
+                    const href = linkFor(n);
+                    const body = (
+                      <div className="flex items-start gap-3">
+                        <NotificationIcon type={n.type} />
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm ${n.is_read ? "text-on-surface" : "font-semibold text-primary"}`}>{n.title}</p>
+                          {n.message && <p className="mt-0.5 text-sm text-on-surface-variant">{n.message}</p>}
+                          <p className="mt-1 text-xs text-outline">{fmtTime(n.created_at)}</p>
+                        </div>
+                        {!n.is_read && (
+                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary-container ring-2 ring-primary-container/30" aria-hidden="true" />
+                        )}
+                        {!n.is_read && <span className="sr-only">Unread</span>}
+                      </div>
+                    );
+                    return (
+                      <li key={n.id} className="px-5 py-4 hover:bg-surface-container" data-testid="notification-row" data-unread={!n.is_read}>
+                        {href ? (
+                          <Link href={href} onClick={() => void markRead(n)} className="block">
+                            {body}
+                          </Link>
+                        ) : (
+                          <button onClick={() => void markRead(n)} className="block w-full text-left">
+                            {body}
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
             <Pagination page={page} pageSize={PAGE_SIZE} count={data.count} onPage={setPage} />
           </>
         )}

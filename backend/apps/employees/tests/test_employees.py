@@ -188,11 +188,46 @@ def test_photo_upload_validation_and_private_access(org, client_for):
 
     res = alice.get(f"/api/employees/{org['alice'].id}/photo/")
     assert res.status_code == 200
-    assert res["Cache-Control"] == "private, no-store"
+    assert res["Cache-Control"].startswith("private, max-age=")  # the user's own browser only
     assert b"".join(res.streaming_content).startswith(b"\x89PNG")
-    # another employee cannot fetch it
-    assert client_for(org["carol"]).get(f"/api/employees/{org['alice'].id}/photo/").status_code == 404
-    # and cannot replace it
+    # colleagues see it (messages, groups, directory) without uploading anything themselves
+    res = client_for(org["carol"]).get(f"/api/employees/{org['alice'].id}/photo/")
+    assert res.status_code == 200 and b"".join(res.streaming_content).startswith(b"\x89PNG")
+    # but cannot replace it
     other = SimpleUploadedFile("x.png", PNG, content_type="image/png")
     res = client_for(org["bob"]).post(f"/api/employees/{org['alice'].id}/photo/", {"photo": other}, format="multipart")
     assert res.status_code == 404
+
+
+def test_profile_photos_are_visible_to_colleagues_but_documents_stay_private(org, client_for):
+    alice = client_for(org["alice"])
+    alice.post(f"/api/employees/{org['alice'].id}/photo/",
+               {"photo": SimpleUploadedFile("me.png", PNG, content_type="image/png")}, format="multipart")
+    version = alice.get("/api/auth/me/").data["employee"]["photo_version"]
+    assert version
+    # The messaging directory tells colleagues there is a photo and which version.
+    people = client_for(org["carol"]).get("/api/messages/people/", {"q": org["alice"].user.first_name}).data["results"]
+    card = next(p for p in people if p["employee_id"] == org["alice"].id)
+    assert card["has_photo"] is True and card["photo_version"] == version
+    # A new photo gets a new version, so browsers do not keep showing the old one.
+    alice.post(f"/api/employees/{org['alice'].id}/photo/",
+               {"photo": SimpleUploadedFile("new.png", PNG, content_type="image/png")}, format="multipart")
+    assert alice.get("/api/auth/me/").data["employee"]["photo_version"] != version
+    # The rest of the employee record is still out of scope for colleagues.
+    assert client_for(org["carol"]).get(f"/api/employees/{org['alice'].id}/").status_code == 404
+
+
+def test_no_photo_means_the_default_avatar(org, client_for):
+    carol = client_for(org["carol"])
+    assert carol.get(f"/api/employees/{org['bob'].id}/photo/").status_code == 404
+    me = client_for(org["bob"]).get("/api/auth/me/").data["employee"]
+    assert me["has_photo"] is False and me["photo_version"] is None
+
+
+def test_former_employees_photo_only_within_hr_scope(org, client_for):
+    alice = client_for(org["alice"])
+    alice.post(f"/api/employees/{org['alice'].id}/photo/",
+               {"photo": SimpleUploadedFile("me.png", PNG, content_type="image/png")}, format="multipart")
+    Employee.objects.filter(pk=org["alice"].pk).update(employment_status="EXITED")  # keep the uploaded photo
+    assert client_for(org["carol"]).get(f"/api/employees/{org['alice'].id}/photo/").status_code == 404
+    assert client_for(org["hr"]).get(f"/api/employees/{org['alice'].id}/photo/").status_code == 200

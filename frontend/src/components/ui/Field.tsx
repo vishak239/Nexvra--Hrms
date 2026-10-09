@@ -165,3 +165,62 @@ export function FilterSelect({ label, children, ...rest }: { label: string } & S
     </div>
   );
 }
+
+const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1);
+const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0"));
+
+/**
+ * A time of day picked on a 12-hour clock (hour, minute, AM/PM). The value stays 24-hour "HH:MM"
+ * (or "" when empty), so forms and the API are unchanged; native time inputs are avoided because
+ * some systems show them as a 24-hour clock.
+ */
+export function TimeField12({
+  label,
+  value,
+  onChange,
+  error,
+  hint,
+  className,
+  disabled,
+  required,
+}: Common & { value: string; onChange: (value: string) => void; disabled?: boolean; required?: boolean }) {
+  const m = value.match(/^(\d{2}):(\d{2})/);
+  const hour24 = m ? Number(m[1]) : null;
+  const minute = m ? m[2] : "";
+  const hour12 = hour24 === null ? "" : String(hour24 % 12 || 12);
+  const period = hour24 === null ? "" : hour24 < 12 ? "AM" : "PM";
+
+  function emit(h12: string, min: string, ap: string) {
+    if (!h12) return onChange("");
+    const h = Number(h12) % 12 + ((ap || "AM") === "PM" ? 12 : 0);
+    onChange(`${h.toString().padStart(2, "0")}:${min || "00"}`);
+  }
+
+  const select = `${controlClass(error)} ${HEIGHT}`;
+  return (
+    <Field label={label} error={error} hint={hint} required={required} className={className}>
+      {(id, describedBy, invalid) => (
+        <div className="grid grid-cols-[1fr_1fr_1fr] gap-1.5" role="group" aria-label={label}>
+          <SelectControl id={id} aria-label={`${label} hour`} aria-describedby={describedBy} aria-invalid={invalid} className={select}
+            value={hour12} disabled={disabled} onChange={(e) => emit(e.target.value, minute, period)}>
+            <option value="">--</option>
+            {HOURS_12.map((h) => (
+              <option key={h} value={h}>{h}</option>
+            ))}
+          </SelectControl>
+          <SelectControl aria-label={`${label} minute`} className={select} value={minute} disabled={disabled || !hour12}
+            onChange={(e) => emit(hour12, e.target.value, period)}>
+            {MINUTES.map((mm) => (
+              <option key={mm} value={mm}>{mm}</option>
+            ))}
+          </SelectControl>
+          <SelectControl aria-label={`${label} AM or PM`} className={select} value={period || "AM"} disabled={disabled || !hour12}
+            onChange={(e) => emit(hour12, minute, e.target.value)}>
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </SelectControl>
+        </div>
+      )}
+    </Field>
+  );
+}

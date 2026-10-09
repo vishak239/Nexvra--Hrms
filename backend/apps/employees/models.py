@@ -1,3 +1,5 @@
+import hashlib
+
 from django.conf import settings
 from django.db import models
 
@@ -55,6 +57,14 @@ class Employee(TimeStampedModel):
 
     def __str__(self):
         return f"{self.employee_code} {self.user.full_name}"
+
+    @property
+    def photo_version(self):
+        """Changes with every new photo (stored under a new random name): lets browsers cache an
+        avatar privately and still show a replacement immediately (?v=<version>)."""
+        if not self.photo:
+            return None
+        return hashlib.sha256(self.photo.name.encode()).hexdigest()[:12]
 
     @property
     def full_name(self):

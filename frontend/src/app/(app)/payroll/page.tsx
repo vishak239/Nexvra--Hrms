@@ -12,7 +12,7 @@ import { Alert, EmptyState, ErrorState, FormError, SkeletonRows } from "@/compon
 import { PAGE_SIZE, Pagination, TBody, THead, Table, Td, Th } from "@/components/ui/Table";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { MONTHS, fmtDate, fmtMoney, fmtPeriod, humanize } from "@/lib/format";
+import { fmtDate, fmtMoney, fmtPeriod, humanize, istParts, MONTHS } from "@/lib/format";
 import { tryApi, useAction, useResource } from "@/lib/hooks";
 import type { CompanySettings, Employee, Paginated, PayComponent, PayrollRun, SalaryStructure } from "@/lib/types";
 
@@ -21,10 +21,10 @@ type Tab = "runs" | "salaries" | "components";
 function Runs({ manage, currency }: { manage: boolean; currency: string }) {
   const router = useRouter();
   const toast = useToast();
-  const now = new Date();
+  const now = istParts();
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
-  const [period, setPeriod] = useState({ year: String(now.getFullYear()), month: String(now.getMonth() + 1) });
+  const [period, setPeriod] = useState({ year: String(now.year), month: String(now.month) });
   const { run, pending, error, setError } = useAction();
   const { data, error: loadError, loading, reload } = useResource<Paginated<PayrollRun>>("/api/payroll/runs/", { page, page_size: PAGE_SIZE });
 

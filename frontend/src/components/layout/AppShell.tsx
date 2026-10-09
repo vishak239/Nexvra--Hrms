@@ -10,7 +10,7 @@ import { NexvraLogo } from "@/components/brand/NexvraLogo";
 import { ConnectionIndicator, OfflineBanner } from "@/components/connection/ConnectionIndicator";
 import { NotificationCenterProvider, useNotificationCenter } from "@/components/layout/NotificationCenter";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
-import { Avatar } from "@/components/ui/Display";
+import { Avatar, photoUrl } from "@/components/ui/Display";
 import { ErrorState, Loading, NoAccess } from "@/components/ui/States";
 import { useAuth } from "@/lib/auth";
 import { ConnectionProvider } from "@/lib/connection";
@@ -21,7 +21,7 @@ function Sidebar({ me, onNavigate }: { me: Me; onNavigate?: () => void }) {
   const pathname = usePathname();
   const { logout } = useAuth();
   const router = useRouter();
-  const photo = me.employee?.has_photo ? `/api/employees/${me.employee.id}/photo/` : null;
+  const photo = photoUrl(me.employee?.id, me.employee?.photo_version, !!me.employee?.has_photo);
   return (
     // `dark`: the sidebar stays black in both themes (the official logo has a black background).
     <div className="dark flex h-full flex-col border-r border-surface-container-high/40 bg-black text-on-surface">
@@ -101,7 +101,7 @@ function UserMenu({ me }: { me: Me }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const photo = me.employee?.has_photo ? `/api/employees/${me.employee.id}/photo/` : null;
+  const photo = photoUrl(me.employee?.id, me.employee?.photo_version, !!me.employee?.has_photo);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);

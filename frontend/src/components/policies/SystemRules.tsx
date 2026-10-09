@@ -1,5 +1,6 @@
 "use client";
 
+import { fmtClockTime } from "@/lib/format";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/Display";
 import { ErrorState, SkeletonRows } from "@/components/ui/States";
@@ -17,7 +18,7 @@ function workingDays(days: number[] | null) {
   return contiguous && sorted.length > 2 ? `${DAYS[sorted[0]]} – ${DAYS[sorted[sorted.length - 1]]}` : sorted.map((d) => DAYS[d]).join(", ");
 }
 
-const hhmm = (t: string | null) => t?.slice(0, 5) ?? null;
+const hhmm = (t: string | null) => fmtClockTime(t);
 
 /**
  * The rules the system enforces, read live from Settings (the single source of truth), so

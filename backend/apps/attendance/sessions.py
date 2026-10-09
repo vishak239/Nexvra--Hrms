@@ -31,6 +31,7 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 from apps.accounts.services import users_with_permission
 from apps.audit import services as audit
 from apps.core.exceptions import Conflict
+from apps.core.timefmt import fmt_time
 from apps.employees.models import Employee
 from apps.notifications.models import Notification
 from apps.notifications.services import notify
@@ -78,7 +79,7 @@ def _day(at, cs):
 
 
 def _fmt(at, cs):
-    return timezone.localtime(at, cs.tz).strftime("%H:%M")
+    return fmt_time(at, cs.tz)
 
 
 def _seconds(start, end):
