@@ -10,7 +10,7 @@ from .models import Task, TaskResponse
 
 def _today(context):
     if "_today" not in context:
-        context["_today"] = CompanySettings.get_solo().today()
+        context["_today"] = CompanySettings.get_solo().now()
     return context["_today"]
 
 
@@ -48,6 +48,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "priority",
+            "start_date",
             "due_date",
             "status",
             "display_status",
@@ -127,7 +128,8 @@ class TaskCreateSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
     description = serializers.CharField(required=False, allow_blank=True, max_length=5000)
     priority = serializers.ChoiceField(choices=Task.Priority.choices, default=Task.Priority.MEDIUM)
-    due_date = serializers.DateField(required=False, allow_null=True)
+    start_date = serializers.DateTimeField(required=False, allow_null=True)
+    due_date = serializers.DateTimeField(required=False, allow_null=True, help_text="Task deadline (date and time).")
     requires_response = serializers.BooleanField(default=True)
 
     def validate_title(self, value):
@@ -136,17 +138,23 @@ class TaskCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Title is required.")
         return value
 
-    def validate_due_date(self, value):
-        if value is not None and value < CompanySettings.get_solo().today():
-            raise serializers.ValidationError("Due date cannot be in the past.")
-        return value
+    def validate(self, attrs):
+        start_date = attrs.get("start_date")
+        due_date = attrs.get("due_date")
+        now = CompanySettings.get_solo().now()
+        if due_date is not None and due_date < now:
+            raise serializers.ValidationError({"due_date": ["The deadline cannot be in the past."]})
+        if start_date is not None and due_date is not None and due_date < start_date:
+            raise serializers.ValidationError({"due_date": ["The deadline must be after the start date."]})
+        return attrs
 
 
 class TaskUpdateSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200, required=False)
     description = serializers.CharField(required=False, allow_blank=True, max_length=5000)
     priority = serializers.ChoiceField(choices=Task.Priority.choices, required=False)
-    due_date = serializers.DateField(required=False, allow_null=True)
+    start_date = serializers.DateTimeField(required=False, allow_null=True)
+    due_date = serializers.DateTimeField(required=False, allow_null=True)
     requires_response = serializers.BooleanField(required=False)
 
     def validate_title(self, value):
@@ -154,6 +162,17 @@ class TaskUpdateSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("Title is required.")
         return value
+
+    def validate(self, attrs):
+        instance = getattr(self, "instance", None)
+        start_date = attrs.get("start_date", getattr(instance, "start_date", None) if instance else None)
+        due_date = attrs.get("due_date", getattr(instance, "due_date", None) if instance else None)
+        now = CompanySettings.get_solo().now()
+        if due_date is not None and due_date < now:
+            raise serializers.ValidationError({"due_date": ["The deadline cannot be in the past."]})
+        if start_date is not None and due_date is not None and due_date < start_date:
+            raise serializers.ValidationError({"due_date": ["The deadline must be after the start date."]})
+        return attrs
 
 
 class TaskMessageSerializer(serializers.Serializer):

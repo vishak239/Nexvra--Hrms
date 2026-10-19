@@ -22,6 +22,7 @@ from .models import (
     Meeting,
     OvertimeSession,
     ResumeWorkRequest,
+    SessionStatus,
     SyncEvent,
     WorkFromHomeRequest,
 )
@@ -331,6 +332,50 @@ class BreakViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     @action(detail=False, methods=["post"])
     def end(self, request):
         return perform_event(request, SyncEvent.Type.BREAK_END)
+
+    @action(detail=False, methods=["get"], url_path="summary")
+    def summary(self, request):
+        """Per-employee per-workday break counts and total completed duration for the date range.
+
+        Read-only; visibility follows the attendance scope (own / team / all).
+        """
+        cs = CompanySettings.get_solo()
+        raw_from = request.query_params.get("date_from")
+        raw_to = request.query_params.get("date_to")
+        try:
+            date_from = datetime.date.fromisoformat(raw_from) if raw_from else cs.today().replace(day=1)
+            date_to = datetime.date.fromisoformat(raw_to) if raw_to else cs.today()
+        except ValueError:
+            raise serializers.ValidationError({"date": ["Use YYYY-MM-DD."]}) from None
+        if date_to < date_from:
+            raise serializers.ValidationError({"date_to": ["Must be on or after date_from."]})
+        if (date_to - date_from).days > 365:
+            raise serializers.ValidationError({"date_to": ["Range is limited to 365 days."]})
+        qs = BreakSession.objects.filter(attendance__date__gte=date_from, attendance__date__lte=date_to)
+        qs = scope_queryset(qs, self.request.user, "attendance").select_related("employee__user", "attendance")
+        employee_ids = {b.employee_id for b in qs}
+        employees = {e.id: employee_ref(e) for e in Employee.objects.filter(id__in=employee_ids)}
+        rows = {}
+        for b in qs:
+            key = (b.employee_id, b.attendance.date)
+            r = rows.setdefault(key, {"count": 0, "total_seconds": 0, "active": 0})
+            r["count"] += 1
+            if b.status == SessionStatus.ACTIVE:
+                r["active"] += 1
+            elif b.duration_seconds:
+                r["total_seconds"] += b.duration_seconds
+        results = []
+        for (eid, d), v in sorted(rows.items(), key=lambda kv: (kv[0][1], kv[0][0])):
+            results.append({
+                "employee": employees.get(eid),
+                "date": d.isoformat(),
+                "count": v["count"],
+                "active": v["active"],
+                "completed": v["count"] - v["active"],
+                "total_seconds": v["total_seconds"],
+                "total_minutes": v["total_seconds"] // 60,
+            })
+        return Response({"date_from": date_from.isoformat(), "date_to": date_to.isoformat(), "results": results})
 
 
 class OvertimeFilter(django_filters.FilterSet):

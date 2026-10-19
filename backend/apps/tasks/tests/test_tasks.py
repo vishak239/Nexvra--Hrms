@@ -1,4 +1,5 @@
 import datetime
+from unittest import mock
 
 import pytest
 
@@ -12,6 +13,13 @@ pytestmark = pytest.mark.django_db
 def create(client, **data):
     body = {"title": "Update employee database", "description": "Fix the phone numbers.", **data}
     return client.post("/api/tasks/", body, format="json")
+
+
+FROZEN = datetime.datetime(2025, 3, 3, 12, 0, tzinfo=datetime.UTC)  # 17:30 IST
+
+
+def freeze(moment):
+    return mock.patch("django.utils.timezone.now", return_value=moment)
 
 
 def test_hr_assigns_by_employee_id_and_employee_is_notified(org, client_for):
@@ -138,7 +146,8 @@ def test_hr_edits_reminds_and_cancels(org, client_for):
 
 def test_overdue_is_derived_and_filterable(org, client_for):
     task = Task.objects.create(
-        title="Old", assigned_by=org["hr"].user, assigned_to=org["alice"], due_date=datetime.date(2020, 1, 1)
+        title="Old", assigned_by=org["hr"].user, assigned_to=org["alice"],
+        due_date=datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC),
     )
     alice = client_for(org["alice"])
     data = alice.get(f"/api/tasks/{task.id}/").data
@@ -158,3 +167,53 @@ def test_title_required_and_validation(org, client_for):
 
 def test_anonymous_rejected(anon, org):
     assert anon.get("/api/tasks/").status_code == 401
+
+
+def test_hr_can_set_start_and_deadline(org, client_for):
+    with freeze(FROZEN):
+        hr = client_for(org["hr"])
+        res = create(hr, employee_code=org["alice"].employee_code,
+                     start_date="2025-03-03T18:00:00+05:30", due_date="2025-03-03T19:00:00+05:30")
+    assert res.status_code == 201, res.data
+    task = Task.objects.get(pk=res.data["id"])
+    assert task.start_date is not None and task.due_date is not None
+    assert res.data["start_date"] and res.data["due_date"]
+
+
+def test_deadline_before_start_is_rejected(org, client_for):
+    with freeze(FROZEN):
+        hr = client_for(org["hr"])
+        res = create(hr, employee_code=org["alice"].employee_code,
+                     start_date="2025-03-03T19:00:00+05:30", due_date="2025-03-03T18:00:00+05:30")
+    assert res.status_code == 400
+    assert "due_date" in res.data["error"]["fields"]
+
+
+def test_deadline_in_past_is_rejected(org, client_for):
+    with freeze(FROZEN):
+        hr = client_for(org["hr"])
+        res = create(hr, employee_code=org["alice"].employee_code, due_date="2020-01-01T10:00:00+05:30")
+    assert res.status_code == 400
+
+
+def test_employee_cannot_edit_timeline(org, client_for):
+    with freeze(FROZEN):
+        hr = client_for(org["hr"])
+        task_id = create(hr, employee_code=org["alice"].employee_code,
+                         due_date="2025-03-03T19:00:00+05:30").data["id"]
+        alice = client_for(org["alice"])
+        res = alice.patch(f"/api/tasks/{task_id}/", {"due_date": "2025-03-04T17:00:00+05:30"}, format="json")
+    assert res.status_code == 403
+    task = Task.objects.get(pk=task_id)
+    assert task.due_date is not None
+
+
+def test_hr_can_edit_timeline(org, client_for):
+    with freeze(FROZEN):
+        hr = client_for(org["hr"])
+        task_id = create(hr, employee_code=org["alice"].employee_code).data["id"]
+        res = hr.patch(f"/api/tasks/{task_id}/", {"due_date": "2025-03-04T17:00:00+05:30",
+                                                  "start_date": "2025-03-04T09:00:00+05:30"}, format="json")
+    assert res.status_code == 200, res.data
+    task = Task.objects.get(pk=task_id)
+    assert task.due_date is not None and task.start_date is not None

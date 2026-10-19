@@ -3,11 +3,11 @@
 import { CheckCircle2, Search } from "@/components/ui/icons";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/ui/Field";
+import { CheckboxField, SelectField, TextAreaField, TextField, TimeField12 } from "@/components/ui/Field";
 import { Modal, useToast } from "@/components/ui/Overlay";
 import { Alert, FormError } from "@/components/ui/States";
 import { api } from "@/lib/api";
-import { humanize, todayISO } from "@/lib/format";
+import { humanize, todayISO, istToISO } from "@/lib/format";
 import { useAction } from "@/lib/hooks";
 import type { AssigneeLookup, Task } from "@/lib/types";
 import { PRIORITIES } from "./TaskBadges";
@@ -25,7 +25,7 @@ export function AssignTaskModal({ open, onClose, onCreated }: { open: boolean; o
   const [by, setBy] = useState<LookupBy>("employee_code");
   const [identifier, setIdentifier] = useState("");
   const [found, setFound] = useState<AssigneeLookup | null>(null);
-  const [form, setForm] = useState({ title: "", description: "", priority: "MEDIUM", due_date: "", requires_response: true });
+  const [form, setForm] = useState({ title: "", description: "", priority: "MEDIUM", start_date: "", start_time: "09:00", due_date: "", due_time: "17:00", requires_response: true });
   const lookup = useAction();
   const save = useAction();
 
@@ -34,7 +34,7 @@ export function AssignTaskModal({ open, onClose, onCreated }: { open: boolean; o
     setBy("employee_code");
     setIdentifier("");
     setFound(null);
-    setForm({ title: "", description: "", priority: "MEDIUM", due_date: "", requires_response: true });
+    setForm({ title: "", description: "", priority: "MEDIUM", start_date: "", start_time: "09:00", due_date: "", due_time: "17:00", requires_response: true });
     lookup.setError(undefined);
     save.setError(undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,7 +57,8 @@ export function AssignTaskModal({ open, onClose, onCreated }: { open: boolean; o
           title: form.title,
           description: form.description,
           priority: form.priority,
-          due_date: form.due_date || null,
+          start_date: form.start_date ? istToISO(form.start_date, form.start_time) : null,
+          due_date: form.due_date ? istToISO(form.due_date, form.due_time) : null,
           requires_response: form.requires_response,
         },
       }),
@@ -160,16 +161,25 @@ export function AssignTaskModal({ open, onClose, onCreated }: { open: boolean; o
           <>
             <TextField label="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} error={f.title} required maxLength={200} />
             <TextAreaField label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} error={f.description} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <SelectField label="Priority" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} error={f.priority}>
-                {PRIORITIES.map((p) => (
-                  <option key={p} value={p}>
-                    {humanize(p)}
-                  </option>
-                ))}
-              </SelectField>
-              <TextField label="Due date" type="date" min={todayISO()} value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} error={f.due_date} />
-            </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SelectField label="Priority" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} error={f.priority}>
+                  {PRIORITIES.map((p) => (
+                    <option key={p} value={p}>
+                      {humanize(p)}
+                    </option>
+                  ))}
+                </SelectField>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <TextField label="Start date" type="date" min={todayISO()} value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} error={f.start_date} />
+                    <TimeField12 label="Start time" value={form.start_time} onChange={(v) => setForm({ ...form, start_time: v })} error={f.start_date} required />
+                  </div>
+                  <div className="space-y-1">
+                    <TextField label="Due date" type="date" min={todayISO()} value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} error={f.due_date} />
+                    <TimeField12 label="Due time" value={form.due_time} onChange={(v) => setForm({ ...form, due_time: v })} error={f.due_date} required />
+                  </div>
+                </div>
+              </div>
             <CheckboxField
               label="Response required before checkout"
               hint="The employee must respond to this task before they can check out."

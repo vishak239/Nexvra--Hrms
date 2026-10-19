@@ -17,6 +17,8 @@ from rest_framework.views import APIView
 from apps.audit import services as audit
 from apps.core.exceptions import Conflict
 from apps.core.permissions import HasPermission
+from apps.core.request import client_ip, user_agent
+from apps.security import services as security_services
 
 from . import services
 from .models import Permission, Role, User
@@ -58,10 +60,14 @@ class LoginView(APIView):
         data = LoginSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         email = data.validated_data["email"].strip().lower()
+        ip = client_ip(request)
+        ua = user_agent(request)
         user = authenticate(request, username=email, password=data.validated_data["password"])
         if user is None:
+            security_services.detect_login(request, None, "failed", ip, ua)
             audit.record(request, "LOGIN_FAILED", metadata={"email": email}, actor=None)
             raise serializers.ValidationError({"non_field_errors": ["Invalid email or password."]})
+        security_services.detect_login(request, user, "success", ip, ua)
         login(request, user)
         audit.record(request, "LOGIN", obj=user, actor=user)
         return Response(_me(user))

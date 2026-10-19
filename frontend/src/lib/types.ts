@@ -28,6 +28,23 @@ export interface Paginated<T> {
   results: T[];
 }
 
+export interface SecurityEvent {
+  id: number;
+  user: number | null;
+  employee: EmployeeRef | null;
+  actor_email: string | null;
+  kind: string;
+  risk_level: "LOW" | "MEDIUM" | "HIGH";
+  ip_address: string | null;
+  user_agent: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  review_status: "OPEN" | "REVIEWED" | "DISMISSED" | "ESCALATED";
+  reviewed_by: number | null;
+  reviewed_at: string | null;
+  resolution_note: string;
+}
+
 export interface ApiErrorBody {
   error: { code: string; message: string; fields: Record<string, string[]> };
 }
@@ -378,6 +395,7 @@ export interface Task {
   title: string;
   description: string;
   priority: TaskPriority;
+  start_date: string | null;
   due_date: string | null;
   status: TaskStatus;
   display_status: TaskStatus | "OVERDUE";

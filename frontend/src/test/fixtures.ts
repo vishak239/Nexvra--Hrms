@@ -123,6 +123,7 @@ export const TASK: Task = {
   title: "Update employee database",
   description: "Fix phone numbers",
   priority: "HIGH",
+  start_date: null,
   due_date: null,
   status: "PENDING",
   display_status: "PENDING",

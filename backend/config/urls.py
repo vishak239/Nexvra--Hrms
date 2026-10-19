@@ -19,6 +19,7 @@ api_patterns = [
     path("tasks/", include("apps.tasks.urls")),
     path("messages/", include("apps.messaging.urls")),
     path("audit-logs/", include("apps.audit.urls")),
+    path("security/", include("apps.security.urls")),
     path("", include("apps.reports.urls")),
 ]
 if settings.DEBUG:

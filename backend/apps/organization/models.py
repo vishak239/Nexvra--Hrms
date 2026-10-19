@@ -145,6 +145,9 @@ class CompanySettings(SingletonModel):
     def today(self):
         return timezone.localtime(timezone.now(), self.tz).date()
 
+    def now(self):
+        return timezone.localtime(timezone.now(), self.tz)
+
     def is_working_day(self, day):
         """True if no working days are configured (rule not applied) or the weekday is configured."""
         return not self.working_days or day.weekday() in self.working_days

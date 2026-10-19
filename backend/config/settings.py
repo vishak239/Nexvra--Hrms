@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "apps.reports",
     "apps.tasks",
     "apps.messaging",
+    "apps.security",
 ]
 
 MIDDLEWARE = [
@@ -142,8 +143,12 @@ SILENCED_SYSTEM_CHECKS = ["drf_spectacular.W001", "drf_spectacular.W002"]
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 # Idle limit: real use restarts it (apps.core.middleware.SlidingSessionMiddleware), so people are
-# never signed out in the middle of a working day; an unattended browser signs out after 8 hours.
-SESSION_COOKIE_AGE = env.int("SESSION_COOKIE_AGE", default=60 * 60 * 8)
+# never signed out in the middle of a working day; an unattended browser signs out after the idle
+# window. SESSION_EXPIRE_AT_BROWSER_CLOSE=False lets the session survive reopening the browser the
+# next day (persistent login) without carrying any attendance state forward - each workday is still
+# recorded independently. Duration is configurable via SESSION_COOKIE_AGE.
+SESSION_COOKIE_AGE = env.int("SESSION_COOKIE_AGE", default=60 * 60 * 24 * 30)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = env.bool("SESSION_EXPIRE_AT_BROWSER_CLOSE", default=False)
 SESSION_RENEW_SECONDS = env.int("SESSION_RENEW_SECONDS", default=5 * 60)
 SESSION_COOKIE_NAME = "nexvra_session"
 CSRF_COOKIE_SAMESITE = "Lax"

@@ -8,7 +8,7 @@ import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
 import { ConfirmDialog, Modal, useToast } from "@/components/ui/Overlay";
 import { Alert, ErrorState, Loading } from "@/components/ui/States";
 import { api } from "@/lib/api";
-import { fmtDate, fmtDateTime, humanize } from "@/lib/format";
+import { fmtDateTime, humanize, istToISO } from "@/lib/format";
 import { useAction, useResource } from "@/lib/hooks";
 import type { Task } from "@/lib/types";
 import { PRIORITIES, PriorityBadge, TaskStatusBadge, handleOf } from "./TaskBadges";
@@ -18,7 +18,7 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: number
   const { data: task, error, loading, reload } = useResource<Task>(taskId ? `/api/tasks/${taskId}/` : null);
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState(false);
-  const [edit, setEdit] = useState({ title: "", description: "", priority: "MEDIUM", due_date: "" });
+  const [edit, setEdit] = useState({ title: "", description: "", priority: "MEDIUM", start_date: "", due_date: "" });
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reason, setReason] = useState("");
   const action = useAction();
@@ -44,8 +44,17 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: number
   }
 
   async function saveEdit() {
+    const startTime = task?.start_date?.slice(11, 16) ?? "00:00";
+    const dueTime = task?.due_date?.slice(11, 16) ?? "00:00";
     const result = await action.run(() =>
-      api<Task>(`/api/tasks/${taskId}/`, { method: "PATCH", body: { ...edit, due_date: edit.due_date || null } }),
+      api<Task>(`/api/tasks/${taskId}/`, {
+        method: "PATCH",
+        body: {
+          ...edit,
+          start_date: edit.start_date ? istToISO(edit.start_date, startTime) : null,
+          due_date: edit.due_date ? istToISO(edit.due_date, dueTime) : null,
+        },
+      }),
     );
     if (result) {
       toast("Task updated.");
@@ -103,7 +112,8 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: number
                 items={[
                   { label: "Assigned to", value: `${task.assigned_to.full_name} (${task.assigned_to.employee_code}${task.assigned_to.username ? ` · @${task.assigned_to.username}` : ""})` },
                   { label: "Assigned by", value: task.assigned_by ? handleOf(task.assigned_by) : "—" },
-                  { label: "Due date", value: fmtDate(task.due_date) },
+                  { label: "Starts", value: task.start_date ? fmtDateTime(task.start_date) : "—" },
+                  { label: "Deadline", value: task.due_date ? fmtDateTime(task.due_date) : "—" },
                   { label: "Created", value: fmtDateTime(task.created_at) },
                   { label: "Acknowledged", value: fmtDateTime(task.acknowledged_at) },
                   { label: "Responded", value: fmtDateTime(task.responded_at) },
@@ -159,7 +169,7 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: number
                 variant="secondary"
                 icon={<Pencil className="h-4 w-4" />}
                 onClick={() => {
-                  setEdit({ title: task.title, description: task.description, priority: task.priority, due_date: task.due_date ?? "" });
+                  setEdit({ title: task.title, description: task.description, priority: task.priority, start_date: task.start_date?.slice(0, 10) ?? "", due_date: task.due_date?.slice(0, 10) ?? "" });
                   setEditing(true);
                 }}
               >

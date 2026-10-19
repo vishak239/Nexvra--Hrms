@@ -14,7 +14,7 @@ from apps.notifications.services import notify
 
 from .models import Task, TaskResponse
 
-EDITABLE_FIELDS = ["title", "description", "priority", "due_date", "requires_response"]
+EDITABLE_FIELDS = ["title", "description", "priority", "start_date", "due_date", "requires_response"]
 
 
 def handle(user):
@@ -75,6 +75,7 @@ def create(request, data):
         title=data["title"],
         description=data.get("description", ""),
         priority=data.get("priority", Task.Priority.MEDIUM),
+        start_date=data.get("start_date"),
         due_date=data.get("due_date"),
         requires_response=data.get("requires_response", True),
         assigned_by=request.user,

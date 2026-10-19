@@ -69,8 +69,8 @@ OBSERVATION_SLACK = datetime.timedelta(seconds=5)
 
 
 def _timeout(cs):
-    m = cs.inactivity_timeout_minutes
-    return datetime.timedelta(minutes=m) if m else None
+    minutes = cs.inactivity_timeout_minutes
+    return datetime.timedelta(minutes=minutes) if minutes else None
 
 
 def _open_record(employee, lock=True):

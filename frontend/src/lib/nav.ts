@@ -74,6 +74,8 @@ export const NAV: NavSection[] = [
       },
       { href: "/admin/users", label: "Users & roles", icon: ShieldCheck, perms: ["users.view", "roles.view"] },
       { href: "/admin/audit", label: "Audit log", icon: ScrollText, perms: ["audit.view"] },
+      { href: "/admin/breaks", label: "Break monitoring", icon: Timer, perms: ["attendance.view_team", "attendance.view_all"] },
+      { href: "/admin/security", label: "Security events", icon: ShieldCheck, perms: ["audit.view"] },
     ],
   },
 ];

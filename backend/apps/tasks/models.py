@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.core.models import TimeStampedModel
+from apps.organization.models import CompanySettings
 
 
 class Task(TimeStampedModel):
@@ -37,7 +38,8 @@ class Task(TimeStampedModel):
     )
     assigned_to = models.ForeignKey("employees.Employee", on_delete=models.PROTECT, related_name="tasks")
     priority = models.CharField(max_length=8, choices=Priority.choices, default=Priority.MEDIUM)
-    due_date = models.DateField(null=True, blank=True)
+    due_date = models.DateTimeField(null=True, blank=True, help_text="Task deadline (date and time).")
+    start_date = models.DateTimeField(null=True, blank=True, help_text="Task start (date and time).")
     requires_response = models.BooleanField(
         default=True,
         help_text="The employee must respond before they can check out (see apps/tasks/rules.py).",
@@ -77,11 +79,14 @@ class Task(TimeStampedModel):
     def is_open(self):
         return self.status in self.OPEN_STATUSES
 
-    def is_overdue(self, today):
-        return self.is_open and self.due_date is not None and self.due_date < today
+    def is_overdue(self, now=None):
+        """Overdue means the deadline has passed. `now` defaults to company time now."""
+        if now is None:
+            now = CompanySettings.get_solo().now()
+        return self.is_open and self.due_date is not None and self.due_date < now
 
-    def display_status(self, today):
-        return self.OVERDUE if self.is_overdue(today) else self.status
+    def display_status(self, now=None):
+        return self.OVERDUE if self.is_overdue(now) else self.status
 
 
 class TaskResponse(models.Model):

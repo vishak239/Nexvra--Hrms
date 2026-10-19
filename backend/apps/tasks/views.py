@@ -34,9 +34,9 @@ class TaskFilter(django_filters.FilterSet):
         fields = ["priority", "assigned_to", "requires_response"]
 
     def filter_status(self, queryset, name, value):
-        today = CompanySettings.get_solo().today()
+        now = CompanySettings.get_solo().now()
         open_q = Q(status__in=Task.OPEN_STATUSES)
-        overdue_q = open_q & Q(due_date__lt=today)
+        overdue_q = open_q & Q(due_date__lt=now)
         if value == Task.OVERDUE:
             return queryset.filter(overdue_q)
         if value == "OPEN":
