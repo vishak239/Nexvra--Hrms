@@ -110,7 +110,7 @@ export function TaskDetailModal({ taskId, onClose, onChanged }: { taskId: number
               {task.description && <p className="whitespace-pre-line text-sm text-on-surface">{task.description}</p>}
               <DetailList
                 items={[
-                  { label: "Assigned to", value: `${task.assigned_to.full_name} (${task.assigned_to.employee_code}${task.assigned_to.username ? ` · @${task.assigned_to.username}` : ""})` },
+                  { label: "Assigned to", value: task.assigned_to ? `${task.assigned_to.full_name} (${task.assigned_to.employee_code}${task.assigned_to.username ? ` · @${task.assigned_to.username}` : ""})` : "Unassigned" },
                   { label: "Assigned by", value: task.assigned_by ? handleOf(task.assigned_by) : "—" },
                   { label: "Starts", value: task.start_date ? fmtDateTime(task.start_date) : "—" },
                   { label: "Deadline", value: task.due_date ? fmtDateTime(task.due_date) : "—" },
