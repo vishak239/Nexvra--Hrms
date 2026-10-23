@@ -17,7 +17,7 @@ from django.utils import timezone
 from apps.notifications.sms import send_sms
 from apps.organization.models import CompanySettings
 
-from ..models import BreakSession
+from ...models import BreakSession
 
 
 class Command(BaseCommand):

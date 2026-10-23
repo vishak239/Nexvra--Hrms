@@ -81,7 +81,11 @@ class SmsMessage(models.Model):
     phone = models.CharField(max_length=32, db_index=True)
     body = models.TextField()
     purpose = models.CharField(max_length=32, choices=Purpose.choices)
-    reference = models.CharField(max_length=128, blank=True, help_text="Business id for idempotency.")
+    reference = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="Business id (break/session/wish) for idempotency.",
+    )
     idempotency_key = models.CharField(max_length=128, unique=True, db_index=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED)
     attempts = models.PositiveSmallIntegerField(default=0)

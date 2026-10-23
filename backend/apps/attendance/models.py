@@ -52,9 +52,20 @@ class AttendanceRecord(TimeStampedModel):
     )
     checkout_reason = models.CharField(max_length=20, choices=CheckoutReason.choices, blank=True)
     # Office check-in verification (dual verification: geofence and/or office network).
-    verification_method = models.CharField(max_length=32, blank=True, help_text="Verification method used.")
-    verification_ip = models.GenericIPAddressField(null=True, blank=True, help_text="Client IP from the trusted proxy.")
-    office_network_match = models.BooleanField(default=False, help_text="IP matched an approved office network.")
+    verification_method = models.CharField(
+        max_length=32,
+        blank=True,
+        help_text="How this office check-in was verified.",
+    )
+    verification_ip = models.GenericIPAddressField(
+        blank=True,
+        null=True,
+        help_text="Client IP observed by the trusted reverse proxy.",
+    )
+    office_network_match = models.BooleanField(
+        default=False,
+        help_text="Whether the observed IP matched an approved office network.",
+    )
     # Location metadata (office check-ins only; never collected for work from home). The
     # coordinates are not exposed through the API; distances are.
     check_in_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
