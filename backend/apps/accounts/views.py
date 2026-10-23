@@ -18,6 +18,8 @@ from apps.audit import services as audit
 from apps.core.exceptions import Conflict
 from apps.core.permissions import HasPermission
 from apps.core.request import client_ip, user_agent
+from apps.notifications.sms import send_sms
+from apps.organization.models import CompanySettings
 from apps.security import services as security_services
 
 from . import services
@@ -37,6 +39,42 @@ from .serializers import (
 def _me(user):
     user = User.objects.select_related("role", "employee__department", "employee__designation").get(pk=user.pk)
     return MeSerializer(user).data
+
+
+def _welcome_wish(user):
+    """Once-per-joining-event welcome: in-app flag plus an enqueued welcome SMS.
+
+    Returned on the login response only when the employee's joining date matches the
+    organization's current date and the greeting has not already been shown. SMS delivery is
+    idempotent and never blocks login.
+    """
+    try:
+        employee = user.employee
+    except AttributeError:
+        return None
+    if not employee.is_current or not employee.joining_date:
+        return None
+    cs = CompanySettings.get_solo()
+    today = cs.today()
+    if employee.joining_date != today or employee.welcome_in_app_shown:
+        return None
+    wish = {
+        "message": f"Welcome to Nexvra, {employee.full_name}! We're happy to have you on our team. "
+        f"Wishing you a successful and wonderful journey with us!",
+        "shown": True,
+    }
+    employee.welcome_in_app_shown = True
+    employee.save(update_fields=["welcome_in_app_shown", "updated_at"])
+    if not employee.welcome_sms_sent and employee.phone:
+        send_sms(
+            phone=employee.phone,
+            body=wish["message"],
+            purpose="WELCOME",
+            reference=str(employee.pk),
+        )
+        employee.welcome_sms_sent = True
+        employee.save(update_fields=["welcome_sms_sent", "updated_at"])
+    return wish
 
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
@@ -70,7 +108,11 @@ class LoginView(APIView):
         security_services.detect_login(request, user, "success", ip, ua)
         login(request, user)
         audit.record(request, "LOGIN", obj=user, actor=user)
-        return Response(_me(user))
+        data = _me(user)
+        welcome_wish = _welcome_wish(request.user)
+        if welcome_wish is not None:
+            data["welcome_wish"] = welcome_wish
+        return Response(data)
 
 
 class LogoutView(APIView):

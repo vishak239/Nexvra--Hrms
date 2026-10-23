@@ -24,6 +24,11 @@ class AttendanceRecord(TimeStampedModel):
         INACTIVITY_TIMEOUT = "INACTIVITY_TIMEOUT", "No activity"
         ADMIN = "ADMIN", "Recorded by HR"
 
+    class VerificationMethod(models.TextChoices):
+        GEOFENCE = "GEOFENCE", "Workplace geofence"
+        OFFICE_NETWORK = "OFFICE_NETWORK", "Office network"
+        GEOFENCE_AND_OFFICE_NETWORK = "GEOFENCE_AND_OFFICE_NETWORK", "Geofence and office network"
+
     employee = models.ForeignKey("employees.Employee", on_delete=models.CASCADE, related_name="attendance_records")
     date = models.DateField()
     check_in = models.DateTimeField(null=True, blank=True)
@@ -46,6 +51,10 @@ class AttendanceRecord(TimeStampedModel):
         "attendance.WorkFromHomeRequest", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     checkout_reason = models.CharField(max_length=20, choices=CheckoutReason.choices, blank=True)
+    # Office check-in verification (dual verification: geofence and/or office network).
+    verification_method = models.CharField(max_length=32, blank=True, help_text="Verification method used.")
+    verification_ip = models.GenericIPAddressField(null=True, blank=True, help_text="Client IP from the trusted proxy.")
+    office_network_match = models.BooleanField(default=False, help_text="IP matched an approved office network.")
     # Location metadata (office check-ins only; never collected for work from home). The
     # coordinates are not exposed through the API; distances are.
     check_in_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -155,6 +164,13 @@ class BreakSession(TimeStampedModel):
     status = models.CharField(max_length=10, choices=SessionStatus.choices, default=SessionStatus.ACTIVE)
     source = models.CharField(max_length=8, choices=SessionSource.choices, default=SessionSource.ONLINE)
     end_reason = models.CharField(max_length=20, choices=EndReason.choices, blank=True)
+    # SMS break-end reminders: reminder_1 at (start + duration - 10 min), reminder_2 at
+    # (start + duration - 5 min). Marked sent when enqueued; early break end cancels them.
+    reminder_1_sent = models.BooleanField(default=False)
+    reminder_2_sent = models.BooleanField(default=False)
+    reminder_duration_minutes = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Break duration (minutes) used to compute reminder times."
+    )
 
     class Meta:
         ordering = ["-started_at", "-id"]

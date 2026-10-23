@@ -81,6 +81,8 @@ type PolicyForm = {
   geofence_max_accuracy_m: string;
   inactivity_timeout_minutes: string;
   overtime_requires_approval: boolean;
+  attendance_verification_policy: string;
+  office_network_addresses: string;
   half_day_min_hours: string;
   full_day_min_hours: string;
   self_attendance_enabled: boolean;
@@ -105,6 +107,8 @@ function toForm(s: CompanySettings): PolicyForm {
     geofence_max_accuracy_m: s.geofence_max_accuracy_m.toString(),
     inactivity_timeout_minutes: s.inactivity_timeout_minutes?.toString() ?? "",
     overtime_requires_approval: s.overtime_requires_approval,
+    attendance_verification_policy: s.attendance_verification_policy,
+    office_network_addresses: Array.isArray(s.office_network_addresses) ? s.office_network_addresses.join(", ") : "",
     half_day_min_hours: s.half_day_min_hours ?? "",
     full_day_min_hours: s.full_day_min_hours ?? "",
     self_attendance_enabled: s.self_attendance_enabled,
@@ -149,6 +153,10 @@ function PoliciesTab() {
       geofence_max_accuracy_m: form.geofence_max_accuracy_m || "100",
       inactivity_timeout_minutes: orNull(form.inactivity_timeout_minutes),
       overtime_requires_approval: form.overtime_requires_approval,
+      attendance_verification_policy: form.attendance_verification_policy || "GEOFENCE_ONLY",
+      office_network_addresses: form.office_network_addresses.trim()
+        ? form.office_network_addresses.split(",").map((s) => s.trim()).filter(Boolean)
+        : null,
       half_day_min_hours: orNull(form.half_day_min_hours),
       full_day_min_hours: orNull(form.full_day_min_hours),
       self_attendance_enabled: form.self_attendance_enabled,
@@ -277,6 +285,42 @@ function PoliciesTab() {
             onChange={(e) => set("overtime_requires_approval", e.target.checked)}
             disabled={!edit}
           />
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Attendance verification"
+          description="Office check-ins can be verified by the workplace geofence, the office network (public IP), or both."
+        />
+        <div className="space-y-5 p-5">
+          <Alert tone="info">
+            An office internet connection alone does not prove someone is physically in the office: mobile data, VPNs and
+            shared networks can be misleading. Treat network verification as a supporting signal, not proof of presence.
+          </Alert>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <SelectField
+              label="Verification policy"
+              value={form.attendance_verification_policy}
+              onChange={(e) => set("attendance_verification_policy", e.target.value)}
+              error={f.attendance_verification_policy}
+              disabled={!edit}
+            >
+              <option value="GEOFENCE_ONLY">Geofence only (existing behaviour)</option>
+              <option value="OFFICE_NETWORK_ONLY">Office network only</option>
+              <option value="GEOFENCE_OR_OFFICE_NETWORK">Geofence or office network</option>
+              <option value="GEOFENCE_AND_OFFICE_NETWORK">Geofence and office network</option>
+            </SelectField>
+            <TextField
+              label="Office IP / CIDR addresses"
+              value={form.office_network_addresses}
+              onChange={(e) => set("office_network_addresses", e.target.value)}
+              error={f.office_network_addresses}
+              placeholder="203.0.113.0/24, 198.51.100.7"
+              hint="Comma-separated public IPs or CIDR ranges. Only used for network policies."
+              disabled={!edit}
+            />
+          </div>
         </div>
       </Card>
 

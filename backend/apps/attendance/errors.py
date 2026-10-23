@@ -49,3 +49,9 @@ class ResumePending(Conflict):
 class InMeeting(Conflict):
     default_code = "in_meeting"
     default_detail = "A meeting is in progress — your working time is paused."
+
+
+class OfficeNetworkRejected(exceptions.APIException):
+    status_code = status.HTTP_403_FORBIDDEN
+    default_code = "office_network_rejected"
+    default_detail = "Your office network is not approved for check-in."

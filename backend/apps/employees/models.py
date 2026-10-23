@@ -27,6 +27,9 @@ class Employee(TimeStampedModel):
     phone = models.CharField(max_length=32, blank=True)
     joining_date = models.DateField()
     exit_date = models.DateField(null=True, blank=True)
+    # New-employee welcome wish: shown/enqueued once per joining event.
+    welcome_in_app_shown = models.BooleanField(default=False)
+    welcome_sms_sent = models.BooleanField(default=False)
     department = models.ForeignKey(
         "organization.Department", null=True, blank=True, on_delete=models.PROTECT, related_name="employees"
     )

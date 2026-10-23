@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
 from .models import Company, CompanySettings, Department, Designation, Holiday, Policy
@@ -25,6 +26,8 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "workplace_longitude",
             "geofence_radius_m",
             "geofence_max_accuracy_m",
+            "attendance_verification_policy",
+            "office_network_addresses",
             "inactivity_timeout_minutes",
             "overtime_requires_approval",
             "half_day_min_hours",
@@ -47,6 +50,28 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
     def validate_working_days(self, value):
         return sorted(value) if value else value
 
+    def validate_office_network_addresses(self, value):
+        import ipaddress
+
+        if value is None:
+            return value
+        if not isinstance(value, list):
+            raise serializers.ValidationError(["Must be a list of IP/CIDR strings."])
+        normalized = []
+        for entry in value:
+            if not isinstance(entry, str) or not entry.strip():
+                raise serializers.ValidationError(["Each entry must be a non-empty string."])
+            entry = entry.strip()
+            try:
+                if "/" in entry:
+                    ipaddress.ip_network(entry, strict=False)
+                else:
+                    ipaddress.ip_address(entry)
+            except ValueError as exc:
+                raise serializers.ValidationError([f"Invalid IP/CIDR {entry!r}: {exc}"]) from None
+            normalized.append(entry)
+        return normalized
+
     def validate(self, attrs):
         merged = {f: attrs.get(f, getattr(self.instance, f, None)) for f in self.Meta.fields if f != "updated_at"}
         half, full = merged["half_day_min_hours"], merged["full_day_min_hours"]
@@ -63,6 +88,14 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
         start, end = merged["work_start_time"], merged["work_end_time"]
         if start and end and end <= start:
             raise serializers.ValidationError({"work_end_time": ["Must be after work start time."]})
+        # Run model-level clean (normalizes and validates office_network_addresses, etc.).
+        merged_instance = CompanySettings(
+            **{f: attrs.get(f, getattr(self.instance, f, None)) for f in self.Meta.fields if f != "updated_at"}
+        )
+        try:
+            merged_instance.clean()
+        except ValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from None
         return attrs
 
 

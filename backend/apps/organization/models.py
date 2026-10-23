@@ -109,6 +109,24 @@ class CompanySettings(SingletonModel):
         null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(50)]
     )
 
+    class AttendanceVerificationPolicy(models.TextChoices):
+        GEOFENCE_ONLY = "GEOFENCE_ONLY", "Geofence only"
+        OFFICE_NETWORK_ONLY = "OFFICE_NETWORK_ONLY", "Office network only"
+        GEOFENCE_OR_OFFICE_NETWORK = "GEOFENCE_OR_OFFICE_NETWORK", "Geofence or office network"
+        GEOFENCE_AND_OFFICE_NETWORK = "GEOFENCE_AND_OFFICE_NETWORK", "Geofence and office network"
+
+    attendance_verification_policy = models.CharField(
+        max_length=32,
+        choices=AttendanceVerificationPolicy.choices,
+        default=AttendanceVerificationPolicy.GEOFENCE_ONLY,
+        help_text="How office check-ins are verified. GEOFENCE_ONLY preserves the existing behaviour.",
+    )
+    office_network_addresses = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Approved office public IP addresses or CIDR ranges (e.g. [\"203.0.113.0/24\", \"198.51.100.7\"]).",
+    )
+
     class Meta:
         verbose_name_plural = "company settings"
         constraints = [
@@ -133,6 +151,46 @@ class CompanySettings(SingletonModel):
             raise ValidationError("Set both workplace latitude and longitude, or neither.")
         if self.work_start_time and self.work_end_time and self.work_end_time <= self.work_start_time:
             raise ValidationError({"work_end_time": "Must be after work start time."})
+        self._validate_office_network_addresses()
+
+    def _validate_office_network_addresses(self):
+        """Normalize and validate each office network address (IP or CIDR)."""
+        import ipaddress
+
+        addresses = self.office_network_addresses or []
+        if not isinstance(addresses, list):
+            raise ValidationError({"office_network_addresses": ["Must be a list of IP/CIDR strings."]})
+        normalized = []
+        for entry in addresses:
+            if not isinstance(entry, str) or not entry.strip():
+                raise ValidationError({"office_network_addresses": ["Each entry must be a non-empty string."]})
+            entry = entry.strip()
+            try:
+                # "/" present -> network; otherwise a single host address.
+                if "/" in entry:
+                    ipaddress.ip_network(entry, strict=False)
+                else:
+                    ipaddress.ip_address(entry)
+            except ValueError as exc:
+                raise ValidationError(
+                    {"office_network_addresses": [f"Invalid IP/CIDR {entry!r}: {exc}"]}
+                ) from None
+            normalized.append(entry)
+        self.office_network_addresses = normalized
+
+    @property
+    def office_networks(self):
+        """Parsed ipaddress.IPv4Network/IPv6Network objects for the approved office addresses."""
+        import ipaddress
+
+        networks = []
+        for entry in (self.office_network_addresses or []):
+            if "/" in entry:
+                networks.append(ipaddress.ip_network(entry, strict=False))
+            else:
+                suffix = "/32" if ":" not in entry else "/128"
+                networks.append(ipaddress.ip_network(f"{entry}{suffix}", strict=False))
+        return networks
 
     @property
     def geofence_configured(self):

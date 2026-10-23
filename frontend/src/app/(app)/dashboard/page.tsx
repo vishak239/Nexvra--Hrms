@@ -5,8 +5,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { WorkSessionCard } from "@/components/attendance/WorkSessionCard";
 import { Badge, Card, CardHeader, PageHeader, StatCard, StatusBadge, type StatAccent } from "@/components/ui/Display";
-import { EmptyState, ErrorState, Loading } from "@/components/ui/States";
-import { useAuth } from "@/lib/auth";
+import { Alert, EmptyState, ErrorState, Loading } from "@/components/ui/States";import { useAuth } from "@/lib/auth";
 import { fmtDate, fmtDays, fmtMoney, fmtPeriod, humanize, istParts } from "@/lib/format";
 import { useResource } from "@/lib/hooks";
 import type { Dashboard, DayStatus } from "@/lib/types";
@@ -94,6 +93,11 @@ export default function DashboardPage() {
         title={`${greeting()}, ${me?.first_name || "there"}`}
         description={`${fmtDate(data.date)} · ${me?.role.name}`}
       />
+      {me?.welcome_wish && (
+        <Alert tone="info">
+          {me.welcome_wish.message}
+        </Alert>
+      )}
 
       {/* One row when the width allows; cards wrap evenly (never narrower than 11.5rem) on smaller screens. */}
       <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,11.5rem),1fr))]" data-testid="summary-cards">

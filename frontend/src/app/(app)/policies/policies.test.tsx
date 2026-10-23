@@ -26,6 +26,7 @@ const SETTINGS: CompanySettings = {
   deactivate_user_on_exit: false, max_upload_size_mb: null, updated_at: "2026-10-01T00:00:00Z",
   workplace_latitude: null, workplace_longitude: null, geofence_radius_m: 20, geofence_max_accuracy_m: 100,
   inactivity_timeout_minutes: 30, overtime_requires_approval: true,
+  attendance_verification_policy: "GEOFENCE_ONLY", office_network_addresses: null,
 };
 
 const POLICY: Policy = {

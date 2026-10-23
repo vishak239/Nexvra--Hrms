@@ -189,6 +189,18 @@ SERVER_EMAIL = env("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise ImproperlyConfigured("Set only one of EMAIL_USE_TLS and EMAIL_USE_SSL.")
 
+# --- SMS (outbound reminders / welcome wishes) ----------------------------------
+# Provider is chosen automatically: Twilio when SMS_TWILIO_* credentials are set,
+# otherwise a console/no-op provider so login, breaks and welcome wishes still work
+# without real SMS credentials.
+SMS_TWILIO_ACCOUNT_SID = env("SMS_TWILIO_ACCOUNT_SID", default="")
+SMS_TWILIO_AUTH_TOKEN = env("SMS_TWILIO_AUTH_TOKEN", default="")
+SMS_TWILIO_FROM = env("SMS_TWILIO_FROM", default="")
+# Default 60-minute break with reminders 10 and 5 minutes before the end.
+SMS_BREAK_REMINDER_DEFAULT_MINUTES = env.int("SMS_BREAK_REMINDER_DEFAULT_MINUTES", default=60)
+SMS_BREAK_REMINDER_FIRST_MINUTES_BEFORE_END = env.int("SMS_BREAK_REMINDER_FIRST_MINUTES_BEFORE_END", default=10)
+SMS_BREAK_REMINDER_SECOND_MINUTES_BEFORE_END = env.int("SMS_BREAK_REMINDER_SECOND_MINUTES_BEFORE_END", default=5)
+
 # --- Backups (manage.py backup_hrms / restore_hrms) -----------------------------
 # Must be outside any publicly served directory. Copy the folder off-site (see docs/backup.md).
 BACKUP_DIR = Path(env("BACKUP_DIR", default=str(BASE_DIR.parent / "backups")))

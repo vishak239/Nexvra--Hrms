@@ -57,3 +57,52 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.recipient_id}: {self.title}"
+
+
+class SmsMessage(models.Model):
+    """Persistent, idempotent record of every outbound SMS.
+
+    One row per intended delivery. The idempotency key (purpose + phone + reference) makes
+    retries safe: sending the same logical message twice produces one row and one provider
+    call. Delivery status and the provider message id are recorded here; message bodies and
+    phone numbers are personal data and are never logged by the provider client.
+    """
+
+    class Status(models.TextChoices):
+        QUEUED = "QUEUED", "Queued"
+        SENT = "SENT", "Sent by provider"
+        FAILED = "FAILED", "Provider rejected the message"
+        UNDELIVERED = "UNDELIVERED", "Provider accepted but did not deliver"
+
+    class Purpose(models.TextChoices):
+        BREAK_REMINDER = "BREAK_REMINDER", "Break-end reminder"
+        WELCOME = "WELCOME", "New employee welcome"
+
+    phone = models.CharField(max_length=32, db_index=True)
+    body = models.TextField()
+    purpose = models.CharField(max_length=32, choices=Purpose.choices)
+    reference = models.CharField(max_length=128, blank=True, help_text="Business id for idempotency.")
+    idempotency_key = models.CharField(max_length=128, unique=True, db_index=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    provider_message_id = models.CharField(max_length=128, blank=True)
+    provider_error = models.TextField(blank=True)
+    scheduled_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["status", "scheduled_at"], name="sms_due_queue"),
+            models.Index(fields=["purpose", "reference"], name="sms_purpose_reference"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["purpose", "reference"], name="sms_one_per_purpose_reference"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.purpose} {self.phone[-4:] if self.phone else ''} {self.status}"

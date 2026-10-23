@@ -2,6 +2,7 @@
 configured, the dependent rule is simply not applied (no invented policy)."""
 
 import datetime
+import ipaddress
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
@@ -11,6 +12,7 @@ from rest_framework.exceptions import PermissionDenied
 from apps.audit import services as audit
 from apps.core.exceptions import Conflict
 from apps.core.permissions import scope_queryset
+from apps.core.request import client_ip
 from apps.core.timefmt import fmt_time
 from apps.employees.models import Employee
 from apps.leaves.models import LeaveRequest
@@ -23,6 +25,7 @@ from . import geo
 from .errors import (
     LocationRequired,
     LocationTooImprecise,
+    OfficeNetworkRejected,
     OutsideGeofence,
     ResumePending,
     ResumeRequired,
@@ -64,6 +67,69 @@ def evaluate(record, cs):
         else:
             status = AttendanceRecord.Status.ABSENT
     return status, is_late
+
+
+def ip_in_office_networks(ip, cs):
+    """True when the observed client IP falls inside one of the approved office networks."""
+    if ip is None or not cs.office_network_addresses:
+        return False
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return any(addr in net for net in cs.office_networks)
+
+
+def verify_office_checkin(cs, ip, latitude, longitude, accuracy):
+    """Server-side dual verification for an office check-in.
+
+    Returns (distance_m_or_None, method, error_exception_or_None).
+    - method is one of "GEOFENCE", "OFFICE_NETWORK", "GEOFENCE_AND_OFFICE_NETWORK",
+      "GEOFENCE_OR_OFFICE_NETWORK" or None.
+    - error is raised when the configured policy is not satisfied.
+    The client's own distance / "inside" flags are never consulted; the IP is the one
+    observed through the trusted reverse proxy, never a client-supplied header.
+    """
+    policy = cs.attendance_verification_policy
+    geofence_ok = False
+    distance = None
+    geofence_error = None
+    if policy in (
+        CompanySettings.AttendanceVerificationPolicy.GEOFENCE_ONLY,
+        CompanySettings.AttendanceVerificationPolicy.GEOFENCE_OR_OFFICE_NETWORK,
+        CompanySettings.AttendanceVerificationPolicy.GEOFENCE_AND_OFFICE_NETWORK,
+    ):
+        try:
+            distance = office_location_check(cs, latitude, longitude, accuracy)
+            geofence_ok = True
+        except (LocationRequired, LocationTooImprecise, OutsideGeofence) as exc:
+            geofence_error = exc
+    network_ok = ip_in_office_networks(ip, cs)
+
+    if policy == CompanySettings.AttendanceVerificationPolicy.GEOFENCE_ONLY:
+        if not geofence_ok:
+            raise geofence_error or OutsideGeofence()
+        return distance, AttendanceRecord.VerificationMethod.GEOFENCE, None
+
+    if policy == CompanySettings.AttendanceVerificationPolicy.OFFICE_NETWORK_ONLY:
+        if not network_ok:
+            raise OfficeNetworkRejected()
+        return distance, AttendanceRecord.VerificationMethod.OFFICE_NETWORK, None
+
+    if policy == CompanySettings.AttendanceVerificationPolicy.GEOFENCE_AND_OFFICE_NETWORK:
+        if not geofence_ok:
+            raise geofence_error or OutsideGeofence()
+        if not network_ok:
+            raise OfficeNetworkRejected()
+        return distance, AttendanceRecord.VerificationMethod.GEOFENCE_AND_OFFICE_NETWORK, None
+
+    # GEOFENCE_OR_OFFICE_NETWORK: either is sufficient.
+    if geofence_ok:
+        return distance, AttendanceRecord.VerificationMethod.GEOFENCE, None
+    if network_ok:
+        return None, AttendanceRecord.VerificationMethod.OFFICE_NETWORK, None
+    # Neither: report the geofence problem if one exists, else network rejection.
+    raise geofence_error or OfficeNetworkRejected()
 
 
 def _self_employee(user, cs):
@@ -142,6 +208,9 @@ def check_in(request, mode=AttendanceRecord.Mode.OFFICE, latitude=None, longitud
 
     wfh = None
     distance = None
+    verification_method = None
+    verification_ip = None
+    office_network_match = False
     if mode == AttendanceRecord.Mode.WORK_FROM_HOME:
         from .wfh import approved_request_for
 
@@ -149,10 +218,27 @@ def check_in(request, mode=AttendanceRecord.Mode.OFFICE, latitude=None, longitud
         if wfh is None:
             raise WfhNotApproved()
     else:
-        distance = office_location_check(cs, latitude, longitude, accuracy)
+        ip = client_ip(request)
+        verification_ip = ip
+        distance, verification_method, _verification_error = verify_office_checkin(
+            cs, ip, latitude, longitude, accuracy
+        )
+        office_network_match = ip_in_office_networks(ip, cs)
 
     if resume is not None:
-        record = _resume(request, record, resume, now, mode, wfh, distance, cs)
+        record = _resume(
+            request,
+            record,
+            resume,
+            now,
+            mode,
+            wfh,
+            distance,
+            cs,
+            verification_method=verification_method,
+            verification_ip=verification_ip,
+            office_network_match=office_network_match,
+        )
         pause_if_in_meeting(record, now)
         return record
 
@@ -167,6 +253,10 @@ def check_in(request, mode=AttendanceRecord.Mode.OFFICE, latitude=None, longitud
         record.check_in_latitude, record.check_in_longitude = _coord(latitude), _coord(longitude)
         record.check_in_accuracy_m = None if accuracy is None else round(accuracy)
         record.check_in_distance_m = None if distance is None else round(distance)
+    if mode == AttendanceRecord.Mode.OFFICE:
+        record.verification_method = verification_method
+        record.verification_ip = verification_ip
+        record.office_network_match = office_network_match
     record.status, record.is_late = evaluate(record, cs)
     try:
         with transaction.atomic():
@@ -177,13 +267,33 @@ def check_in(request, mode=AttendanceRecord.Mode.OFFICE, latitude=None, longitud
         request,
         "ATTENDANCE_CHECK_IN",
         obj=record,
-        metadata={"mode": mode, "distance_m": record.check_in_distance_m, "wfh_request": getattr(wfh, "pk", None)},
+        metadata={
+            "mode": mode,
+            "distance_m": record.check_in_distance_m,
+            "wfh_request": getattr(wfh, "pk", None),
+            "verification_method": verification_method,
+            "verification_ip": verification_ip,
+            "office_network_match": office_network_match,
+        },
     )
     pause_if_in_meeting(record, now)
     return record
 
 
-def _resume(request, record, resume, now, mode, wfh, distance, cs):
+def _resume(
+    request,
+    record,
+    resume,
+    now,
+    mode,
+    wfh,
+    distance,
+    cs,
+    *,
+    verification_method=None,
+    verification_ip=None,
+    office_network_match=False,
+):
     """Reopen the day's session after an approved Resume Work request (validation passed)."""
     period = NonWorkingPeriod.objects.select_for_update().filter(attendance=record, ended_at__isnull=True).first()
     if period is None:  # defensive: the gap is non-working time either way
@@ -201,6 +311,10 @@ def _resume(request, record, resume, now, mode, wfh, distance, cs):
     record.wfh_request = wfh
     record.last_activity_at = now
     record.last_heartbeat_at = now
+    if mode == AttendanceRecord.Mode.OFFICE:
+        record.verification_method = verification_method
+        record.verification_ip = verification_ip
+        record.office_network_match = office_network_match
     record.status, _ = evaluate(record, cs)
     record.save()
     resume.status = ResumeWorkRequest.Status.USED
@@ -216,6 +330,9 @@ def _resume(request, record, resume, now, mode, wfh, distance, cs):
             "resume_request": resume.pk,
             "previous_check_out": previous_checkout,
             "non_working_seconds": period.duration_seconds,
+            "verification_method": verification_method,
+            "verification_ip": verification_ip,
+            "office_network_match": office_network_match,
         },
     )
     return record

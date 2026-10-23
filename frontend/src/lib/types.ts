@@ -19,6 +19,7 @@ export interface Me {
     has_photo: boolean;
     photo_version?: string | null;
   } | null;
+  welcome_wish?: { message: string; shown: boolean } | null;
 }
 
 export interface Paginated<T> {
@@ -141,6 +142,8 @@ export interface CompanySettings {
   geofence_max_accuracy_m: number;
   inactivity_timeout_minutes: number | null;
   overtime_requires_approval: boolean;
+  attendance_verification_policy: string;
+  office_network_addresses: string[] | null;
   half_day_min_hours: string | null;
   full_day_min_hours: string | null;
   self_attendance_enabled: boolean;
