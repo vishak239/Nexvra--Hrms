@@ -17,7 +17,7 @@ function TaskResponseForm({ task, onDone }: { task: Task; onDone: () => void }) 
   const toast = useToast();
   const [message, setMessage] = useState("");
   const { run, pending, error } = useAction();
-  const handle = task.assigned_to.username ? `@${task.assigned_to.username}` : task.assigned_to.full_name;
+  const handle = task.assigned_to?.username ? `@${task.assigned_to.username}` : task.assigned_to?.full_name ?? "Unassigned";
 
   return (
     <li className="rounded-xl border border-warning-outline bg-warning-container/40 p-4">

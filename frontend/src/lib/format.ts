@@ -27,6 +27,18 @@ function parse(value: string | Date): Date {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00${IST_OFFSET}`) : new Date(value);
 }
 
+/** Parse a value into a valid Date, or null when it is null/empty/unparseable. */
+export function safeDate(value: string | Date | null | undefined): Date | null {
+  if (value === null || value === undefined || value === "") return null;
+  try {
+    const d = value instanceof Date ? value : parse(value);
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return null;
+    return d;
+  } catch {
+    return null;
+  }
+}
+
 export interface IstParts {
   year: number;
   month: number;
@@ -35,11 +47,12 @@ export interface IstParts {
   minute: number;
 }
 
-/** Calendar date and clock of an instant, in India. */
+/** Calendar date and clock of an instant, in India. Returns all-zero parts when the value
+ * cannot be parsed, so callers never receive a RangeError from an invalid date. */
 export function istParts(value: string | Date = new Date()): IstParts {
-  const parts: Record<string, string> = {};
-  for (const p of PARTS.formatToParts(parse(value))) parts[p.type] = p.value;
-  return { year: +parts.year, month: +parts.month, day: +parts.day, hour: +parts.hour % 24, minute: +parts.minute };
+  const d = safeDate(value);
+  if (!d) return { year: 0, month: 0, day: 0, hour: 0, minute: 0 };
+  return partsFromDate(d);
 }
 
 const pad = (n: number) => n.toString().padStart(2, "0");
@@ -49,19 +62,43 @@ export function twelveHour(hour: number, minute: number) {
   return `${hour % 12 || 12}:${pad(minute)} ${hour < 12 ? "AM" : "PM"}`;
 }
 
-export const fmtDate = (v?: string | null) => (v ? DATE.format(parse(v)) : "—");
+export const fmtDate = (v?: string | null) => {
+  const d = safeDate(v);
+  return d ? DATE.format(d) : "—";
+};
 export const fmtTime = (v?: string | null) => {
-  if (!v) return "—";
-  const p = istParts(v);
+  const d = safeDate(v);
+  if (!d) return "—";
+  const p = partsFromDate(d);
   return twelveHour(p.hour, p.minute);
 };
-export const fmtDateTime = (v?: string | null) => (v ? `${DATE.format(parse(v))}, ${fmtTime(v)}` : "—");
+export const fmtDateTime = (v?: string | null) => {
+  const d = safeDate(v);
+  if (!d) return "—";
+  return `${DATE.format(d)}, ${timeFromDate(d)}`;
+};
+
+/** Break a Date into IST parts (used by the time/date-time formatters). */
+function partsFromDate(d: Date): IstParts {
+  const parts: Record<string, string> = {};
+  for (const p of PARTS.formatToParts(d)) parts[p.type] = p.value;
+  return { year: +parts.year, month: +parts.month, day: +parts.day, hour: +parts.hour % 24, minute: +parts.minute };
+}
+
+/** Format the clock time of a Date in IST. */
+function timeFromDate(d: Date): string {
+  const p = partsFromDate(d);
+  return twelveHour(p.hour, p.minute);
+}
 /** A wall-clock time from settings ("09:00:00" / "18:30") -> "9:00 AM" / "6:30 PM". */
 export function fmtClockTime(value?: string | null) {
   const m = value?.match(/^(\d{1,2}):(\d{2})/);
   return m ? twelveHour(Number(m[1]), Number(m[2])) : null;
 }
-export const fmtWeekday = (v: string) => WEEKDAY.format(parse(v));
+export const fmtWeekday = (v: string | null | undefined) => {
+  const d = safeDate(v);
+  return d ? WEEKDAY.format(d) : "—";
+};
 
 /** Today's date in India, "YYYY-MM-DD" (for date inputs and filters). */
 export function todayISO() {
@@ -83,7 +120,14 @@ export function addDaysISO(iso: string, days: number) {
 
 /** An India date + 24-hour "HH:MM" -> ISO instant for the API. */
 export function istToISO(date: string, time: string) {
-  return time ? new Date(`${date}T${time}:00${IST_OFFSET}`).toISOString() : null;
+  if (!date || !time) return null;
+  try {
+    const d = new Date(`${date}T${time}:00${IST_OFFSET}`);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString();
+  } catch {
+    return null;
+  }
 }
 
 /** ISO instant -> the India clock time as 24-hour "HH:MM" (form values, never displayed raw). */

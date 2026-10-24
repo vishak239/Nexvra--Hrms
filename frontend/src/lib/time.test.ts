@@ -9,6 +9,7 @@ import {
   istDateKey,
   istParts,
   istToISO,
+  safeDate,
   todayISO,
   twelveHour,
 } from "./format";
@@ -74,5 +75,41 @@ describe("India calendar day", () => {
     expect(addDaysISO("2026-10-31", 1)).toBe("2026-11-01");
     expect(addDaysISO("2026-12-31", 1)).toBe("2027-01-01");
     expect(addDaysISO("2026-03-01", -1)).toBe("2026-02-28");
+  });
+});
+
+describe("Date formatters with invalid input", () => {
+  it.each([
+    ["fmtDate", fmtDate],
+    ["fmtTime", fmtTime],
+    ["fmtDateTime", fmtDateTime],
+  ])("%s returns em dash and does not throw for invalid inputs", (_name, fn) => {
+    for (const bad of [null, undefined, "", "not-a-date", "2026-13-45"]) {
+      expect(() => fn(bad as any)).not.toThrow();
+      expect(fn(bad as any)).toBe("—");
+    }
+  });
+
+  it("istParts returns zero parts and does not throw for invalid inputs", () => {
+    for (const bad of [null, "", "not-a-date", "2026-13-45"]) {
+      expect(() => istParts(bad as any)).not.toThrow();
+      expect(istParts(bad as any)).toEqual({ year: 0, month: 0, day: 0, hour: 0, minute: 0 });
+    }
+  });
+
+  it("istToISO returns null and does not throw for invalid inputs", () => {
+    for (const bad of [null, undefined, "", "not-a-date"]) {
+      expect(() => istToISO(bad as any, "09:00")).not.toThrow();
+      expect(istToISO(bad as any, "09:00")).toBeNull();
+    }
+    for (const bad of [null, undefined, "", "not-a-time", "25:00"]) {
+      expect(() => istToISO("2026-10-06", bad as any)).not.toThrow();
+      expect(istToISO("2026-10-06", bad as any)).toBeNull();
+    }
+  });
+
+  it("safeDate returns null for invalid Date objects", () => {
+    expect(safeDate(new Date("not-a-date"))).toBeNull();
+    expect(safeDate(new Date(NaN))).toBeNull();
   });
 });

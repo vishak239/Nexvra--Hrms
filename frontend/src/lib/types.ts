@@ -404,7 +404,7 @@ export interface Task {
   display_status: TaskStatus | "OVERDUE";
   is_overdue: boolean;
   requires_response: boolean;
-  assigned_to: EmployeeRef;
+  assigned_to: EmployeeRef | null;
   assigned_by: UserRef | null;
   acknowledged_at: string | null;
   response: string;

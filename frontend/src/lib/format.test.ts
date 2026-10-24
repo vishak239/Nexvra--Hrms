@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtBytes, fmtDate, fmtDays, fmtMinutes, fmtMoney, fmtPeriod, humanize, initials } from "./format";
+import { fmtBytes, fmtDate, fmtDays, fmtMinutes, fmtMoney, fmtPeriod, fmtWeekday, humanize, initials } from "./format";
 import { visibleNav } from "./nav";
 import type { Me } from "./types";
 
@@ -26,6 +26,15 @@ describe("format", () => {
   it("humanizes enum values and builds initials", () => {
     expect(humanize("NOTICE_PERIOD")).toBe("Notice period");
     expect(initials("Demo Employee Two")).toBe("DE");
+  });
+});
+
+describe("fmtWeekday", () => {
+  it("returns em dash and does not throw for invalid input", () => {
+    for (const bad of [null, undefined, "", "not-a-date"]) {
+      expect(() => fmtWeekday(bad as any)).not.toThrow();
+      expect(fmtWeekday(bad as any)).toBe("—");
+    }
   });
 });
 

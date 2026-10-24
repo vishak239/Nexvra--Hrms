@@ -92,8 +92,14 @@ function TaskTable({ tab, onOpen, version }: { tab: Tab; onOpen: (id: number) =>
                   </Td>
                   {showAssignee && (
                     <Td>
-                      <span className="font-medium text-primary">{t.assigned_to.full_name}</span>
-                      <span className="ml-2 font-code-mono text-code-mono text-outline">{t.assigned_to.employee_code}</span>
+                      {t.assigned_to ? (
+                        <>
+                          <span className="font-medium text-primary">{t.assigned_to.full_name}</span>
+                          <span className="ml-2 font-code-mono text-code-mono text-outline">{t.assigned_to.employee_code}</span>
+                        </>
+                      ) : (
+                        <span className="text-on-surface-variant">Unassigned</span>
+                      )}
                     </Td>
                   )}
                   <Td>
