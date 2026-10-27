@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge, Card, CardHeader, PageHeader, StatusBadge } from "@/components/ui/Display";
 import { CheckboxField, FilterSelect, SelectField, TextAreaField, TextField } from "@/components/ui/Field";
 import { ConfirmDialog, Modal, Tabs, useToast } from "@/components/ui/Overlay";
+import { ViewLeaveModal } from "@/components/leave/ViewLeaveModal";
 import { Alert, EmptyState, ErrorState, FormError, Loading, NoAccess, SkeletonRows } from "@/components/ui/States";
 import { PAGE_SIZE, Pagination, TBody, THead, Table, Td, Th } from "@/components/ui/Table";
 import { api } from "@/lib/api";
@@ -116,7 +117,13 @@ function ApplyModal({ open, onClose, onDone }: { open: boolean; onClose: () => v
 
 // --- my leave -----------------------------------------------------------------------
 
-function MyLeave({ employeeId }: { employeeId: number }) {
+function MyLeave({
+  employeeId,
+  onView,
+}: {
+  employeeId: number;
+  onView?: (id: number) => void;
+}) {
   const toast = useToast();
   const [applying, setApplying] = useState(false);
   const [cancelling, setCancelling] = useState<LeaveRequest | null>(null);
@@ -169,6 +176,7 @@ function MyLeave({ employeeId }: { employeeId: number }) {
                 <Th>Days</Th>
                 <Th>Status</Th>
                 <Th>Decision</Th>
+                <Th className="text-right">View</Th>
                 <Th className="text-right">Actions</Th>
               </THead>
               <TBody>
@@ -189,6 +197,11 @@ function MyLeave({ employeeId }: { employeeId: number }) {
                       <Td className="max-w-xs truncate text-xs text-on-surface-variant">
                         {r.decided_by_name ? `${r.decided_by_name}${r.decision_note ? `: ${r.decision_note}` : ""}` : "—"}
                         {r.balance_deducted && <span className="block text-outline">{fmtDays(r.balance_deducted)} day(s) deducted</span>}
+                      </Td>
+                      <Td className="text-right">
+                        <Button size="sm" variant="secondary" onClick={() => onView?.(r.id)}>
+                          View
+                        </Button>
                       </Td>
                       <Td className="text-right">
                         {cancellable && (
@@ -305,9 +318,11 @@ function DecisionModal({
 function RequestsTable({
   rows,
   onDecide,
+  onView,
 }: {
   rows: LeaveRequest[];
   onDecide?: (r: LeaveRequest, approve: boolean) => void;
+  onView?: (id: number) => void;
 }) {
   return (
     <Table>
@@ -318,6 +333,7 @@ function RequestsTable({
         <Th>Days</Th>
         <Th>Reason</Th>
         <Th>Status</Th>
+        {onView && <Th className="text-right">View</Th>}
         {onDecide && <Th className="text-right">Actions</Th>}
       </THead>
       <TBody>
@@ -336,6 +352,13 @@ function RequestsTable({
             <Td>
               <StatusBadge status={r.status} />
             </Td>
+            {onView && (
+              <Td className="text-right">
+                <Button size="sm" variant="secondary" onClick={() => onView(r.id)}>
+                  View
+                </Button>
+              </Td>
+            )}
             {onDecide && (
               <Td className="text-right">
                 {r.can_decide && (
@@ -357,7 +380,11 @@ function RequestsTable({
   );
 }
 
-function Approvals() {
+function Approvals({
+  onView,
+}: {
+  onView?: (id: number) => void;
+}) {
   const [page, setPage] = useState(1);
   const [decision, setDecision] = useState<{ request: LeaveRequest; approve: boolean } | null>(null);
   const { data, error, loading, reload } = useResource<Paginated<LeaveRequest>>("/api/leaves/requests/pending-approvals/", { page, page_size: PAGE_SIZE });
@@ -372,7 +399,7 @@ function Approvals() {
         <EmptyState icon={<Check className="h-5 w-5" />} title="All caught up" description="There are no leave requests waiting for you." />
       ) : (
         <>
-          <RequestsTable rows={data.results} onDecide={(request, approve) => setDecision({ request, approve })} />
+          <RequestsTable rows={data.results} onDecide={(request, approve) => setDecision({ request, approve })} onView={onView} />
           <Pagination page={page} pageSize={PAGE_SIZE} count={data.count} onPage={setPage} />
         </>
       )}
@@ -389,7 +416,11 @@ function Approvals() {
   );
 }
 
-function AllRequests() {
+function AllRequests({
+  onView,
+}: {
+  onView?: (id: number) => void;
+}) {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [decision, setDecision] = useState<{ request: LeaveRequest; approve: boolean } | null>(null);
@@ -417,7 +448,7 @@ function AllRequests() {
         <EmptyState icon={<CalendarRange className="h-5 w-5" />} title="No leave requests" />
       ) : (
         <>
-          <RequestsTable rows={data.results} onDecide={(request, approve) => setDecision({ request, approve })} />
+          <RequestsTable rows={data.results} onDecide={(request, approve) => setDecision({ request, approve })} onView={onView} />
           <Pagination page={page} pageSize={PAGE_SIZE} count={data.count} onPage={setPage} />
         </>
       )}
@@ -762,6 +793,7 @@ function LeaveContent() {
   ];
   const requested = params.get("tab") as Tab | null;
   const [tab, setTab] = useState<Tab>(tabs.find((t) => t.value === requested)?.value ?? tabs[0]?.value ?? "mine");
+  const [viewing, setViewing] = useState<number | null>(null);
 
   if (tabs.length === 0) return <NoAccess />;
   return (
@@ -777,11 +809,17 @@ function LeaveContent() {
           }}
         />
       )}
-      {tab === "mine" && me?.employee && <MyLeave employeeId={me.employee.id} />}
-      {tab === "approvals" && <Approvals />}
-      {tab === "all" && <AllRequests />}
+      {tab === "mine" && me?.employee && <MyLeave employeeId={me.employee.id} onView={setViewing} />}
+      {tab === "approvals" && <Approvals onView={setViewing} />}
+      {tab === "all" && <AllRequests onView={setViewing} />}
       {tab === "balances" && <Balances />}
       {tab === "types" && <LeaveTypes />}
+      <ViewLeaveModal
+        open={viewing != null}
+        requestId={viewing}
+        onClose={() => setViewing(null)}
+        onDone={() => setViewing(null)}
+      />
     </>
   );
 }
