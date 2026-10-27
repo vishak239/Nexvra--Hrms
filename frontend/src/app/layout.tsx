@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: { default: "Nexvra HRMS", template: "%s · Nexvra HRMS" },
   description: "Nexvra Solutions internal HR management system",
   icons: { icon: "/brand/nexvra-logo.png" },
+  manifest: "/manifest.json",
   robots: { index: false, follow: false },
 };
 
@@ -21,6 +22,20 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {/* Register the service worker for offline app-shell caching. API calls are handled by
+            the offline queue in lib/offline.ts, not by this cache. */}
+        <script
+          id="nexvra-sw-registration"
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ("serviceWorker" in navigator) {
+                window.addEventListener("load", () => {
+                  navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body>
         <ThemeProvider>
